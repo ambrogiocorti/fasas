@@ -30,6 +30,39 @@ tracciata in ogni modifica, cifrata a riposo e organizzata attorno al lavoro rea
 
 La corrispondenza puntuale tra i 30 punti della specifica e il codice è in [docs/ARCHITETTURA.md](docs/ARCHITETTURA.md).
 
+## Provare il sistema
+
+Tre modi, dal più semplice. In tutti si entra con `admin`, `coordinatore`, `operatore` o `medico`,
+password `Demo-Fasas-2026!`, su dati di fantasia. **Non inserire dati reali di ospiti in queste prove.**
+
+### 1. Nel browser, senza installare nulla (GitHub Codespaces)
+
+1. Su GitHub apri il repository e scegli il branch su cui lavorare.
+2. **Code → Codespaces → Create codespace on …**
+3. Attendi qualche minuto la prima preparazione: il sistema si avvia da solo e si apre in una nuova scheda
+   (se non si apre: scheda **Porte** in basso, porta 8000, icona del globo).
+
+Le volte successive riapri lo stesso codespace da **Code → Codespaces**: scarica da solo le ultime modifiche
+e riparte. Con un account GitHub personale sono comprese circa 60 ore al mese gratuite; il codespace si sospende
+da solo dopo 30 minuti di inattività.
+
+### 2. Sul tuo PC, aggiornandosi da solo
+
+Solo la prima volta: installa [Python](https://www.python.org/downloads/) (su Windows spunta «Add Python to PATH»)
+e [Git](https://git-scm.com/downloads), poi scarica il progetto con:
+
+```bash
+git clone -b claude/fasas-digital-system-5v69px https://github.com/ambrogiocorti/fasas.git
+```
+
+Da quel momento basta **doppio clic su `avvia.bat`** (Windows) o `./avvia.sh` (Mac/Linux): scarica le ultime
+modifiche, aggiorna librerie e database, carica i dati demo la prima volta e apre il browser.
+
+### 3. Test automatici
+
+A ogni modifica pubblicata su GitHub i test girano da soli su Linux (SQLite e PostgreSQL) e su Windows:
+l'esito è nella scheda **Actions** del repository. In locale: `python manage.py test fasas.tests`.
+
 ## Avvio rapido (sviluppo)
 
 Requisiti: Python 3.12+.

@@ -52,10 +52,15 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--force", action="store_true", help="Esegue anche se esistono già ospiti")
+        parser.add_argument("--skip-if-exists", action="store_true",
+                            help="Se esistono già ospiti non fa nulla (usato dagli script di avvio)")
 
     def handle(self, *args, **options):
         from fasas.guests.models import Guest
 
+        if Guest.objects.exists() and options["skip_if_exists"]:
+            self.stdout.write("Dati presenti: i dati demo non vengono ricaricati.")
+            return
         if Guest.objects.exists() and not options["force"]:
             raise CommandError("Esistono già ospiti: usare --force per aggiungere comunque i dati demo.")
         call_command("fasas_setup", stdout=self.stdout)
