@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ guest }} – visite{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="page-head"><h2>Visite e controlli</h2><div class="actions">{% if perms.appointments.add_appointment and not guest.is_archived %}<a class="btn btn-primary btn-sm" href="{% url 'appointments:create' %}?guest={{ guest.pk }}">+ Appuntamento</a>{% endif %}</div></div>
+<div class="card table-wrap"><table>
+  <thead><tr><th>Data</th><th>Tipo</th><th>Descrizione</th><th>Luogo / medico</th><th>Stato</th><th>Esito</th></tr></thead>
+  <tbody>{% for a in appointments %}
+    <tr><td class="nowrap"><a href="{{ a.get_absolute_url }}">{{ a.scheduled_at|date:"d/m/Y H:i" }}</a></td><td>{{ a.get_kind_display }}</td><td>{{ a.title }}</td><td>{{ a.location }}<br><small>{{ a.doctor }}</small></td>
+      <td><span class="pill {% if a.status == 'done' %}pill-ok{% elif a.status == 'scheduled' %}pill-info{% else %}pill-warn{% endif %}">{{ a.get_status_display }}</span></td><td>{{ a.outcome|truncatechars:120 }}</td></tr>
+  {% empty %}<tr><td colspan="6" class="empty">Nessun appuntamento.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

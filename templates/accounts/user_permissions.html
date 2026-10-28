@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Permessi {{ target }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Permessi granulari – {{ target }}</h1><div class="actions"><a class="btn" href="{% url 'accounts:user_list' %}">← Utenti</a></div></div>
+<p class="muted">Ruolo: <strong>{{ target.get_role_display }}</strong>. Per ogni permesso si può mantenere il valore del ruolo, concederlo (✔) o negarlo (✖) solo a questo utente. Le modifiche sono registrate nell'audit log.</p>
+<form method="post">{% csrf_token %}
+{% for section, items in grouped.items %}
+  <div class="card table-wrap">
+    <h3>{{ section }}</h3>
+    <table><thead><tr><th>Permesso</th><th>Ruolo</th><th>Per questo utente</th></tr></thead><tbody>
+    {% for i in items %}
+      <tr><td>{{ i.perm.name }}<br><small class="mono muted">{{ i.perm.content_type.app_label }}.{{ i.perm.codename }}</small></td>
+        <td>{% if i.role_default %}<span class="state state-ok">✔</span>{% else %}<span class="state state-muted">✖</span>{% endif %}</td>
+        <td><select name="perm_{{ i.perm.pk }}" style="width:auto">
+          <option value="role" {% if i.state == 'role' %}selected{% endif %}>come il ruolo</option>
+          <option value="allow" {% if i.state == 'allow' %}selected{% endif %}>✔ concesso</option>
+          <option value="deny" {% if i.state == 'deny' %}selected{% endif %}>✖ negato</option>
+        </select></td></tr>
+    {% endfor %}
+    </tbody></table>
+  </div>
+{% endfor %}
+<div class="form-actions"><button class="btn btn-primary">Salva permessi</button></div>
+</form>
+{% endblock %}

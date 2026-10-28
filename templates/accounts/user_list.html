@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Utenti{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Utenti e permessi</h1><div class="actions">{% if perms.accounts.add_user %}<a class="btn btn-primary" href="{% url 'accounts:user_create' %}">+ Nuovo utente</a>{% endif %}</div></div>
+<form class="filters" method="get"><input type="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Cerca"><button class="btn">Cerca</button></form>
+<div class="card table-wrap">
+  <table>
+    <thead><tr><th>Utente</th><th>Ruolo</th><th>Qualifica</th><th>Ultimo accesso</th><th>Stato</th><th></th></tr></thead>
+    <tbody>
+    {% for u in object_list %}
+      <tr><td><strong>{{ u.get_full_name|default:u.username }}</strong><br><small class="mono">{{ u.username }}</small></td>
+        <td>{{ u.get_role_display }}{% if u.is_superuser %} <span class="pill pill-warn">superuser</span>{% endif %}</td>
+        <td>{{ u.qualification }}</td><td>{{ u.last_login|date:"d/m/Y H:i"|default:"mai" }}</td>
+        <td>{% if u.is_active %}<span class="pill pill-ok">attivo</span>{% else %}<span class="pill">disattivato</span>{% endif %}{% if u.permission_overrides.exists %} <span class="pill pill-info">permessi personalizzati</span>{% endif %}</td>
+        <td class="num nowrap">{% if perms.accounts.change_user %}<a class="btn btn-sm" href="{% url 'accounts:user_update' u.pk %}">Modifica</a> <a class="btn btn-sm" href="{% url 'accounts:user_permissions' u.pk %}">Permessi</a> <a class="btn btn-sm" href="{% url 'accounts:user_set_password' u.pk %}">Password</a>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "partials/pagination.html" %}
+{% endblock %}

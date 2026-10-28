@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Magazzino farmaci{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Magazzino farmaci</h1>
+  <div class="actions">
+    {% if perms.pharmacy.view_drug %}<a class="btn" href="{% url 'pharmacy:drug_list' %}">Catalogo farmaci</a>{% endif %}
+    {% if perms.pharmacy.add_stocklot %}<a class="btn btn-primary" href="{% url 'pharmacy:lot_load' %}">+ Carico</a>{% endif %}
+  </div></div>
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="Farmaco o principio attivo">
+  <select name="status"><option value="">Tutti</option><option value="low" {% if status == 'low' %}selected{% endif %}>Sotto soglia</option><option value="expiring" {% if status == 'expiring' %}selected{% endif %}>Scaduti / in scadenza</option></select>
+  <button class="btn">Filtra</button>
+</form>
+<div class="card table-wrap">
+  <table>
+    <thead><tr><th>Farmaco</th><th class="num">Giacenza valida</th><th class="num">Soglia</th><th>Lotti (scadenza · quantità · intestatario)</th><th>Stato</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td><strong>{{ r.drug }}</strong><br><small class="muted">{{ r.drug.active_ingredient }} {% if r.drug.is_controlled %}<span class="pill pill-warn">stupefacente</span>{% endif %}</small></td>
+        <td class="num"><strong>{{ r.total|floatformat:"-2" }}</strong> {{ r.drug.stock_unit }}</td>
+        <td class="num">{{ r.drug.min_stock|floatformat:"-2" }}</td>
+        <td>{% for lot in r.lots %}<div><a href="{% url 'pharmacy:lot_detail' lot.pk %}">{{ lot.lot_number }}</a> · <span {% if lot in r.expired %}style="color:var(--danger)"{% elif lot in r.expiring %}style="color:var(--warn)"{% endif %}>{{ lot.expiry_date|date:"d/m/Y" }}</span> · {{ lot.quantity|floatformat:"-2" }}{% if lot.guest %} · <small>{{ lot.guest }}</small>{% endif %}</div>{% empty %}<span class="muted">nessun lotto</span>{% endfor %}</td>
+        <td>{% if r.low %}<span class="pill pill-danger">in esaurimento</span>{% endif %}{% if r.expired %}<span class="pill pill-danger">scaduti</span>{% endif %}{% if r.expiring %}<span class="pill pill-warn">in scadenza</span>{% endif %}{% if not r.low and not r.expired and not r.expiring %}<span class="pill pill-ok">ok</span>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">Nessun farmaco in catalogo.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

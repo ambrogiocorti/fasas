@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Impostazioni notifiche{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Impostazioni notifiche</h1><div class="actions"><a class="btn" href="{% url 'core:settings' %}">← Impostazioni</a></div></div>
+<p class="muted">Per ogni tipo di notifica scegliere quali ruoli la ricevono. Le email (se attive) non contengono dati sanitari: solo un avviso di accedere al sistema.</p>
+<form method="post">{% csrf_token %}
+<div class="card table-wrap"><table>
+  <thead><tr><th>Notifica</th><th>Attiva</th>{% for code, label in roles %}<th>{{ label }}</th>{% endfor %}<th>Email</th></tr></thead>
+  <tbody>{% for s in settings_list %}
+    <tr><td><strong>{{ s.get_kind_display }}</strong></td>
+      <td><input type="checkbox" name="enabled_{{ s.pk }}" {% if s.enabled %}checked{% endif %} aria-label="Attiva"></td>
+      {% for code, label in roles %}<td><input type="checkbox" name="role_{{ s.pk }}_{{ code }}" {% if code in s.roles %}checked{% endif %} aria-label="{{ label }}"></td>{% endfor %}
+      <td><input type="checkbox" name="email_{{ s.pk }}" {% if s.send_email %}checked{% endif %} aria-label="Email"></td></tr>
+  {% endfor %}</tbody>
+</table></div>
+<div class="form-actions"><button class="btn btn-primary">Salva</button></div>
+</form>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Checklist turno{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Checklist – {{ shift_label }} {{ day|date:"d/m/Y" }}</h1>
+  <div class="actions"><span class="pill {% if status.done == status.total %}pill-ok{% else %}pill-warn{% endif %}">{{ status.done }}/{{ status.total }} completate</span>
+  {% if perms.daily.close_shift and not closed %}<a class="btn btn-sm" href="{% url 'daily:close_shift' %}?date={{ day|date:'Y-m-d' }}&shift={{ shift }}">Chiudi turno</a>{% endif %}</div></div>
+{% include "partials/shift_nav.html" %}
+<p class="muted">✔ completato · ⚠ mancante · — non applicabile. Le voci automatiche si completano registrando farmaci, pasti, igiene, parametri ed evacuazioni; le voci manuali si spuntano qui.</p>
+{% if status.rows %}
+<div class="card table-wrap">
+  <table class="checklist-table">
+    <thead><tr><th>Voce</th>{% for g in status.guests %}<th title="{{ g }}">{{ g.last_name|truncatechars:12 }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for row in status.rows %}
+      <tr id="item-{{ row.item.pk }}">
+        <td><strong>{{ row.item.label }}</strong><br><small class="muted">{{ row.item.get_check_type_display }}</small></td>
+        {% if row.item.per_guest %}
+          {% for cell in row.cells %}
+          <td>
+            {% if closed or not perms.daily.add_checklistcheck %}{% state_icon cell.state %}
+            {% else %}
+            <form method="post" action="{% url 'daily:checklist_toggle' %}" class="cell-form">{% csrf_token %}
+              <input type="hidden" name="date" value="{{ day|date:'Y-m-d' }}"><input type="hidden" name="shift" value="{{ shift }}">
+              <input type="hidden" name="item" value="{{ row.item.pk }}"><input type="hidden" name="guest" value="{{ cell.guest.pk }}">
+              {% if cell.check %}
+                <button name="action" value="undo" title="Annulla la spunta ({{ cell.check.done_by }})">{% state_icon cell.state %}</button>
+              {% elif cell.state == 'missing' %}
+                <button name="action" value="done" title="Segna come fatto">{% state_icon cell.state %}</button>
+                <button name="action" value="na" title="Non applicabile" class="muted" style="font-size:.75rem">n/a</button>
+              {% else %}{% state_icon cell.state %}{% endif %}
+            </form>
+            {% endif %}
+          </td>
+          {% endfor %}
+        {% else %}
+          <td colspan="{{ status.guests|length }}" style="text-align:left">
+            {% with cell=row.cells.0 %}
+            <form method="post" action="{% url 'daily:checklist_toggle' %}" class="cell-form">{% csrf_token %}
+              <input type="hidden" name="date" value="{{ day|date:'Y-m-d' }}"><input type="hidden" name="shift" value="{{ shift }}"><input type="hidden" name="item" value="{{ row.item.pk }}">
+              {% state_icon cell.state %}
+              {% if not closed and perms.daily.add_checklistcheck %}{% if cell.check %}<button class="btn btn-sm" name="action" value="undo">Annulla spunta</button> <small class="muted">{{ cell.check.done_by }} {{ cell.check.done_at|time:"H:i" }}</small>{% else %}<button class="btn btn-sm btn-ok" name="action" value="done">Fatto</button>{% endif %}{% endif %}
+            </form>
+            {% endwith %}
+          </td>
+        {% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}<div class="card empty">Nessuna checklist configurata per questo turno. {% if perms.daily.add_checklisttemplate %}<a href="{% url 'daily:checklisttemplate_list' %}">Configura</a>{% endif %}</div>{% endif %}
+{% endblock %}

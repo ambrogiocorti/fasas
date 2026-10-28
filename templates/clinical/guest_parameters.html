@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ guest }} – parametri{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="page-head">
+  <h2>Parametri sanitari</h2>
+  <form class="filters" method="get" style="margin:0">
+    <select name="days" onchange="this.form.submit()" aria-label="Periodo">
+      <option value="7" {% if days == 7 %}selected{% endif %}>7 giorni</option>
+      <option value="30" {% if days == 30 %}selected{% endif %}>30 giorni</option>
+      <option value="90" {% if days == 90 %}selected{% endif %}>90 giorni</option>
+      <option value="365" {% if days == 365 %}selected{% endif %}>1 anno</option>
+    </select>
+  </form>
+  <div class="actions">
+    {% if perms.clinical.add_parameterreading and not guest.is_archived %}
+      <a class="btn btn-sm" href="{% url 'clinical:parameter_create' guest.pk %}">+ Singolo valore</a>
+      <a class="btn btn-sm btn-primary" href="{% url 'clinical:quick_parameters' guest.pk %}">+ Rilevazione</a>
+    {% endif %}
+  </div>
+</div>
+{% if charts %}
+<div class="grid grid-2">
+  {% for c in charts %}
+    <div class="card">
+      <div class="card-head"><h3>{{ c.name }} <small class="muted">({{ c.unit }})</small></h3>
+        {% if c.min is not None and c.max is not None %}<span class="muted" style="margin-left:auto">fascia normale {{ c.min }}–{{ c.max }}</span>{% endif %}</div>
+      <div class="chart" data-chart="{{ forloop.counter0 }}"></div>
+    </div>
+  {% endfor %}
+</div>
+{{ charts|json_script:"charts-data" }}
+{% endif %}
+<div class="card table-wrap">
+  <form class="filters" method="get">
+    <input type="hidden" name="days" value="{{ days }}">
+    <select name="type"><option value="">Tutti i parametri</option>{% for t in types %}<option value="{{ t.pk }}" {% if request.GET.type == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</select>
+    <button class="btn btn-sm">Filtra</button>
+  </form>
+  <table>
+    <thead><tr><th>Data/ora</th><th>Parametro</th><th>Valore</th><th>Note</th><th>Operatore</th><th></th></tr></thead>
+    <tbody>
+    {% for r in readings %}
+      <tr><td class="nowrap">{{ r.occurred_at|date:"d/m/Y H:i" }}</td><td>{{ r.parameter_type.name }}</td>
+        <td><strong {% if r.out_of_range %}style="color:var(--danger)"{% endif %}>{{ r.display_value }}</strong>{% if r.out_of_range %} <span class="pill pill-danger">fuori range</span>{% endif %}</td>
+        <td>{{ r.notes }}</td><td>{{ r.created_by }}</td>
+        <td class="num nowrap">{% if perms.clinical.change_parameterreading and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'clinical:parameter_update' r.pk %}">Modifica</a>{% endif %}
+          {% if perms.clinical.delete_parameterreading and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'clinical:parameter_void' r.pk %}">Annulla</a>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">Nessuna rilevazione.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

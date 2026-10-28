@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ lot }}{% endblock %}
+{% block content %}
+<div class="page-head"><h1>{{ lot.drug }} – lotto {{ lot.lot_number }}</h1><div class="actions"><a class="btn" href="{% url 'pharmacy:stock' %}">← Magazzino</a></div></div>
+<div class="grid grid-2">
+  <div class="card"><table><tbody>
+    <tr><th>Giacenza</th><td><strong>{{ lot.quantity|floatformat:"-2" }} {{ lot.drug.stock_unit }}</strong></td></tr>
+    <tr><th>Scadenza</th><td>{{ lot.expiry_date|date:"d/m/Y" }} {% if lot.is_expired %}<span class="pill pill-danger">scaduto</span>{% endif %}</td></tr>
+    <tr><th>Intestatario</th><td>{{ lot.guest|default:"Scorta della comunità" }}</td></tr>
+    <tr><th>Carico</th><td>{{ lot.received_on|date:"d/m/Y" }} · {{ lot.supplier }}</td></tr>
+    <tr><th>Note</th><td>{{ lot.notes|default:"—" }}</td></tr>
+  </tbody></table></div>
+  {% if perms.pharmacy.change_stocklot %}
+  <div class="card"><h2>Rettifica / smaltimento</h2>
+    <form method="post" novalidate>{% csrf_token %}{% include "partials/form_fields.html" %}<div class="form-actions"><button class="btn btn-primary">Registra movimento</button></div></form></div>
+  {% endif %}
+</div>
+<div class="card table-wrap"><h2>Movimenti</h2>
+  <table><thead><tr><th>Data/ora</th><th>Tipo</th><th class="num">Quantità</th><th class="num">Giacenza dopo</th><th>Ospite</th><th>Operatore</th><th>Note</th></tr></thead>
+  <tbody>{% for m in movements %}<tr><td class="nowrap">{{ m.created_at|date:"d/m/Y H:i" }}</td><td>{{ m.get_kind_display }}</td><td class="num">{{ m.quantity|floatformat:"-2" }}</td><td class="num">{{ m.balance_after|floatformat:"-2" }}</td><td>{{ m.administration.guest|default:"" }}</td><td>{{ m.created_by|default:"" }}</td><td>{{ m.notes }}</td></tr>{% empty %}<tr><td colspan="7" class="empty">Nessun movimento.</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endblock %}

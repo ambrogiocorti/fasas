@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Impostazioni{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Impostazioni</h1></div>
+<div class="grid grid-3">
+  <div class="card"><h2>Personale</h2><ul class="list-plain">
+    <li><a href="{% url 'accounts:profile' %}">Il mio profilo e tema</a></li>
+    <li><a href="{% url 'accounts:password_change' %}">Cambia password</a></li>
+    {% if perms.signatures.sign_document %}<li><a href="{% url 'signatures:credential' %}">Firma digitale</a></li>{% endif %}
+  </ul></div>
+  <div class="card"><h2>Cartella clinica</h2><ul class="list-plain">
+    {% if perms.guests.view_clinicaltag %}<li><a href="{% url 'guests:tag_list' %}">Tag clinici</a></li>{% endif %}
+    {% if perms.clinical.view_parametertype %}<li><a href="{% url 'clinical:parametertype_list' %}">Tipi di parametro sanitario</a></li>{% endif %}
+    {% if perms.protocols.view_protocol %}<li><a href="{% url 'protocols:list' %}">Protocolli automatici</a></li>{% endif %}
+    {% if perms.daily.view_checklisttemplate %}<li><a href="{% url 'daily:checklisttemplate_list' %}">Checklist di turno</a> · <a href="{% url 'daily:checklistitem_list' %}">voci</a></li>{% endif %}
+  </ul></div>
+  <div class="card"><h2>Farmaci</h2><ul class="list-plain">
+    {% if perms.pharmacy.view_drug %}<li><a href="{% url 'pharmacy:drug_list' %}">Catalogo farmaci</a></li>{% endif %}
+    {% if perms.pharmacy.view_druginteraction %}<li><a href="{% url 'pharmacy:interaction_list' %}">Interazioni farmacologiche</a></li>{% endif %}
+    {% if perms.pharmacy.add_stocklot %}<li><a href="{% url 'pharmacy:lot_load' %}">Carico magazzino</a></li>{% endif %}
+  </ul></div>
+  <div class="card"><h2>Report</h2><ul class="list-plain">
+    {% if perms.reports.view_reportschedule %}<li><a href="{% url 'reports:schedule_list' %}">Report programmati</a></li>{% endif %}
+    {% if perms.reports.view_generatedreport %}<li><a href="{% url 'reports:list' %}">Archivio report</a></li>{% endif %}
+  </ul></div>
+  <div class="card"><h2>Sistema</h2><ul class="list-plain">
+    {% if perms.core.change_systemconfig %}<li><a href="{% url 'core:config' %}">Configurazione generale</a></li>{% endif %}
+    {% if perms.notifications.change_notificationsetting %}<li><a href="{% url 'notifications:settings' %}">Notifiche</a></li>{% endif %}
+    {% if perms.accounts.view_user %}<li><a href="{% url 'accounts:user_list' %}">Utenti, ruoli e permessi</a></li>{% endif %}
+    {% if perms.backups.manage_backup %}<li><a href="{% url 'backups:list' %}">Backup</a></li>{% endif %}
+    {% if perms.audit.view_auditlog %}<li><a href="{% url 'audit:list' %}">Audit log</a></li>{% endif %}
+    {% if perms.accounts.view_accesslog %}<li><a href="{% url 'accounts:access_log' %}">Log accessi</a></li>{% endif %}
+  </ul></div>
+</div>
+{% endblock %}

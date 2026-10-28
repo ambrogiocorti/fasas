@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Protocolli attivati{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Protocolli attivati</h1><div class="actions">{% if perms.protocols.view_protocol %}<a class="btn" href="{% url 'protocols:list' %}">Regole</a>{% endif %}</div></div>
+<form class="filters" method="get">
+  <select name="status"><option value="open" {% if status == 'open' %}selected{% endif %}>Da gestire / in corso</option><option value="resolved" {% if status == 'resolved' %}selected{% endif %}>Risolti</option><option value="dismissed" {% if status == 'dismissed' %}selected{% endif %}>Archiviati</option><option value="all" {% if status == 'all' %}selected{% endif %}>Tutti</option></select>
+  <select name="kind"><option value="">Tutti i tipi</option>{% for c, l in kinds %}<option value="{{ c }}" {% if request.GET.kind == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <button class="btn">Filtra</button>
+</form>
+<div class="card table-wrap"><table>
+  <thead><tr><th>Attivato</th><th>Ospite</th><th>Protocollo</th><th>Motivo</th><th>Stato</th></tr></thead>
+  <tbody>{% for a in activations %}
+    <tr><td class="nowrap"><a href="{{ a.get_absolute_url }}">{{ a.triggered_at|date:"d/m/Y H:i" }}</a></td><td><a href="{{ a.guest.get_absolute_url }}">{{ a.guest }}</a></td><td>{{ a.protocol.name }}</td><td>{{ a.trigger_summary }}</td>
+      <td><span class="pill {% if a.is_open %}pill-danger{% else %}pill-ok{% endif %}">{{ a.get_status_display }}</span>{% if a.auto_resolved %} <small>auto</small>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="5" class="empty">Nessun protocollo in questo stato.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

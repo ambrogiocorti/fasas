@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Chiudi turno{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 860px">
+  <h1>Chiusura turno {{ shift_label|lower }} del {{ day|date:"d/m/Y" }}</h1>
+  {% if closed %}<div class="alert alert-info">Il turno è già chiuso.</div>{% else %}
+  <p>Checklist: <strong>{{ status.done }}/{{ status.total }}</strong> voci completate.</p>
+  {% if status.missing %}
+    <div class="alert alert-warning"><strong>Attività mancanti ({{ status.missing|length }}):</strong>
+      <ul>{% for m in status.missing|slice:":30" %}<li>{{ m.guest }} – {{ m.item }}</li>{% endfor %}</ul>
+      {% if status.missing|length > 30 %}…e altre {{ status.missing|length|add:"-30" }}.{% endif %}
+      Le mancanze saranno registrate nel riepilogo di chiusura e segnalate al coordinatore.</div>
+  {% else %}<div class="alert alert-success">Tutte le attività del turno risultano completate.</div>{% endif %}
+  <form method="post" novalidate>{% csrf_token %}{% include "partials/form_fields.html" %}
+    <div class="form-actions"><button class="btn btn-primary">Chiudi il turno</button><a class="btn" href="{% url 'daily:checklist' %}?date={{ day|date:'Y-m-d' }}&shift={{ shift }}">Torna alla checklist</a></div></form>
+  {% endif %}
+</div>
+{% endblock %}

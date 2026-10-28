@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ guest }} – storico{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<form class="filters" method="get">
+  {% for code, label in kinds %}
+    <label class="pill" style="cursor:pointer"><input type="checkbox" name="kind" value="{{ code }}" {% if code in selected %}checked{% endif %}> {{ label }}</label>
+  {% endfor %}
+  <button class="btn btn-sm">Filtra</button>
+  <a class="btn btn-sm btn-ghost" href="?">Tutto</a>
+</form>
+<div class="card">
+  <p class="muted">Storico completo della cartella: utile per controlli ASL/ATS, visite mediche e passaggi di consegne. Ogni modifica è anche nell'audit log.</p>
+  <ul class="timeline">
+    {% for i in items %}
+      <li class="k-{{ i.kind }}">
+        <div class="when">{{ i.when|date:"d/m/Y H:i" }}{% if i.user %} · {{ i.user }}{% endif %}</div>
+        <div>{% if i.url %}<a href="{{ i.url }}"><strong>{{ i.title }}</strong></a>{% else %}<strong>{{ i.title }}</strong>{% endif %}</div>
+        {% if i.detail %}<small>{{ i.detail }}</small>{% endif %}
+      </li>
+    {% empty %}<li>Nessun elemento.</li>{% endfor %}
+  </ul>
+</div>
+{% endblock %}

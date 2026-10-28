@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Audit #{{ object.pk }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 960px">
+  <div class="card-head"><h1>Voce di audit #{{ object.pk }}</h1><div class="actions"><a class="btn btn-sm" href="{% url 'audit:list' %}">← Elenco</a></div></div>
+  <table><tbody>
+    <tr><th>Data/ora</th><td>{{ object.timestamp|date:"d/m/Y H:i:s" }}</td></tr>
+    <tr><th>Utente</th><td>{{ object.username }}</td></tr>
+    <tr><th>Azione</th><td>{{ object.get_action_display }}</td></tr>
+    <tr><th>Oggetto</th><td>{{ object.content_type.name|default:"—" }} #{{ object.object_id }} – {{ object.object_repr }}</td></tr>
+    <tr><th>Motivazione</th><td>{{ object.reason|default:"—" }}</td></tr>
+    <tr><th>Origine</th><td>{{ object.source }} · IP {{ object.ip_address|default:"—" }}</td></tr>
+    <tr><th>Impronta</th><td class="mono">{{ object.hash }}<br><small class="muted">precedente {{ object.prev_hash|default:"(prima voce)" }}</small></td></tr>
+  </tbody></table>
+  <h2 style="margin-top:1rem">Modifiche</h2>
+  <div class="table-wrap"><table><thead><tr><th>Campo</th><th>Valore precedente</th><th>Valore nuovo</th></tr></thead><tbody>
+    {% for k, v in object.changes.items %}<tr><td><strong>{{ k }}</strong></td><td>{{ v.0|default_if_none:"—" }}</td><td>{{ v.1|default_if_none:"—" }}</td></tr>{% empty %}<tr><td colspan="3" class="empty">—</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% endblock %}

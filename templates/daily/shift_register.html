@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Registro giornaliero{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Registro giornaliero – {{ shift_label }} {{ day|date:"d/m/Y" }}</h1></div>
+{% include "partials/shift_nav.html" %}
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Nuova registrazione</h2>
+    {% if closed %}<p class="muted">Turno chiuso: non è possibile inserire dati.</p>
+    {% elif perms.daily.add_dailyrecord %}
+    <form method="post" novalidate>{% csrf_token %}{% include "partials/form_fields.html" %}
+      <div class="form-actions"><button class="btn btn-primary">Salva</button></div></form>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h2>Note di diario del turno</h2>
+    <ul class="list-plain">
+      {% for d in diary %}<li>{% if d.is_relevant %}<span class="pill pill-warn">rilevante</span> {% endif %}<a href="{% url 'daily:guest_diary' d.guest_id %}"><strong>{{ d.guest }}</strong></a> <small class="muted">{{ d.occurred_at|time:"H:i" }} · {{ d.created_by }}</small><br>{{ d.text|linebreaksbr }}</li>
+      {% empty %}<li class="muted">Nessuna nota.</li>{% endfor %}
+    </ul>
+  </div>
+</div>
+<div class="card table-wrap">
+  <h2>Registrazioni del turno</h2>
+  <table>
+    <thead><tr><th>Ora</th><th>Ospite</th><th>Categoria</th><th>Dettaglio</th><th>Operatore</th></tr></thead>
+    <tbody>
+    {% for r in records %}
+      <tr><td>{{ r.occurred_at|time:"H:i" }}</td><td><a href="{% url 'daily:guest_daily' r.guest_id %}">{{ r.guest }}</a></td><td>{{ r.get_category_display }}</td>
+        <td>{% if r.meal %}<strong>{{ r.get_meal_display }}</strong> {{ r.get_intake_display }} {% endif %}{{ r.description }}</td><td>{{ r.created_by }}</td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">Nessuna registrazione nel turno.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

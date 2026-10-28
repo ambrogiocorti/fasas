@@ -1,0 +1,103 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}{{ guest }}{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+
+{% for tag in tag_alerts %}
+  <div class="alert alert-info"><strong>{{ tag.name }}:</strong> {{ tag.alert_message }}</div>
+{% endfor %}
+{% for a in protocols %}
+  <div class="alert alert-danger"><strong>⚑ {{ a.protocol.name }}</strong> – {{ a.trigger_summary }} · <a href="{{ a.get_absolute_url }}">gestisci</a></div>
+{% endfor %}
+{% for r in active_restraints %}
+  <div class="alert alert-warning"><strong>Contenzione in corso:</strong> {{ r.get_restraint_type_display }} dal {{ r.occurred_at|date:"d/m H:i" }} ({{ r.duration_display }}) · <a href="{% url 'clinical:restraint_update' r.pk %}">aggiorna</a></div>
+{% endfor %}
+
+<div class="grid grid-4">
+  <div class="card stat"><span class="label">Terapie attive</span><span class="value">{{ therapies|length }}</span><span class="muted">+ {{ sos_therapies|length }} al bisogno</span></div>
+  <div class="card stat"><span class="label">Giorni dall'ultima evacuazione</span>
+    <span class="value" style="color: {% if days_since_evacuation >= 3 %}var(--danger){% elif days_since_evacuation == 2 %}var(--warn){% else %}inherit{% endif %}">{{ days_since_evacuation }}</span>
+    <span class="muted">{% if last_evacuation %}ultima {{ last_evacuation.occurred_at|date:"d/m H:i" }}{% else %}nessuna registrata{% endif %}</span></div>
+  <div class="card stat"><span class="label">SOS ultimi 7 giorni</span><span class="value">{{ sos_week }}</span></div>
+  <div class="card stat"><span class="label">PAI</span>
+    {% if pai %}<span class="value"><a href="{{ pai.get_absolute_url }}">v{{ pai.version }}</a></span><span class="muted">revisione entro {{ pai.review_due|date:"d/m/Y" }}</span>
+    {% else %}<span class="value">—</span><span class="muted">nessun PAI in vigore</span>{% endif %}</div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Terapia attiva</h2><div class="actions"><a class="btn btn-sm" href="{% url 'clinical:guest_therapies' guest.pk %}">Tutte</a></div></div>
+    {% if therapies or sos_therapies %}
+    <table>
+      <tbody>
+      {% for t in therapies %}
+        <tr><td><a href="{{ t.get_absolute_url }}"><strong>{{ t.drug }}</strong></a><br><small>{{ t.get_route_display }}{% if t.instructions %} · {{ t.instructions }}{% endif %}</small></td>
+            <td class="nowrap">{{ t.dose_display }}</td><td class="mono">{{ t.schedule_times|join:" · " }}</td></tr>
+      {% endfor %}
+      {% for t in sos_therapies %}
+        <tr><td><a href="{{ t.get_absolute_url }}"><strong>{{ t.drug }}</strong></a> <span class="pill pill-info">SOS</span><br><small>{{ t.sos_indication }}</small></td>
+            <td class="nowrap">{{ t.dose_display }}</td><td>{% if t.sos_max_daily %}max {{ t.sos_max_daily }}/24h{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="empty">Nessuna terapia attiva.</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Allergie e diagnosi</h2><div class="actions"><a class="btn btn-sm" href="{% url 'guests:health' guest.pk %}">Dettaglio</a></div></div>
+    {% for a in allergies %}
+      <div><span class="pill {% if a.severity == 'severe' %}pill-danger{% else %}pill-warn{% endif %}">{{ a.get_kind_display }}</span> <strong>{{ a.substance }}</strong> <small>{{ a.reaction }}</small></div>
+    {% empty %}<p class="muted">Nessuna allergia nota.</p>{% endfor %}
+    <hr>
+    <ul class="list-plain">
+      {% for d in diagnoses %}<li>{% if d.is_primary %}<strong>{% endif %}{{ d.description }}{% if d.is_primary %}</strong>{% endif %} {% if d.icd_code %}<small class="mono">{{ d.icd_code }}</small>{% endif %}</li>
+      {% empty %}<li class="muted">Nessuna diagnosi registrata.</li>{% endfor %}
+    </ul>
+    {% if guest.diet or guest.diet_texture %}<p><strong>Dieta:</strong> {{ guest.diet }} {% if guest.diet_texture %}· consistenza {{ guest.diet_texture }}{% endif %}</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Ultimi parametri</h2><div class="actions"><a class="btn btn-sm" href="{% url 'clinical:guest_parameters' guest.pk %}">Grafici</a></div></div>
+    {% if latest_parameters %}
+    <div class="grid grid-3">
+      {% for r in latest_parameters %}
+        <div class="stat"><span class="label">{{ r.parameter_type.name }}</span>
+          <span class="value" style="font-size:1.25rem; {% if r.out_of_range %}color:var(--danger){% endif %}">{{ r.display_value }}</span>
+          <small class="muted">{{ r.occurred_at|date:"d/m H:i" }}</small></div>
+      {% endfor %}
+    </div>
+    {% else %}<p class="empty">Nessun parametro registrato.</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Eventi recenti (14 giorni)</h2><div class="actions"><a class="btn btn-sm" href="{% url 'clinical:guest_events' guest.pk %}">Tutti</a></div></div>
+    <ul class="list-plain">
+      {% for e in events %}
+        <li><a href="{% url 'clinical:event_detail' e.pk %}"><strong>{{ e.get_event_type_display }}</strong></a>
+          <span class="pill {% if e.severity == 'critical' or e.severity == 'high' %}pill-danger{% else %}pill-warn{% endif %}">{{ e.get_severity_display }}</span>
+          <small class="muted">{{ e.occurred_at|date:"d/m H:i" }}</small><br><small>{{ e.description|truncatechars:140 }}</small></li>
+      {% empty %}<li class="muted">Nessun evento.</li>{% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Diario (7 giorni)</h2><div class="actions"><a class="btn btn-sm" href="{% url 'daily:guest_diary' guest.pk %}">Diario</a></div></div>
+    <ul class="list-plain">
+      {% for d in diary %}
+        <li>{% if d.is_relevant %}<span class="pill pill-warn">rilevante</span> {% endif %}<small class="muted">{{ d.occurred_at|date:"d/m H:i" }} · {{ d.created_by }}</small><br>{{ d.text|truncatechars:220 }}</li>
+      {% empty %}<li class="muted">Nessuna nota.</li>{% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Prossime visite</h2><div class="actions">{% if perms.appointments.add_appointment and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'appointments:create' %}?guest={{ guest.pk }}">+ Visita</a>{% endif %}</div></div>
+    <ul class="list-plain">
+      {% for a in appointments %}<li><a href="{{ a.get_absolute_url }}">{{ a.title }}</a> <small class="muted">{{ a.scheduled_at|date:"D d/m H:i" }} · {{ a.location }}</small></li>
+      {% empty %}<li class="muted">Nessuna visita programmata.</li>{% endfor %}
+    </ul>
+    {% if emergency_contacts %}<hr><strong>Contatti in emergenza</strong>
+      <ul class="list-plain">{% for c in emergency_contacts %}<li>{{ c.name }} ({{ c.get_kind_display }}{% if c.relationship %}, {{ c.relationship }}{% endif %}) – <a href="tel:{{ c.phone }}">{{ c.phone }}</a></li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

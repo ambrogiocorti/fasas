@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Report{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Report ed esportazioni</h1><div class="actions">{% if perms.reports.view_reportschedule %}<a class="btn" href="{% url 'reports:schedule_list' %}">Report programmati</a>{% endif %}</div></div>
+{% if perms.reports.add_generatedreport %}
+<div class="card">
+  <h2>Genera report</h2>
+  <form method="post" novalidate>{% csrf_token %}{% include "partials/form_fields.html" with compact=True %}
+    <div class="form-actions"><button class="btn btn-primary">Genera</button></div></form>
+</div>
+{% endif %}
+<form class="filters" method="get">
+  <select name="type"><option value="">Tutti i report</option>{% for c, l in types %}<option value="{{ c }}" {% if request.GET.type == c %}selected{% endif %}>{{ l }}</option>{% endfor %}<option value="guest_folder" {% if request.GET.type == 'guest_folder' %}selected{% endif %}>Cartelle complete</option></select>
+  <button class="btn">Filtra</button>
+</form>
+<div class="card table-wrap"><table>
+  <thead><tr><th>Report</th><th>Periodo</th><th>Formato</th><th>Generato</th><th>Conservato fino al</th><th></th></tr></thead>
+  <tbody>{% for r in reports %}
+    <tr><td><strong>{{ r.title }}</strong>{% if r.schedule %}<br><small class="muted">programmato: {{ r.schedule }}</small>{% endif %}</td>
+      <td>{{ r.period_start|date:"d/m/Y"|default:"" }}{% if r.period_end %} – {{ r.period_end|date:"d/m/Y" }}{% endif %}</td>
+      <td><span class="pill">{{ r.get_format_display }}</span></td>
+      <td>{{ r.generated_at|date:"d/m/Y H:i" }}<br><small>{{ r.generated_by|default:"automatico" }}</small></td>
+      <td>{{ r.expires_on|date:"d/m/Y" }}</td>
+      <td class="num"><a class="btn btn-sm" href="{% url 'reports:download' r.pk %}">Scarica</a></td></tr>
+  {% empty %}<tr><td colspan="6" class="empty">Nessun report generato.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

@@ -1,0 +1,125 @@
+# FASAS Digitale
+
+Sistema web per la gestione del **FASAS** (Fascicolo Socio Assistenziale Sanitario) di una comunità
+per persone con disabilità. Sostituisce il fascicolo cartaceo con una cartella digitale per ogni ospite,
+tracciata in ogni modifica, cifrata a riposo e organizzata attorno al lavoro reale dei turni.
+
+> **Stato:** prima versione completa e funzionante, con 67 test automatici che passano su SQLite e PostgreSQL.
+> Prima dell'uso con dati reali servono le verifiche descritte in [Prima della messa in produzione](#prima-della-messa-in-produzione).
+
+## Cosa fa
+
+| Area | Funzioni |
+|---|---|
+| **Cartella ospite** | anagrafica, tutela legale e contatti, diagnosi, allergie/intolleranze, dieta, disabilità, tag clinici con avvisi; cruscotto clinico; storico completo (timeline) |
+| **Terapie** | prescrizioni con orari e vie di somministrazione, giro farmaci per turno, farmaci SOS con motivo, limiti e validazione, controllo automatico di duplicati, interazioni e allergie |
+| **Magazzino farmaci** | lotti con scadenza, farmaci personali dell'ospite o scorta comune, scarico automatico FEFO a ogni somministrazione, soglie minime, avvisi di esaurimento e scadenza |
+| **Parametri** | temperatura, pressione, glicemia, peso e altri configurabili, valori fuori range evidenziati, grafici nel tempo |
+| **Eventi e contenzioni** | cadute, crisi, agitazione, interventi, incidenti; contenzioni con autorizzazione medica, durata e responsabile; **pulsante «Evento critico»** sempre visibile |
+| **Turno** | registro giornaliero (pasti, igiene, comportamento, attività), evacuazioni in modalità A (SI/NO giornaliero) o B (solo quando avviene) con conteggio dei giorni, diario assistenziale, checklist per turno (✔ completato / ⚠ mancante), registro turni operatori |
+| **Protocolli automatici** | evacuazione, febbre, glicemia, crisi epilettica, agitazione, farmaci SOS: notifica, avviso in cruscotto e lista delle azioni richieste da spuntare |
+| **PAI** | aree sanitaria, autonomia, comportamentale, sociale; obiettivi, interventi, responsabili, verifiche; versioni e revisioni; PDF archiviato e firmabile |
+| **Visite** | appuntamenti con accompagnatore, esito e referto; promemoria «visita domani» e «visita oggi» |
+| **Documenti** | carta d'identità, tessera sanitaria, certificati, consensi, relazioni, PAI: cifrati, versionati, con limite di dimensione e registro degli accessi |
+| **Firma digitale** | firma PAdES dei PDF con il certificato del medico (PKCS#12) e punto di integrazione per la firma remota qualificata (QTSP); verifica delle firme |
+| **Report** | registro giornaliero, farmaci, eventi, parametri, protocolli in PDF ed Excel, su richiesta o programmati (giornalieri, settimanali, mensili), conservati 1–5 anni |
+| **Esportazione cartella** | PDF unico con tutta la cartella e gli allegati, per il trasferimento dell'ospite |
+| **Sicurezza e tracciabilità** | ruoli e permessi granulari per utente, audit log non cancellabile con catena di hash, blocco delle modifiche (24 h / motivazione / solo coordinatore), chiusura del turno, cartelle archiviate in sola lettura, log accessi con IP e dispositivo, blocco dopo tentativi falliti, disconnessione per inattività, restrizione per rete |
+| **Continuità** | backup giornaliero cifrato AES-256-GCM con verifica di integrità e ripristino |
+| **Altro** | ricerca globale con filtri, notifiche configurabili per ruolo, tema scuro (automatico nel turno di notte), interfaccia utilizzabile da tablet e smartphone, API REST per una futura app mobile |
+
+La corrispondenza puntuale tra i 30 punti della specifica e il codice è in [docs/ARCHITETTURA.md](docs/ARCHITETTURA.md).
+
+## Avvio rapido (sviluppo)
+
+Requisiti: Python 3.12+.
+
+```bash
+python -m venv .venv
+```
+
+```bash
+source .venv/bin/activate
+```
+
+```bash
+pip install -r requirements.txt
+```
+
+```bash
+echo "DJANGO_DEBUG=1" > .env
+```
+
+```bash
+python manage.py migrate
+```
+
+```bash
+python manage.py fasas_demo
+```
+
+```bash
+python manage.py runserver
+```
+
+Aprire <http://127.0.0.1:8000> e accedere con uno degli utenti dimostrativi (`admin`, `coordinatore`,
+`operatore`, `medico`, password `Demo-Fasas-2026!`). I dati demo sono di fantasia.
+
+Senza `DATABASE_URL` viene usato SQLite; per PostgreSQL/Supabase vedere [docs/DEPLOY.md](docs/DEPLOY.md).
+
+## Comandi utili
+
+| Comando | A cosa serve |
+|---|---|
+| `python manage.py fasas_setup` | ruoli, permessi e configurazioni predefinite (eseguito anche in automatico dopo `migrate`) |
+| `python manage.py fasas_genkey` | genera `DJANGO_SECRET_KEY`, `FASAS_ENCRYPTION_KEYS`, `FASAS_BACKUP_KEY` |
+| `python manage.py fasas_jobs --list` | elenca i job periodici; `fasas_jobs all` li esegue tutti (escluso il backup) |
+| `python manage.py backup_create` / `backup_verify` / `backup_restore FILE --confirm` | backup cifrato, verifica, ripristino |
+| `python manage.py audit_verify` | verifica l'integrità della catena di hash dell'audit log |
+| `python manage.py supabase_harden` | RLS e revoca dei privilegi ai ruoli API di Supabase (eseguito anche dopo `migrate`) |
+| `python manage.py test fasas.tests` | test automatici |
+
+## Struttura
+
+```
+config/            impostazioni, URL, Celery
+fasas/core         comunità, configurazione, turni, blocco modifiche, cifratura, middleware, job
+fasas/accounts     utenti, ruoli, permessi granulari, log accessi
+fasas/audit        audit log append-only con catena di hash
+fasas/guests       ospiti, tag, contatti, diagnosi, allergie, archiviazione, timeline
+fasas/clinical     terapie, somministrazioni, SOS, parametri, eventi, contenzioni, emergenza
+fasas/pharmacy     catalogo farmaci, interazioni, lotti, movimenti
+fasas/daily        registro, evacuazioni, diario, checklist, turni, chiusura turni
+fasas/protocols    regole e motore dei protocolli automatici
+fasas/appointments visite e promemoria
+fasas/pai          Piano Assistenziale Individuale versionato
+fasas/documents    documenti cifrati e versionati
+fasas/signatures   firma digitale PAdES e verifica
+fasas/notifications notifiche e impostazioni per ruolo
+fasas/reports      report PDF/Excel, programmazione, esportazione cartella
+fasas/backups      backup cifrati, verifica, ripristino
+fasas/search       ricerca globale
+fasas/api          API REST (DRF) per l'app mobile futura
+templates/, static/ interfaccia (HTML, CSS, JavaScript senza dipendenze esterne)
+```
+
+## Prima della messa in produzione
+
+Il software è completo, ma un sistema che tratta dati sanitari richiede passaggi che non dipendono dal codice:
+
+1. **Validazione clinica dei protocolli**: soglie e azioni predefinite sono esempi; vanno approvate dal medico
+   o dal direttore sanitario (campo «validato da» di ogni protocollo). Lo stesso vale per la tabella delle interazioni.
+2. **Firma digitale qualificata**: per il pieno valore legale serve un certificato qualificato di un QTSP
+   (smart card esportabile in PKCS#12 o firma remota). L'integrazione con le API del provider scelto va completata
+   in `fasas/signatures/providers.py` (`RemoteQTSPProvider`).
+3. **GDPR**: registro dei trattamenti, valutazione d'impatto (DPIA, obbligatoria per dati sanitari su larga scala
+   o di soggetti vulnerabili), nomina del responsabile del trattamento per hosting e Supabase, informative.
+4. **Conservazione a norma**: i report e l'esportazione PDF non sostituiscono la conservazione digitale a norma
+   (Linee guida AgID) se richiesta dalla regione o dall'ente: valutare l'invio a un conservatore accreditato.
+5. **Requisiti regionali**: struttura e contenuti minimi del FASAS sono definiti dalle normative regionali
+   (es. DGR della Lombardia per le strutture sociosanitarie): verificarli con l'ATS/ASL di riferimento.
+6. **Chiavi**: conservare `FASAS_ENCRYPTION_KEYS` e `FASAS_BACKUP_KEY` anche fuori dal server (es. cassaforte
+   o password manager della direzione). Senza le chiavi documenti e backup non sono recuperabili.
+7. **Prova di ripristino**: eseguire periodicamente un ripristino completo su un database di prova.
+
+Dettagli in [docs/SICUREZZA.md](docs/SICUREZZA.md) e [docs/DEPLOY.md](docs/DEPLOY.md).

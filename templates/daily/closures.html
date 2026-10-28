@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Chiusura turni{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Blocco giornata – chiusura turni</h1></div>
+<p class="muted">Quando un turno viene chiuso i suoi dati non sono più modificabili.
+{% if config.auto_close_shifts %}I turni si chiudono automaticamente {{ config.auto_close_grace_minutes }} minuti dopo la fine.{% else %}La chiusura automatica è disattivata.{% endif %}</p>
+<div class="card table-wrap">
+  <table>
+    <thead><tr><th>Giorno</th><th>Mattina</th><th>Pomeriggio</th><th>Notte</th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+      <tr><td class="nowrap"><strong>{{ row.day|date:"D d/m/Y" }}</strong></td>
+      {% for s in row.shifts %}
+        <td>
+          {% if s.closure and s.closure.is_closed %}
+            <a href="{% url 'daily:closure_detail' s.closure.pk %}"><span class="pill pill-ok">🔒 chiuso</span></a>
+            <small class="muted">{{ s.closure.closed_at|date:"d/m H:i" }} {% if s.closure.automatic %}auto{% else %}{{ s.closure.closed_by }}{% endif %}</small>
+            {% if s.closure.summary.missing %}<br><span class="pill pill-warn">{{ s.closure.summary.missing|length }} mancanti</span>{% endif %}
+          {% elif s.future %}<span class="muted">—</span>
+          {% else %}
+            <span class="pill {% if s.is_current %}pill-info{% else %}pill-warn{% endif %}">{% if s.is_current %}in corso{% elif s.closure %}riaperto{% else %}aperto{% endif %}</span>
+            {% if perms.daily.close_shift %}<a class="btn btn-sm" href="{% url 'daily:close_shift' %}?date={{ row.day|date:'Y-m-d' }}&shift={{ s.shift }}">Chiudi</a>{% endif %}
+          {% endif %}
+        </td>
+      {% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

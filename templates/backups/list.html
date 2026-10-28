@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Backup{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Backup</h1>
+  <div class="actions"><form method="post" action="{% url 'backups:run' %}" class="inline-form">{% csrf_token %}<button class="btn btn-primary" data-confirm="Avviare ora un backup completo cifrato?">Esegui backup ora</button></form></div></div>
+<p class="muted">Backup automatico giornaliero cifrato (AES-256-GCM) di database e file, con verifica di integrità. I file scaricati restano cifrati: per aprirli serve la chiave di backup custodita fuori dal server. Il ripristino si esegue da riga di comando (<span class="mono">manage.py backup_restore</span>).</p>
+<div class="card table-wrap"><table>
+  <thead><tr><th>Data</th><th>Tipo</th><th>Stato</th><th>File</th><th class="num">Dimensione</th><th>Verifica</th><th></th></tr></thead>
+  <tbody>{% for b in backups %}
+    <tr><td class="nowrap">{{ b.created_at|date:"d/m/Y H:i" }}</td><td>{{ b.get_kind_display }}{% if b.created_by %}<br><small>{{ b.created_by }}</small>{% endif %}</td>
+      <td><span class="pill {% if b.status == 'ok' %}pill-ok{% elif b.status == 'failed' %}pill-danger{% endif %}">{{ b.get_status_display }}</span>{% if b.deleted_at %}<br><small class="muted">eliminato il {{ b.deleted_at|date:"d/m/Y" }}</small>{% endif %}{% if b.error %}<br><small style="color:var(--danger)">{{ b.error|truncatechars:160 }}</small>{% endif %}</td>
+      <td class="mono">{{ b.filename }}<br><small class="muted" title="{{ b.sha256 }}">{{ b.sha256|truncatechars:20 }}</small></td>
+      <td class="num">{{ b.size|filesizeformat }}</td>
+      <td>{% if b.verify_ok %}<span class="pill pill-ok">integro</span>{% elif b.verify_ok is False %}<span class="pill pill-danger">KO</span>{% else %}—{% endif %}<br><small>{{ b.verified_at|date:"d/m H:i" }}</small></td>
+      <td class="num nowrap">{% if b.status == 'ok' and not b.deleted_at %}
+        <form method="post" action="{% url 'backups:verify' b.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm">Verifica</button></form>
+        <a class="btn btn-sm" href="{% url 'backups:download' b.pk %}">Scarica</a>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="7" class="empty">Nessun backup eseguito.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

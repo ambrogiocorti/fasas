@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Audit log{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Audit log</h1>
+  <div class="actions"><a class="btn" href="{% url 'audit:verify' %}">Verifica integrità catena</a></div></div>
+<p class="muted">Registro non cancellabile di tutte le modifiche: utente, data e ora, valore precedente e nuovo. Ogni voce è concatenata alla precedente con un'impronta SHA-256.</p>
+<form class="filters" method="get">
+  <input type="text" name="user" value="{{ request.GET.user|default:'' }}" placeholder="Utente">
+  <select name="action"><option value="">Tutte le azioni</option>{% for c, l in actions %}<option value="{{ c }}" {% if request.GET.action == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <select name="model"><option value="">Tutti gli oggetti</option>{% for ct in models %}<option value="{{ ct.pk }}" {% if request.GET.model == ct.pk|stringformat:"s" %}selected{% endif %}>{{ ct.name|capfirst }}</option>{% endfor %}</select>
+  <input type="text" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Testo oggetto">
+  <input type="date" name="date_from" value="{{ request.GET.date_from|default:'' }}"><input type="date" name="date_to" value="{{ request.GET.date_to|default:'' }}">
+  <button class="btn">Filtra</button>
+</form>
+<div class="card table-wrap"><table>
+  <thead><tr><th>#</th><th>Data/ora</th><th>Utente</th><th>Azione</th><th>Oggetto</th><th>Modifiche</th><th>IP</th></tr></thead>
+  <tbody>{% for e in object_list %}
+    <tr><td><a href="{% url 'audit:detail' e.pk %}">{{ e.pk }}</a></td><td class="nowrap">{{ e.timestamp|date:"d/m/Y H:i:s" }}</td><td>{{ e.username }}</td>
+      <td><span class="pill">{{ e.get_action_display }}</span></td>
+      <td>{{ e.content_type.name|default:""|capfirst }}<br><small>{{ e.object_repr }}</small></td>
+      <td><small>{% for k, v in e.changes.items|slice:":4" %}<div><strong>{{ k }}</strong>: {{ v.0|default_if_none:"—"|truncatechars:40 }} → {{ v.1|default_if_none:"—"|truncatechars:40 }}</div>{% endfor %}{% if e.changes|length > 4 %}…{% endif %}</small>{% if e.reason %}<div><em>Motivo: {{ e.reason }}</em></div>{% endif %}</td>
+      <td class="mono">{{ e.ip_address }}</td></tr>
+  {% empty %}<tr><td colspan="7" class="empty">Nessuna voce.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% include "partials/pagination.html" %}
+{% endblock %}

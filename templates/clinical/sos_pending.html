@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}SOS da validare{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Farmaci SOS da validare</h1></div>
+{% for a in pending %}
+  <div class="card">
+    <div class="card-head"><h2><a href="{{ a.guest.get_absolute_url }}">{{ a.guest }}</a> – {{ a.therapy.drug }} {{ a.dose_given }}</h2>
+      <span class="muted">{{ a.occurred_at|date:"d/m/Y H:i" }} · {{ a.created_by }}</span></div>
+    <p><strong>Motivo:</strong> {{ a.sos_reason }}</p>
+    <p><strong>Indicazione prescritta:</strong> {{ a.therapy.sos_indication|default:"—" }}</p>
+    {% if a.notes %}<p><strong>Note:</strong> {{ a.notes }}</p>{% endif %}
+    <form method="post" action="{% url 'clinical:sos_validate' a.pk %}">
+      {% csrf_token %}
+      <div class="form-grid">
+        <div class="field"><label>Esito</label><select name="approve"><option value="1">Valida</option><option value="0">Non validare</option></select></div>
+        <div class="field"><label>Note</label><input type="text" name="notes"></div>
+      </div>
+      <div class="form-actions"><button class="btn btn-primary">Registra validazione</button></div>
+    </form>
+  </div>
+{% empty %}
+  <div class="card empty">Nessuna somministrazione SOS in attesa di validazione.</div>
+{% endfor %}
+{% endblock %}

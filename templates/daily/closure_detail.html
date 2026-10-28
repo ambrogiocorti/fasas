@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ closure }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 860px">
+  <h1>{{ closure }}</h1>
+  <table><tbody>
+    <tr><th>Stato</th><td>{% if closure.is_closed %}<span class="pill pill-ok">🔒 chiuso</span>{% else %}<span class="pill pill-warn">riaperto il {{ closure.reopened_at|date:"d/m/Y H:i" }} da {{ closure.reopened_by }}: {{ closure.reopen_reason }}</span>{% endif %}</td></tr>
+    <tr><th>Chiuso il</th><td>{{ closure.closed_at|date:"d/m/Y H:i" }} {% if closure.automatic %}(automatico){% else %}da {{ closure.closed_by }}{% endif %}</td></tr>
+    <tr><th>Checklist</th><td>{{ closure.summary.checklist_done }}/{{ closure.summary.checklist_total }}</td></tr>
+    <tr><th>Consegne</th><td>{{ closure.handover_notes|linebreaksbr|default:"—" }}</td></tr>
+  </tbody></table>
+  {% if closure.summary.missing %}<h3>Attività mancanti alla chiusura</h3><ul>{% for m in closure.summary.missing %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% if can_reopen %}
+    <hr><h3>Riapertura straordinaria</h3>
+    <p class="muted">Consentita solo all'amministratore, con motivazione registrata nell'audit log.</p>
+    <form method="post">{% csrf_token %}{% include "partials/form_fields.html" %}<div class="form-actions"><button class="btn btn-danger" data-confirm="Riaprire il turno? L'operazione è tracciata.">Riapri turno</button></div></form>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Protocolli{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Protocolli automatici</h1>
+  <div class="actions"><a class="btn" href="{% url 'protocols:activations' %}">Attivazioni</a>{% if perms.protocols.add_protocol %}<a class="btn btn-primary" href="{% url 'protocols:create' %}">+ Nuovo protocollo</a>{% endif %}</div></div>
+<div class="alert alert-warning">I protocolli predefiniti sono esempi: le soglie e le azioni devono essere validate dal medico o dal direttore sanitario della struttura prima dell'uso.</div>
+<div class="grid grid-2">
+{% for p in object_list %}
+  <div class="card">
+    <div class="card-head"><h2>{{ p.name }}</h2><span class="pill {% if p.active %}pill-ok{% endif %}">{% if p.active %}attivo{% else %}disattivato{% endif %}</span>
+      <div class="actions">{% if perms.protocols.change_protocol %}<a class="btn btn-sm" href="{% url 'protocols:update' p.pk %}">Modifica</a>{% endif %}</div></div>
+    <p><span class="pill pill-info">{{ p.get_kind_display }}</span> <span class="pill">{{ p.get_severity_display }}</span> <span class="mono muted">{{ p.params }}</span></p>
+    <ol>{% for a in p.action_list %}<li>{{ a }}</li>{% endfor %}</ol>
+    <small class="muted">{% if p.applies_to_all %}Tutti gli ospiti{% else %}Ospiti selezionati / con tag{% endif %}{% if p.validated_by %} · validato da {{ p.validated_by }}{% else %} · <strong>non ancora validato</strong>{% endif %}</small>
+  </div>
+{% empty %}<div class="card empty">Nessun protocollo.</div>{% endfor %}
+</div>
+{% endblock %}

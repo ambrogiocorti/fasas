@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ guest }} – terapie{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="page-head">
+  <h2>Terapie</h2>
+  <div class="actions">
+    <a class="btn btn-sm" href="{% url 'clinical:guest_administrations' guest.pk %}">Storico somministrazioni</a>
+    {% if perms.clinical.add_therapy and not guest.is_archived %}
+      <a class="btn btn-sm" href="{% url 'clinical:therapy_create' guest.pk %}?sos=1">+ Farmaco SOS</a>
+      <a class="btn btn-sm btn-primary" href="{% url 'clinical:therapy_create' guest.pk %}">+ Nuova terapia</a>
+    {% endif %}
+  </div>
+</div>
+<div class="card table-wrap">
+  <h3>Terapia programmata</h3>
+  <table>
+    <thead><tr><th>Farmaco</th><th>Dose</th><th>Via</th><th>Orari</th><th class="hide-mobile">Periodo</th><th class="hide-mobile">Prescrittore</th></tr></thead>
+    <tbody>
+    {% for t in scheduled %}
+      <tr><td><a href="{{ t.get_absolute_url }}"><strong>{{ t.drug }}</strong></a><br><small class="muted">{{ t.drug.active_ingredient }}{% if t.instructions %} · {{ t.instructions }}{% endif %}</small></td>
+          <td class="nowrap">{{ t.dose_display }}</td><td>{{ t.get_route_display }}</td>
+          <td class="mono">{{ t.schedule_times|join:" · " }}{% if t.every_n_days > 1 %}<br><small>ogni {{ t.every_n_days }} giorni</small>{% endif %}</td>
+          <td class="hide-mobile">dal {{ t.start_date|date:"d/m/Y" }}{% if t.end_date %}<br>al {{ t.end_date|date:"d/m/Y" }}{% endif %}</td>
+          <td class="hide-mobile">{{ t.prescriber_display }}</td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">Nessuna terapia programmata.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="card table-wrap">
+  <h3>Farmaci al bisogno (SOS)</h3>
+  <table>
+    <thead><tr><th>Farmaco</th><th>Dose</th><th>Indicazione</th><th>Limiti</th><th>Validazione</th><th></th></tr></thead>
+    <tbody>
+    {% for t in sos %}
+      <tr><td><a href="{{ t.get_absolute_url }}"><strong>{{ t.drug }}</strong></a></td><td>{{ t.dose_display }}</td><td>{{ t.sos_indication }}</td>
+          <td>{% if t.sos_max_daily %}max {{ t.sos_max_daily }}/24h{% endif %}{% if t.sos_min_interval_hours %}<br>ogni ≥ {{ t.sos_min_interval_hours }} h{% endif %}</td>
+          <td>{% if t.sos_requires_validation %}richiesta{% else %}—{% endif %}</td>
+          <td class="num">{% if perms.clinical.add_therapyadministration and not guest.is_archived %}<a class="btn btn-sm btn-primary" href="{% url 'clinical:sos_administer' guest.pk %}?therapy={{ t.pk }}">Somministra</a>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">Nessun farmaco SOS.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if inactive %}
+<div class="card table-wrap">
+  <h3>Terapie sospese e terminate</h3>
+  <table><tbody>
+    {% for t in inactive %}
+      <tr><td><a href="{{ t.get_absolute_url }}">{{ t }}</a></td><td><span class="pill">{{ t.get_status_display }}</span></td><td>{{ t.status_reason }}</td><td>{{ t.start_date|date:"d/m/Y" }} – {{ t.end_date|date:"d/m/Y"|default:"…" }}</td></tr>
+    {% endfor %}
+  </tbody></table>
+</div>
+{% endif %}
+{% endblock %}

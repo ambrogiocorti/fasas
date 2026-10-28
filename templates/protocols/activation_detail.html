@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ activation }}{% endblock %}
+{% block content %}
+{% include "guests/_header.html" with compact=True %}
+<div class="card" style="max-width: 960px">
+  <div class="card-head"><h1>⚑ {{ activation.protocol.name }}</h1><span class="pill {% if activation.is_open %}pill-danger{% else %}pill-ok{% endif %}">{{ activation.get_status_display }}</span></div>
+  <p><strong>Attivato il {{ activation.triggered_at|date:"d/m/Y H:i" }}:</strong> {{ activation.trigger_summary }}</p>
+  {% if activation.trigger_data.updates %}<details><summary>Ulteriori rilevazioni ({{ activation.trigger_data.updates|length }})</summary><ul>{% for u in activation.trigger_data.updates %}<li>{{ u.at|slice:":16" }} – {{ u.summary }}</li>{% endfor %}</ul></details>{% endif %}
+  <h2 style="margin-top:1rem">Azioni richieste</h2>
+  <ul class="list-plain">
+  {% for a in actions %}
+    <li style="display:flex; gap:.6rem; align-items:flex-start; flex-wrap:wrap">
+      {% if a.log %}<span class="state state-ok">✔</span>{% else %}<span class="state state-warn">⚠</span>{% endif %}
+      <div style="flex:1; min-width: 200px"><strong>{{ a.label }}</strong>{% if a.log %}<br><small class="muted">{{ a.log.done_at|date:"d/m H:i" }} – {{ a.log.done_by }}{% if a.log.notes %}: {{ a.log.notes }}{% endif %}</small>{% endif %}</div>
+      {% if not a.log and activation.is_open and can_handle %}
+        <form method="post" action="{% url 'protocols:action_done' activation.pk %}" class="inline-form" style="display:flex; gap:.3rem">{% csrf_token %}
+          <input type="hidden" name="action_label" value="{{ a.label }}"><input type="text" name="notes" placeholder="Esito / note" style="width:12rem">
+          <button class="btn btn-sm btn-ok">Eseguita</button></form>
+      {% endif %}
+    </li>
+  {% endfor %}
+  </ul>
+  {% if activation.is_open and can_handle %}
+    <hr><h2>Chiudi protocollo</h2>
+    <form method="post" action="{% url 'protocols:activation_resolve' activation.pk %}">{% csrf_token %}{% include "partials/form_fields.html" with form=resolve_form %}
+      <div class="form-actions"><button class="btn btn-primary">Chiudi</button></div></form>
+  {% elif not activation.is_open %}
+    <hr><p><strong>Chiuso il {{ activation.resolved_at|date:"d/m/Y H:i" }}</strong>{% if activation.resolved_by %} da {{ activation.resolved_by }}{% endif %}{% if activation.auto_resolved %} (automaticamente){% endif %}: {{ activation.resolution_notes }}</p>
+  {% endif %}
+</div>
+{% endblock %}

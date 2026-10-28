@@ -1,0 +1,22 @@
+{% load static %}<!doctype html>
+<html lang="it" data-theme="light">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">
+<title>Accesso · FASAS Digitale</title><link rel="stylesheet" href="{% static 'css/fasas.css' %}">
+<script>try{if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.dataset.theme='dark'}catch(e){}</script></head>
+<body>
+<div class="auth">
+  <div class="card">
+    <div class="brand" style="padding-left:0"><span class="brand-mark">FAS</span><span>FASAS Digitale<small class="muted">Fascicolo Socio Assistenziale Sanitario</small></span></div>
+    {% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="alert alert-error">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
+      <div class="field"><label for="id_username">Nome utente</label>{{ form.username }}</div>
+      <div class="field" style="margin-top:.8rem"><label for="id_password">Password</label>{{ form.password }}</div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <div class="form-actions"><button class="btn btn-primary btn-lg" style="width:100%">Accedi</button></div>
+    </form>
+    <p class="muted" style="font-size:.8rem; margin-top:1rem">Accesso riservato al personale autorizzato. Ogni accesso e ogni operazione sono registrati.</p>
+  </div>
+</div>
+</body></html>

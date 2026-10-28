@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+{% include "guests/_header.html" with compact=True %}
+<div class="card" style="max-width: 1000px">
+  <h1>{{ page_title }}</h1>
+  {% if form.warnings %}
+    <div class="alert alert-danger">
+      <strong>Controllo automatico duplicati, interazioni e allergie</strong>
+      <ul>{% for w in form.warnings %}<li>{{ w.message }}</li>{% endfor %}</ul>
+      Spuntare la conferma in fondo al modulo per procedere: la conferma sarà registrata e i coordinatori avvisati.
+    </div>
+  {% endif %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-error">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
+    <h3>Farmaco e dose</h3>
+    <div class="form-grid compact">
+      {% include "partials/field.html" with field=form.drug %}
+      {% include "partials/field.html" with field=form.dose %}
+      {% include "partials/field.html" with field=form.dose_unit %}
+      {% include "partials/field.html" with field=form.route %}
+      {% include "partials/field.html" with field=form.stock_units_per_dose %}
+      {% include "partials/field.html" with field=form.is_sos %}
+    </div>
+    <div data-show-if="id_is_sos" data-invert="1">
+      <h3>Programmazione</h3>
+      <div class="form-grid compact">
+        {% include "partials/field.html" with field=form.schedule_times %}
+        {% include "partials/field.html" with field=form.every_n_days %}
+      </div>
+    </div>
+    <div data-show-if="id_is_sos">
+      <h3>Farmaco al bisogno</h3>
+      <div class="form-grid compact">
+        {% include "partials/field.html" with field=form.sos_indication %}
+        {% include "partials/field.html" with field=form.sos_max_daily %}
+        {% include "partials/field.html" with field=form.sos_min_interval_hours %}
+        {% include "partials/field.html" with field=form.sos_requires_validation %}
+      </div>
+    </div>
+    <h3>Periodo e prescrizione</h3>
+    <div class="form-grid compact">
+      {% include "partials/field.html" with field=form.start_date %}
+      {% include "partials/field.html" with field=form.end_date %}
+      {% include "partials/field.html" with field=form.prescription_date %}
+      {% include "partials/field.html" with field=form.prescriber %}
+      {% include "partials/field.html" with field=form.prescriber_name %}
+      {% include "partials/field.html" with field=form.prescription_document %}
+    </div>
+    <div class="form-grid">{% include "partials/field.html" with field=form.instructions full=True %}</div>
+    {% if form.warnings %}<div class="form-grid" style="margin-top:1rem">{% include "partials/field.html" with field=form.confirm_warnings full=True %}</div>{% endif %}
+    <div class="form-actions">
+      <button class="btn btn-primary">Salva terapia</button>
+      <a class="btn" href="{% url 'clinical:guest_therapies' guest.pk %}">Annulla</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

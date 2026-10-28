@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ pai }}{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="page-head">
+  <h2>PAI versione {{ pai.version }}</h2>
+  <span class="pill {% if pai.status == 'active' %}pill-ok{% elif pai.status == 'draft' %}pill-warn{% endif %}">{{ pai.get_status_display }}</span>
+  <div class="actions">
+    {% if pai.is_editable and perms.pai.change_pai %}<a class="btn btn-sm" href="{% url 'pai:edit' pai.pk %}">Dati generali</a>{% endif %}
+    {% if pai.status == 'draft' and perms.pai.approve_pai %}<form method="post" action="{% url 'pai:activate' pai.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm btn-primary" data-confirm="Mettere in vigore questa versione del PAI? La versione precedente sarà superata.">Approva e metti in vigore</button></form>{% endif %}
+    {% if pai.status != 'draft' and perms.pai.add_pai and not guest.is_archived %}<form method="post" action="{% url 'pai:revise' pai.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm">Nuova revisione</button></form>{% endif %}
+    {% if perms.pai.change_pai %}<form method="post" action="{% url 'pai:pdf' pai.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm">Genera PDF</button></form>{% endif %}
+    {% if pai.document %}<a class="btn btn-sm" href="{{ pai.document.get_absolute_url }}">PDF archiviato / firma</a>{% endif %}
+  </div>
+</div>
+<div class="card">
+  <table><tbody>
+    <tr><th>In vigore dal</th><td>{{ pai.valid_from|date:"d/m/Y"|default:"—" }}</td><th>Revisione entro</th><td>{{ pai.review_due|date:"d/m/Y" }}</td></tr>
+    <tr><th>Approvato da</th><td>{{ pai.approved_by|default:"—" }}</td><th>Partecipanti</th><td>{{ pai.participants|default:"—" }}</td></tr>
+  </tbody></table>
+  {% if pai.summary %}<p style="margin-top:.8rem">{{ pai.summary|linebreaksbr }}</p>{% endif %}
+</div>
+{% for code, label, goals in areas %}
+  <div class="card table-wrap">
+    <div class="card-head"><h3>{{ label }}</h3><div class="actions">{% if pai.is_editable and perms.pai.change_pai %}<a class="btn btn-sm" href="{% url 'pai:goal_create' pai.pk %}?area={{ code }}">+ Obiettivo</a>{% endif %}</div></div>
+    <table>
+      <thead><tr><th>Obiettivo</th><th>Intervento</th><th>Responsabile</th><th>Verifica</th><th>Esito</th><th></th></tr></thead>
+      <tbody>{% for g in goals %}
+        <tr><td>{{ g.objective|linebreaksbr }}{% if g.indicators %}<br><small class="muted">Indicatori: {{ g.indicators }}</small>{% endif %}</td><td>{{ g.intervention|linebreaksbr }}</td>
+          <td>{{ g.responsible_display }}</td><td class="nowrap">{{ g.verification_date|date:"d/m/Y" }}</td>
+          <td><span class="pill {% if g.outcome == 'achieved' %}pill-ok{% elif g.outcome == 'not_achieved' %}pill-danger{% elif g.outcome == 'partial' %}pill-warn{% endif %}">{{ g.get_outcome_display }}</span>{% if g.verification_notes %}<br><small>{{ g.verification_notes }}</small>{% endif %}</td>
+          <td class="num nowrap">
+            {% if pai.is_editable and perms.pai.change_pai %}<a class="btn btn-sm" href="{% url 'pai:goal_edit' pai.pk g.pk %}">Modifica</a>
+              <form method="post" action="{% url 'pai:goal_delete' pai.pk g.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm" data-confirm="Rimuovere l'obiettivo dalla bozza?">✕</button></form>
+            {% elif pai.status == 'active' and perms.pai.change_paigoal and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'pai:goal_verify' pai.pk g.pk %}">Verifica</a>{% endif %}
+          </td></tr>
+      {% empty %}<tr><td colspan="6" class="empty">Nessun obiettivo per quest'area.</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+{% endfor %}
+<div class="card"><h3>Storico versioni</h3>
+  <ul class="list-plain">{% for p in history %}<li><a href="{{ p.get_absolute_url }}">PAI v{{ p.version }}</a> <span class="pill">{{ p.get_status_display }}</span> <small class="muted">{% if p.valid_from %}in vigore dal {{ p.valid_from|date:"d/m/Y" }}{% else %}creato il {{ p.created_at|date:"d/m/Y" }}{% endif %}</small></li>{% endfor %}</ul>
+</div>
+{% endblock %}

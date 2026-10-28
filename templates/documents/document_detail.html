@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ document }}{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>{{ document.title }}</h2>
+      <div class="actions">{% if perms.documents.change_document and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'documents:edit' document.pk %}">Modifica dati</a>{% endif %}</div></div>
+    <table><tbody>
+      <tr><th>Categoria</th><td>{{ document.get_category_display }}</td></tr>
+      <tr><th>Data documento</th><td>{{ document.document_date|date:"d/m/Y"|default:"—" }}</td></tr>
+      <tr><th>Scadenza</th><td>{{ document.expires_on|date:"d/m/Y"|default:"—" }}</td></tr>
+      <tr><th>Descrizione</th><td>{{ document.description|default:"—" }}</td></tr>
+      <tr><th>Creato</th><td>{{ document.created_at|date:"d/m/Y H:i" }} da {{ document.created_by }}</td></tr>
+    </tbody></table>
+  </div>
+  {% if perms.documents.add_document and not guest.is_archived %}
+  <div class="card">
+    <h2>Carica nuova versione</h2>
+    <form method="post" action="{% url 'documents:version_upload' document.pk %}" enctype="multipart/form-data">{% csrf_token %}
+      {% include "partials/form_fields.html" with form=version_form %}
+      <div class="form-actions"><button class="btn btn-primary">Carica versione</button></div></form>
+  </div>
+  {% endif %}
+</div>
+<div class="card table-wrap">
+  <h2>Versioni</h2>
+  <table>
+    <thead><tr><th>Versione</th><th>File</th><th>Caricato</th><th>Impronta SHA-256</th><th>Firma</th><th></th></tr></thead>
+    <tbody>
+    {% for v in versions %}
+      <tr><td><strong>v{{ v.number }}</strong>{% if forloop.first %} <span class="pill pill-info">corrente</span>{% endif %}<br><small>{{ v.note }}</small></td>
+        <td>{{ v.original_name }}<br><small class="muted">{{ v.size|filesizeformat }} · {{ v.content_type }}</small></td>
+        <td>{{ v.uploaded_at|date:"d/m/Y H:i" }}<br><small>{{ v.uploaded_by }}</small></td>
+        <td class="mono" title="{{ v.sha256 }}">{{ v.sha256|truncatechars:20 }}</td>
+        <td>{% if v.is_signed %}<span class="pill pill-ok">firmato</span>{% if v.signature %}<br><small>{{ v.signature.certificate_subject|truncatechars:50 }}</small>{% endif %}{% endif %}</td>
+        <td class="num nowrap">
+          <a class="btn btn-sm" href="{% url 'documents:view' v.pk %}" target="_blank" rel="noopener">Apri</a>
+          <a class="btn btn-sm" href="{% url 'documents:download' v.pk %}">Scarica</a>
+          {% if v.is_pdf %}<a class="btn btn-sm" href="{% url 'documents:verify' v.pk %}">Verifica firme</a>{% endif %}
+          {% if v.is_pdf and perms.signatures.sign_document and not guest.is_archived %}<a class="btn btn-sm btn-primary" href="{% url 'documents:sign' v.pk %}">Firma</a>{% endif %}
+        </td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if access_log is not None %}
+<div class="card table-wrap">
+  <h2>Registro accessi al documento</h2>
+  <table><tbody>{% for e in access_log %}<tr><td class="nowrap">{{ e.timestamp|date:"d/m/Y H:i" }}</td><td>{{ e.username }}</td><td>{{ e.get_action_display }}</td><td>{{ e.object_repr }}</td><td class="mono">{{ e.ip_address }}</td></tr>{% empty %}<tr><td class="empty">Nessun accesso registrato.</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endif %}
+{% endblock %}

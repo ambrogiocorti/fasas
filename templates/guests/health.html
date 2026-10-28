@@ -1,0 +1,82 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}{{ guest }} – anagrafica{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Dati anagrafici</h2>
+      <div class="actions">{% if perms.guests.change_guest and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'guests:update' guest.pk %}">Modifica</a>{% endif %}</div></div>
+    <table><tbody>
+      <tr><th>Nome</th><td>{{ guest.first_name }} {{ guest.last_name }} ({{ guest.get_sex_display }})</td></tr>
+      <tr><th>Nascita</th><td>{{ guest.birth_date|date:"d/m/Y" }} {{ guest.birth_place }}</td></tr>
+      <tr><th>Codice fiscale</th><td class="mono">{{ guest.fiscal_code }}</td></tr>
+      <tr><th>Tessera sanitaria</th><td>{{ guest.health_card_number|default:"—" }}</td></tr>
+      <tr><th>Residenza</th><td>{{ guest.residence_address }} {{ guest.residence_zip }} {{ guest.residence_city }}</td></tr>
+      <tr><th>Ingresso</th><td>{{ guest.admission_date|date:"d/m/Y" }}</td></tr>
+      <tr><th>Medico curante</th><td>{{ guest.general_practitioner|default:"—" }} {% if guest.general_practitioner_phone %}· <a href="tel:{{ guest.general_practitioner_phone }}">{{ guest.general_practitioner_phone }}</a>{% endif %}</td></tr>
+      <tr><th>Servizio inviante</th><td>{{ guest.referring_service|default:"—" }}</td></tr>
+    </tbody></table>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Profilo sanitario</h2></div>
+    <table><tbody>
+      <tr><th>Disabilità</th><td>{{ guest.disability_description|linebreaksbr|default:"—" }}</td></tr>
+      <tr><th>Certificazioni</th><td>{{ guest.disability_certifications|default:"—" }}</td></tr>
+      <tr><th>Dieta</th><td>{{ guest.diet|default:"—" }}{% if guest.diet_texture %} · {{ guest.diet_texture }}{% endif %}</td></tr>
+      <tr><th>Note cliniche</th><td>{{ guest.clinical_notes|linebreaksbr|default:"—" }}</td></tr>
+      <tr><th>Tag clinici</th><td>{% for t in guest.tags.all %}{% tag_chip t %} {% empty %}—{% endfor %}</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Diagnosi e patologie</h2>
+      <div class="actions">{% if perms.guests.add_diagnosis and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'guests:diagnosis_create' guest.pk %}">+ Aggiungi</a>{% endif %}</div></div>
+    <table><tbody>
+      {% for d in diagnoses %}
+        <tr><td>{% if d.is_primary %}<strong>{{ d.description }}</strong>{% else %}{{ d.description }}{% endif %}<br><small class="muted">{{ d.get_kind_display }} {{ d.icd_code }} {{ d.diagnosed_on|date:"d/m/Y" }}</small></td>
+            <td>{% if not d.active %}<span class="pill">non attiva</span>{% endif %}</td>
+            <td class="num">{% if perms.guests.change_diagnosis and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'guests:diagnosis_edit' guest.pk d.pk %}">Modifica</a>{% endif %}</td></tr>
+      {% empty %}<tr><td class="empty">Nessuna diagnosi.</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Allergie e intolleranze</h2>
+      <div class="actions">{% if perms.guests.add_allergy and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'guests:allergy_create' guest.pk %}">+ Aggiungi</a>{% endif %}</div></div>
+    <table><tbody>
+      {% for a in allergies %}
+        <tr><td><strong>{{ a.substance }}</strong><br><small class="muted">{{ a.get_kind_display }} · {{ a.get_category_display }} · {{ a.reaction }}</small></td>
+            <td><span class="pill {% if a.severity == 'severe' %}pill-danger{% else %}pill-warn{% endif %}">{{ a.get_severity_display }}</span></td>
+            <td class="num">{% if perms.guests.change_allergy and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'guests:allergy_edit' guest.pk a.pk %}">Modifica</a>{% endif %}</td></tr>
+      {% empty %}<tr><td class="empty">Nessuna allergia nota.</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+
+  <div class="card span-2">
+    <div class="card-head"><h2>Familiari, tutela legale e contatti</h2>
+      <div class="actions">{% if perms.guests.add_guestcontact and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'guests:contact_create' guest.pk %}">+ Contatto</a>{% endif %}</div></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Tipo</th><th>Nome</th><th>Recapiti</th><th>Note</th><th></th></tr></thead>
+      <tbody>
+      {% for c in contacts %}
+        <tr><td>{{ c.get_kind_display }}{% if c.is_emergency_contact %} <span class="pill pill-danger">emergenza</span>{% endif %}{% if c.can_receive_health_info %} <span class="pill pill-info">info sanitarie</span>{% endif %}</td>
+            <td><strong>{{ c.name }}</strong><br><small>{{ c.relationship }}</small></td>
+            <td>{% if c.phone %}<a href="tel:{{ c.phone }}">{{ c.phone }}</a><br>{% endif %}{{ c.email }}</td>
+            <td><small>{{ c.legal_reference }} {{ c.notes }}</small></td>
+            <td class="num">{% if perms.guests.change_guestcontact and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'guests:contact_edit' guest.pk c.pk %}">Modifica</a>{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="5" class="empty">Nessun contatto.</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="card span-2">
+    <div class="card-head"><h2>Movimenti</h2>
+      <div class="actions">
+        {% if not guest.is_archived %}
+          {% if perms.guests.add_admissionevent %}<a class="btn btn-sm" href="{% url 'guests:movement' guest.pk %}">Ricovero / assenza / rientro</a>{% endif %}
+          {% if perms.guests.archive_guest %}<a class="btn btn-sm btn-danger" href="{% url 'guests:discharge' guest.pk %}">Dimetti e archivia</a>{% endif %}
+        {% endif %}
+      </div></div>
+    <ul class="list-plain">{% for m in movements %}<li><strong>{{ m.get_kind_display }}</strong> {{ m.date|date:"d/m/Y" }} <small class="muted">{{ m.notes }}</small></li>{% empty %}<li class="muted">Nessun movimento.</li>{% endfor %}</ul>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Appuntamenti sanitari{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Appuntamenti sanitari</h1><div class="actions">{% if perms.appointments.add_appointment %}<a class="btn btn-primary" href="{% url 'appointments:create' %}">+ Nuovo appuntamento</a>{% endif %}</div></div>
+<form class="filters" method="get">
+  <select name="period"><option value="upcoming" {% if period == 'upcoming' %}selected{% endif %}>Prossimi</option><option value="past" {% if period == 'past' %}selected{% endif %}>Passati</option></select>
+  <select name="kind"><option value="">Tutti i tipi</option>{% for c, l in kinds %}<option value="{{ c }}" {% if request.GET.kind == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <button class="btn">Filtra</button>
+</form>
+{% for day, items in grouped.items %}
+  <div class="card">
+    <h2>{{ day|date:"l d F Y" }} {% if day == today %}<span class="pill pill-danger">oggi</span>{% elif day == tomorrow %}<span class="pill pill-warn">domani</span>{% endif %}</h2>
+    <ul class="list-plain">{% for a in items %}
+      <li><strong class="mono">{{ a.scheduled_at|time:"H:i" }}</strong> <a href="{{ a.get_absolute_url }}"><strong>{{ a.guest }}</strong> – {{ a.title }}</a>
+        <span class="pill">{{ a.get_kind_display }}</span>{% if a.status != 'scheduled' %} <span class="pill {% if a.status == 'done' %}pill-ok{% else %}pill-warn{% endif %}">{{ a.get_status_display }}</span>{% endif %}
+        <br><small class="muted">{{ a.location }}{% if a.doctor %} · {{ a.doctor }}{% endif %}{% if a.companion_display %} · accompagna {{ a.companion_display }}{% endif %}</small></li>
+    {% endfor %}</ul>
+  </div>
+{% empty %}<div class="card empty">Nessun appuntamento.</div>{% endfor %}
+{% endblock %}

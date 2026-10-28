@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+{% if guest %}{% include "guests/_header.html" with compact=True %}{% endif %}
+<div class="card" style="max-width: 980px">
+  <div class="card-head"><h1>{{ page_title }}</h1></div>
+  {% if intro %}<p class="muted">{{ intro }}</p>{% endif %}
+  {% if decision and decision.reason_required %}<div class="alert alert-warning">{{ decision.message }}</div>{% endif %}
+  <form method="post"{% if multipart or form.is_multipart %} enctype="multipart/form-data"{% endif %} novalidate>
+    {% csrf_token %}
+    {% include "partials/form_fields.html" %}
+    <div class="form-actions">
+      <button class="btn {% if danger %}btn-danger{% else %}btn-primary{% endif %}" type="submit">{{ submit_label|default:"Salva" }}</button>
+      {% if cancel_url %}<a class="btn" href="{{ cancel_url }}">Annulla</a>{% else %}<a class="btn" href="javascript:history.back()">Annulla</a>{% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

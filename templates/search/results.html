@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Ricerca{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Ricerca avanzata</h1></div>
+<form class="filters card" method="get">
+  <div class="field" style="flex:1 1 240px"><label>Testo</label><input type="search" name="q" value="{{ q }}" placeholder="Ospite, farmaco, evento, documento, protocollo…"></div>
+  <div class="field"><label>Tipo</label><select name="type"><option value="">Tutto</option>{% for c, l in sections %}<option value="{{ c }}" {% if section == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+  <div class="field"><label>Ospite</label><select name="guest"><option value="">Tutti</option>{% for g in guests %}<option value="{{ g.pk }}" {% if params.guest == g.pk|stringformat:"s" %}selected{% endif %}>{{ g }}</option>{% endfor %}</select></div>
+  <div class="field"><label>Operatore</label><select name="operator"><option value="">Tutti</option>{% for u in operators %}<option value="{{ u.pk }}" {% if params.operator == u.pk|stringformat:"s" %}selected{% endif %}>{{ u }}</option>{% endfor %}</select></div>
+  <div class="field"><label>Dal</label><input type="date" name="date_from" value="{{ params.date_from|default:'' }}"></div>
+  <div class="field"><label>Al</label><input type="date" name="date_to" value="{{ params.date_to|default:'' }}"></div>
+  <button class="btn btn-primary">Cerca</button>
+</form>
+{% if has_filters %}
+  <p class="muted">{{ total }} risultat{{ total|pluralize:"o,i" }}.</p>
+  {% for key, label, items in results %}
+    {% if items %}
+    <div class="card">
+      <h2>{{ label }} <small class="muted">({{ items|length }})</small></h2>
+      <ul class="list-plain">{% for i in items %}<li><a href="{{ i.url }}"><strong>{{ i.title }}</strong></a>{% if i.subtitle %}<br><small class="muted">{{ i.subtitle }}</small>{% endif %}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+  {% endfor %}
+{% else %}<div class="card empty">Inserire un testo o un filtro per cercare.</div>{% endif %}
+{% endblock %}

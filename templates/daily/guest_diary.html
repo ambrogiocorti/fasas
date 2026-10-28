@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ guest }} – diario{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="page-head"><h2>Diario assistenziale</h2>
+  <form class="filters" method="get" style="margin:0"><label class="pill"><input type="checkbox" name="relevant" value="1" {% if request.GET.relevant %}checked{% endif %} onchange="this.form.submit()"> solo rilevanti</label></form>
+  <div class="actions">{% if perms.daily.add_diaryentry and not guest.is_archived %}<a class="btn btn-primary btn-sm" href="{% url 'daily:diary_create' guest.pk %}">+ Nuova nota</a>{% endif %}</div></div>
+<div class="card">
+  <ul class="timeline">
+  {% for d in entries %}
+    <li class="{% if d.is_relevant %}k-event{% endif %}">
+      <div class="when">{{ d.occurred_at|date:"l d/m/Y H:i" }} · turno {{ d.get_shift_display|lower }} · {{ d.created_by }}{% if d.is_relevant %} · <strong>rilevante</strong>{% endif %}</div>
+      <div {% if d.is_voided %}style="text-decoration:line-through" class="muted"{% endif %}>{{ d.text|linebreaksbr }}</div>
+      {% if d.is_voided %}<small>Annullata: {{ d.void_reason }}</small>
+      {% elif not guest.is_archived %}<small>{% if perms.daily.change_diaryentry %}<a href="{% url 'daily:diary_update' d.pk %}">modifica</a>{% endif %}{% if perms.daily.delete_diaryentry %} · <a href="{% url 'daily:diary_void' d.pk %}">annulla</a>{% endif %}</small>{% endif %}
+    </li>
+  {% empty %}<li>Nessuna nota nel diario.</li>{% endfor %}
+  </ul>
+</div>
+{% endblock %}

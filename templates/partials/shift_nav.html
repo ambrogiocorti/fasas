@@ -1,0 +1,9 @@
+<form class="filters" method="get">
+  <a class="btn btn-sm" href="?date={{ prev_day|date:'Y-m-d' }}&shift={{ shift }}">←</a>
+  <input type="date" name="date" value="{{ day|date:'Y-m-d' }}" aria-label="Giornata">
+  <select name="shift" aria-label="Turno">{% for code, label in shifts %}<option value="{{ code }}" {% if code == shift %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <button class="btn btn-sm">Vai</button>
+  <a class="btn btn-sm" href="?date={{ next_day|date:'Y-m-d' }}&shift={{ shift }}">→</a>
+  <a class="btn btn-sm btn-ghost" href="?">Turno corrente</a>
+  {% if closed %}<span class="pill pill-warn">🔒 Turno chiuso: sola consultazione</span>{% endif %}
+</form>

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Verifica firme{% endblock %}
+{% block content %}
+{% include "guests/_header.html" with compact=True %}
+<div class="card" style="max-width: 960px">
+  <div class="card-head"><h1>Verifica firme – {{ version }}</h1><div class="actions"><a class="btn btn-sm" href="{{ document.get_absolute_url }}">← Documento</a></div></div>
+  {% for r in results %}
+    <div class="card">
+      <h3>{{ r.field }}</h3>
+      {% if r.error %}<div class="alert alert-danger">Firma non verificabile: {{ r.error }}</div>{% else %}
+      <table><tbody>
+        <tr><th>Firmatario</th><td>{{ r.signer }}</td></tr>
+        <tr><th>Emittente</th><td>{{ r.issuer }}</td></tr>
+        <tr><th>Data dichiarata</th><td>{{ r.signed_at|date:"d/m/Y H:i"|default:"—" }}</td></tr>
+        <tr><th>Integrità contenuto</th><td>{% if r.intact %}<span class="pill pill-ok">documento integro</span>{% else %}<span class="pill pill-danger">documento ALTERATO</span>{% endif %}</td></tr>
+        <tr><th>Firma crittografica</th><td>{% if r.valid %}<span class="pill pill-ok">valida</span>{% else %}<span class="pill pill-danger">non valida</span>{% endif %}</td></tr>
+        <tr><th>Catena di fiducia</th><td>{% if r.trusted %}<span class="pill pill-ok">certificato attendibile</span>{% else %}<span class="pill pill-warn">non verificata sul server</span> <small class="muted">verificare con un software di verifica che usi l'elenco europeo dei prestatori qualificati</small>{% endif %}</td></tr>
+        <tr><th>Copertura</th><td>{% if r.covers_whole_document %}intero documento{% else %}parziale (ci sono modifiche successive alla firma){% endif %}</td></tr>
+      </tbody></table>
+      {% endif %}
+    </div>
+  {% empty %}<p class="empty">Nessuna firma digitale presente nel documento.</p>{% endfor %}
+</div>
+{% endblock %}

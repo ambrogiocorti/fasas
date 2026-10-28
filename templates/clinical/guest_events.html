@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ guest }} – eventi{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="page-head">
+  <h2>Eventi sanitari</h2>
+  <form class="filters" method="get" style="margin:0">
+    <select name="type" onchange="this.form.submit()"><option value="">Tutti i tipi</option>{% for c, l in types %}<option value="{{ c }}" {% if request.GET.type == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  </form>
+  <div class="actions">{% if not guest.is_archived %}
+    {% if perms.clinical.add_restraint %}<a class="btn btn-sm" href="{% url 'clinical:restraint_create' guest.pk %}">+ Contenzione</a>{% endif %}
+    {% if perms.clinical.add_clinicalevent %}<a class="btn btn-sm btn-primary" href="{% url 'clinical:event_create' guest.pk %}">+ Evento</a>{% endif %}
+  {% endif %}</div>
+</div>
+<div class="card table-wrap">
+  <table>
+    <thead><tr><th>Data/ora</th><th>Tipo</th><th>Gravità</th><th>Descrizione</th><th>Operatore</th></tr></thead>
+    <tbody>
+    {% for e in events %}
+      <tr class="{% if e.is_voided %}voided{% endif %}"><td class="nowrap"><a href="{% url 'clinical:event_detail' e.pk %}">{{ e.occurred_at|date:"d/m/Y H:i" }}</a></td>
+        <td>{{ e.get_event_type_display }}{% if e.is_emergency %} <span class="pill pill-danger">emergenza</span>{% endif %}</td>
+        <td><span class="pill {% if e.severity == 'critical' or e.severity == 'high' %}pill-danger{% elif e.severity == 'medium' %}pill-warn{% endif %}">{{ e.get_severity_display }}</span></td>
+        <td>{{ e.description|truncatechars:160 }}</td><td>{{ e.created_by }}</td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">Nessun evento registrato.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="card table-wrap">
+  <h2>Contenzioni</h2>
+  <table>
+    <thead><tr><th>Inizio</th><th>Fine / durata</th><th>Tipo</th><th>Motivo</th><th>Autorizzazione</th><th>Responsabile</th><th></th></tr></thead>
+    <tbody>
+    {% for r in restraints %}
+      <tr class="{% if r.is_voided %}voided{% endif %}"><td class="nowrap">{{ r.occurred_at|date:"d/m/Y H:i" }}</td>
+        <td>{% if r.ended_at %}{{ r.ended_at|date:"d/m H:i" }}{% else %}<span class="pill pill-warn">in corso</span>{% endif %}<br><small>{{ r.duration_display }}</small></td>
+        <td>{{ r.get_restraint_type_display }}</td><td>{{ r.reason|truncatechars:120 }}</td>
+        <td>{{ r.authorizing_doctor_display }}<br><small>{{ r.authorization_date|date:"d/m/Y" }}</small></td>
+        <td>{{ r.responsible_operator }}</td>
+        <td class="num nowrap keep">{% if not r.is_voided and not guest.is_archived %}
+          {% if perms.clinical.change_restraint %}<a class="btn btn-sm" href="{% url 'clinical:restraint_update' r.pk %}">Aggiorna</a>{% endif %}
+          {% if perms.clinical.delete_restraint %}<a class="btn btn-sm" href="{% url 'clinical:restraint_void' r.pk %}">Annulla</a>{% endif %}{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="7" class="empty">Nessuna contenzione registrata.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

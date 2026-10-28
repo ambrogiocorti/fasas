@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Log accessi{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Log accessi</h1></div>
+<form class="filters" method="get">
+  <input type="text" name="username" value="{{ request.GET.username|default:'' }}" placeholder="Utente">
+  <select name="event"><option value="">Tutti gli eventi</option>{% for c, l in events %}<option value="{{ c }}" {% if request.GET.event == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <input type="text" name="ip" value="{{ request.GET.ip|default:'' }}" placeholder="IP">
+  <input type="date" name="date_from" value="{{ request.GET.date_from|default:'' }}"><input type="date" name="date_to" value="{{ request.GET.date_to|default:'' }}">
+  <button class="btn">Filtra</button>
+</form>
+<div class="card table-wrap"><table>
+  <thead><tr><th>Data/ora</th><th>Utente</th><th>Evento</th><th>IP</th><th>Dispositivo</th></tr></thead>
+  <tbody>{% for a in object_list %}
+    <tr><td class="nowrap">{{ a.timestamp|date:"d/m/Y H:i:s" }}</td><td>{{ a.username }}</td>
+      <td><span class="pill {% if a.event == 'login' %}pill-ok{% elif a.event == 'failed' or a.event == 'locked' %}pill-danger{% endif %}">{{ a.get_event_display }}</span></td>
+      <td class="mono">{{ a.ip_address }}</td><td title="{{ a.user_agent }}">{{ a.device }}</td></tr>
+  {% empty %}<tr><td colspan="5" class="empty">Nessun accesso.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% include "partials/pagination.html" %}
+{% endblock %}
