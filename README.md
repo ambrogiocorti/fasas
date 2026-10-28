@@ -123,3 +123,8 @@ Il software è completo, ma un sistema che tratta dati sanitari richiede passagg
 7. **Prova di ripristino**: eseguire periodicamente un ripristino completo su un database di prova.
 
 Dettagli in [docs/SICUREZZA.md](docs/SICUREZZA.md) e [docs/DEPLOY.md](docs/DEPLOY.md).
+
+## Crediti
+
+Le icone dell'interfaccia derivano da [Lucide](https://lucide.dev) (licenza ISC) e sono incluse nel progetto
+(`templates/partials/icons.html`): l'applicazione non carica risorse esterne.

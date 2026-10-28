@@ -1,7 +1,7 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}Impostazioni notifiche{% endblock %}
 {% block content %}
-<div class="page-head"><h1>Impostazioni notifiche</h1><div class="actions"><a class="btn" href="{% url 'core:settings' %}">← Impostazioni</a></div></div>
+<div class="page-head"><h1>Impostazioni notifiche</h1><div class="actions"><a class="btn" href="{% url 'core:settings' %}">{% icon "arrow-left" %}Impostazioni</a></div></div>
 <p class="muted">Per ogni tipo di notifica scegliere quali ruoli la ricevono. Le email (se attive) non contengono dati sanitari: solo un avviso di accedere al sistema.</p>
 <form method="post">{% csrf_token %}
 <div class="card table-wrap"><table>

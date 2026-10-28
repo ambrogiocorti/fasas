@@ -3,47 +3,58 @@
 {% block content %}
 <div class="page-head">
   <div>
-    <h1>Turno {{ shift_label|lower }} · {{ day|date:"l d F Y" }}</h1>
-    <span class="muted">{{ shift_start|time:"H:i" }}–{{ shift_end|time:"H:i" }} · {{ guest_count }} ospiti presenti{% if absent_count %}, {{ absent_count }} assenti/ricoverati{% endif %}</span>
+    <h1>Turno {{ shift_label|lower }}</h1>
+    <span class="subtitle">{{ day|date:"l d F Y" }} · {{ shift_start|time:"H:i" }}–{{ shift_end|time:"H:i" }} · {{ guest_count }} ospiti presenti{% if absent_count %}, {{ absent_count }} assenti o ricoverati{% endif %}</span>
   </div>
   <div class="actions">
-    {% if shift_closed %}<span class="pill pill-warn">🔒 turno chiuso</span>{% endif %}
+    {% if shift_closed %}<span class="pill pill-warn">{% icon "lock" %}Turno chiuso</span>{% endif %}
     {% if not checked_in %}
-      <form method="post" action="{% url 'daily:check_in' %}" class="inline-form">{% csrf_token %}<button class="btn btn-primary">Prendo servizio</button></form>
-    {% else %}<span class="pill pill-ok">In servizio</span>{% endif %}
+      <form method="post" action="{% url 'daily:check_in' %}" class="inline-form">{% csrf_token %}<button class="btn btn-primary">{% icon "user-check" %}Prendo servizio</button></form>
+    {% else %}<span class="pill pill-ok">{% icon "check" %}In servizio</span>{% endif %}
   </div>
 </div>
 
 {% for a in protocols %}
-  <div class="alert alert-danger">⚑ <strong>{{ a.protocol.name }}</strong> – <a href="{{ a.guest.get_absolute_url }}">{{ a.guest }}</a>: {{ a.trigger_summary }} · <a href="{{ a.get_absolute_url }}">gestisci</a></div>
+  <div class="alert alert-danger">{% icon "flag" %}<div class="alert-body"><strong>{{ a.protocol.name }}</strong> – <a href="{{ a.guest.get_absolute_url }}">{{ a.guest }}</a>: {{ a.trigger_summary }} · <a href="{{ a.get_absolute_url }}">gestisci</a></div></div>
 {% endfor %}
 
 <div class="grid grid-4">
   {% if doses_total is not None %}
-  <div class="card stat"><span class="label">Farmaci del turno</span>
-    <span class="value"><a href="{% url 'clinical:board' %}">{{ doses_done }}/{{ doses_total }}</a></span>
+  <div class="card stat {% if doses_total and doses_done == doses_total %}tone-ok{% endif %}">
+    <span class="label">Farmaci del turno <span class="stat-icon">{% icon "pill" %}</span></span>
+    <span class="value"><a href="{% url 'clinical:board' %}">{{ doses_done }}<span class="muted" style="font-size:1.1rem; font-weight:600">/{{ doses_total }}</span></a></span>
     <div class="progress"><span style="width: {{ doses_done|percent:doses_total }}%"></span></div></div>
   {% endif %}
   {% if checklist_total is not None %}
-  <div class="card stat"><span class="label">Checklist turno</span>
-    <span class="value"><a href="{% url 'daily:checklist' %}">{{ checklist_done }}/{{ checklist_total }}</a></span>
+  <div class="card stat {% if checklist_total and checklist_done == checklist_total %}tone-ok{% endif %}">
+    <span class="label">Checklist turno <span class="stat-icon">{% icon "clipboard-check" %}</span></span>
+    <span class="value"><a href="{% url 'daily:checklist' %}">{{ checklist_done }}<span class="muted" style="font-size:1.1rem; font-weight:600">/{{ checklist_total }}</span></a></span>
     <div class="progress"><span style="width: {{ checklist_done|percent:checklist_total }}%"></span></div></div>
   {% endif %}
-  <div class="card stat"><span class="label">Protocolli attivi</span><span class="value" {% if protocols %}style="color:var(--danger)"{% endif %}><a href="{% url 'protocols:activations' %}">{{ protocols|length }}</a></span></div>
+  <div class="card stat {% if protocols %}tone-danger{% endif %}">
+    <span class="label">Protocolli attivi <span class="stat-icon">{% icon "flag" %}</span></span>
+    <span class="value"><a href="{% url 'protocols:activations' %}">{{ protocols|length }}</a></span>
+    <small>{% if protocols %}da gestire{% else %}nessuna azione richiesta{% endif %}</small></div>
   {% if sos_pending is not None %}
-  <div class="card stat"><span class="label">SOS da validare</span><span class="value" {% if sos_pending %}style="color:var(--warn)"{% endif %}><a href="{% url 'clinical:sos_pending' %}">{{ sos_pending }}</a></span></div>
+  <div class="card stat {% if sos_pending %}tone-warn{% endif %}">
+    <span class="label">SOS da validare <span class="stat-icon">{% icon "shield-check" %}</span></span>
+    <span class="value"><a href="{% url 'clinical:sos_pending' %}">{{ sos_pending }}</a></span>
+    <small>somministrazioni al bisogno</small></div>
   {% else %}
-  <div class="card stat"><span class="label">Notifiche non lette</span><span class="value"><a href="{% url 'notifications:list' %}">{{ unread_notifications }}</a></span></div>
+  <div class="card stat {% if unread_notifications %}tone-warn{% endif %}">
+    <span class="label">Notifiche non lette <span class="stat-icon">{% icon "bell" %}</span></span>
+    <span class="value"><a href="{% url 'notifications:list' %}">{{ unread_notifications }}</a></span>
+    <small>per il tuo ruolo</small></div>
   {% endif %}
 </div>
 
 <div class="grid grid-2">
   {% if doses_due is not None %}
   <div class="card">
-    <div class="card-head"><h2>Farmaci da somministrare ora</h2><div class="actions"><a class="btn btn-sm btn-primary" href="{% url 'clinical:board' %}">Giro farmaci</a></div></div>
+    <div class="card-head"><h2>Farmaci da somministrare ora</h2><div class="actions"><a class="btn btn-sm btn-primary" href="{% url 'clinical:board' %}">{% icon "pill" %}Giro farmaci</a></div></div>
     <ul class="list-plain">
       {% for d in doses_due %}
-        <li><strong class="mono" {% if d.overdue %}style="color:var(--danger)"{% endif %}>{{ d.time|time:"H:i" }}</strong> <a href="{{ d.guest.get_absolute_url }}">{{ d.guest }}</a> – {{ d.therapy.drug }} {{ d.therapy.dose_display }}{% if d.overdue %} <span class="pill pill-danger">in ritardo</span>{% endif %}</li>
+        <li><span class="pill {% if d.overdue %}pill-danger{% endif %} mono">{{ d.time|time:"H:i" }}</span> <a href="{{ d.guest.get_absolute_url }}">{{ d.guest }}</a> – {{ d.therapy.drug }} {{ d.therapy.dose_display }}{% if d.overdue %} <span class="pill pill-danger">in ritardo</span>{% endif %}</li>
       {% empty %}<li class="muted">Nessuna dose in scadenza nella prossima ora.</li>{% endfor %}
     </ul>
   </div>
@@ -75,9 +86,9 @@
   {% endif %}
 
   <div class="card">
-    <div class="card-head"><h2>Visite oggi e domani</h2><div class="actions">{% if perms.appointments.add_appointment %}<a class="btn btn-sm" href="{% url 'appointments:create' %}">+ Visita</a>{% endif %}</div></div>
+    <div class="card-head"><h2>Visite oggi e domani</h2><div class="actions">{% if perms.appointments.add_appointment %}<a class="btn btn-sm" href="{% url 'appointments:create' %}">{% icon "plus" %}Visita</a>{% endif %}</div></div>
     <ul class="list-plain">
-      {% for a in appointments %}<li><strong class="mono">{{ a.scheduled_at|date:"D H:i" }}</strong> <a href="{{ a.get_absolute_url }}">{{ a.guest }} – {{ a.title }}</a> <small class="muted">{{ a.location }}{% if a.companion_display %} · accompagna {{ a.companion_display }}{% endif %}</small></li>
+      {% for a in appointments %}<li><span class="pill mono">{{ a.scheduled_at|date:"D H:i" }}</span> <a href="{{ a.get_absolute_url }}">{{ a.guest }} – {{ a.title }}</a> <small class="muted">{{ a.location }}{% if a.companion_display %} · accompagna {{ a.companion_display }}{% endif %}</small></li>
       {% empty %}<li class="muted">Nessuna visita.</li>{% endfor %}
     </ul>
   </div>
@@ -92,7 +103,7 @@
   {% if stock_low is not None %}
   <div class="card">
     <div class="card-head"><h2>Magazzino</h2><div class="actions"><a class="btn btn-sm" href="{% url 'pharmacy:stock' %}">Apri</a></div></div>
-    {% if stock_expiring %}<div class="alert alert-warning">{{ stock_expiring }} lotti scaduti o in scadenza.</div>{% endif %}
+    {% if stock_expiring %}<div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">{{ stock_expiring }} lotti scaduti o in scadenza.</div></div>{% endif %}
     <ul class="list-plain">{% for r in stock_low %}<li><strong>{{ r.drug }}</strong> – giacenza {{ r.total }} {{ r.drug.stock_unit }} (soglia {{ r.drug.min_stock }})</li>{% empty %}<li class="muted">Nessun farmaco sotto soglia.</li>{% endfor %}</ul>
   </div>
   {% endif %}

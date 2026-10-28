@@ -1,10 +1,10 @@
 {% load fasas_tags %}
 <div class="guest-header">
   <div class="avatar" aria-hidden="true">{{ guest.initials }}</div>
-  <div>
-    <h1><a href="{{ guest.get_absolute_url }}" style="color:inherit">{{ guest.last_name }} {{ guest.first_name }}</a></h1>
+  <div class="guest-id">
+    <h1><a href="{{ guest.get_absolute_url }}">{{ guest.last_name }} {{ guest.first_name }}</a></h1>
     <div class="meta">
-      <span>{{ guest.age }} anni · nato/a il {{ guest.birth_date|date:"d/m/Y" }}</span>
+      <span>{{ guest.age }} anni · {{ guest.birth_date|date:"d/m/Y" }}</span>
       {% if guest.room %}<span>Camera {{ guest.room }}</span>{% endif %}
       <span class="mono">{{ guest.fiscal_code }}</span>
       <span class="pill {% if guest.status == 'active' %}pill-ok{% elif guest.status == 'archived' %}{% else %}pill-warn{% endif %}">{{ guest.get_status_display }}</span>
@@ -14,20 +14,20 @@
   {% if not compact %}
   <div class="actions">
     {% if not guest.is_archived %}
-      {% if perms.clinical.add_parameterreading %}<a class="btn btn-sm" href="{% url 'clinical:quick_parameters' guest.pk %}">+ Parametri</a>{% endif %}
-      {% if perms.daily.add_diaryentry %}<a class="btn btn-sm" href="{% url 'daily:diary_create' guest.pk %}">+ Diario</a>{% endif %}
-      {% if perms.clinical.add_clinicalevent %}<a class="btn btn-sm" href="{% url 'clinical:event_create' guest.pk %}">+ Evento</a>{% endif %}
-      {% if perms.clinical.add_therapyadministration %}<a class="btn btn-sm" href="{% url 'clinical:sos_administer' guest.pk %}">+ SOS</a>{% endif %}
+      {% if perms.clinical.add_parameterreading %}<a class="btn btn-sm" href="{% url 'clinical:quick_parameters' guest.pk %}">{% icon "activity" %}Parametri</a>{% endif %}
+      {% if perms.daily.add_diaryentry %}<a class="btn btn-sm" href="{% url 'daily:diary_create' guest.pk %}">{% icon "pen" %}Diario</a>{% endif %}
+      {% if perms.clinical.add_clinicalevent %}<a class="btn btn-sm" href="{% url 'clinical:event_create' guest.pk %}">{% icon "plus" %}Evento</a>{% endif %}
+      {% if perms.clinical.add_therapyadministration %}<a class="btn btn-sm" href="{% url 'clinical:sos_administer' guest.pk %}">{% icon "pill" %}SOS</a>{% endif %}
     {% endif %}
-    {% if perms.guests.export_guest %}<a class="btn btn-sm" href="{% url 'reports:guest_export' guest.pk %}">Esporta PDF</a>{% endif %}
+    {% if perms.guests.export_guest %}<a class="btn btn-sm btn-ghost" href="{% url 'reports:guest_export' guest.pk %}">{% icon "download" %}Esporta PDF</a>{% endif %}
   </div>
   {% endif %}
 </div>
 {% if guest.is_archived %}
-  <div class="archived-banner">🔒 Cartella archiviata il {{ guest.archived_at|date:"d/m/Y" }} (dimissione {{ guest.discharge_date|date:"d/m/Y" }}{% if guest.discharge_destination %} → {{ guest.discharge_destination }}{% endif %}). Sola consultazione, conservazione fino al {{ guest.retention_until|date:"d/m/Y" }}.</div>
+  <div class="archived-banner">{% icon "lock" %}<span>Cartella archiviata il {{ guest.archived_at|date:"d/m/Y" }} (dimissione {{ guest.discharge_date|date:"d/m/Y" }}{% if guest.discharge_destination %} → {{ guest.discharge_destination }}{% endif %}). Sola consultazione, conservazione fino al {{ guest.retention_until|date:"d/m/Y" }}.</span></div>
 {% endif %}
 {% with allergies=guest.allergies.all %}{% if allergies %}
-  <div class="allergy-banner">⚠ Allergie/intolleranze: {% for a in allergies %}{{ a.substance }}{% if a.severity == 'severe' %} (GRAVE){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</div>
+  <div class="allergy-banner">{% icon "alert" %}<span>Allergie e intolleranze: {% for a in allergies %}{{ a.substance }}{% if a.severity == 'severe' %} (GRAVE){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</span></div>
 {% endif %}{% endwith %}
 {% if not compact %}
 <nav class="tabs" aria-label="Sezioni della cartella">

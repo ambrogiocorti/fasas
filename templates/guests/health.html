@@ -30,7 +30,7 @@
 
   <div class="card">
     <div class="card-head"><h2>Diagnosi e patologie</h2>
-      <div class="actions">{% if perms.guests.add_diagnosis and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'guests:diagnosis_create' guest.pk %}">+ Aggiungi</a>{% endif %}</div></div>
+      <div class="actions">{% if perms.guests.add_diagnosis and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'guests:diagnosis_create' guest.pk %}">{% icon "plus" %}Aggiungi</a>{% endif %}</div></div>
     <table><tbody>
       {% for d in diagnoses %}
         <tr><td>{% if d.is_primary %}<strong>{{ d.description }}</strong>{% else %}{{ d.description }}{% endif %}<br><small class="muted">{{ d.get_kind_display }} {{ d.icd_code }} {{ d.diagnosed_on|date:"d/m/Y" }}</small></td>
@@ -41,7 +41,7 @@
   </div>
   <div class="card">
     <div class="card-head"><h2>Allergie e intolleranze</h2>
-      <div class="actions">{% if perms.guests.add_allergy and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'guests:allergy_create' guest.pk %}">+ Aggiungi</a>{% endif %}</div></div>
+      <div class="actions">{% if perms.guests.add_allergy and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'guests:allergy_create' guest.pk %}">{% icon "plus" %}Aggiungi</a>{% endif %}</div></div>
     <table><tbody>
       {% for a in allergies %}
         <tr><td><strong>{{ a.substance }}</strong><br><small class="muted">{{ a.get_kind_display }} · {{ a.get_category_display }} · {{ a.reaction }}</small></td>
@@ -53,7 +53,7 @@
 
   <div class="card span-2">
     <div class="card-head"><h2>Familiari, tutela legale e contatti</h2>
-      <div class="actions">{% if perms.guests.add_guestcontact and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'guests:contact_create' guest.pk %}">+ Contatto</a>{% endif %}</div></div>
+      <div class="actions">{% if perms.guests.add_guestcontact and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'guests:contact_create' guest.pk %}">{% icon "plus" %}Contatto</a>{% endif %}</div></div>
     <div class="table-wrap"><table>
       <thead><tr><th>Tipo</th><th>Nome</th><th>Recapiti</th><th>Note</th><th></th></tr></thead>
       <tbody>

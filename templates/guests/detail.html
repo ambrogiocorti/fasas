@@ -3,25 +3,35 @@
 {% block content %}
 {% include "guests/_header.html" %}
 
-{% for tag in tag_alerts %}
-  <div class="alert alert-info"><strong>{{ tag.name }}:</strong> {{ tag.alert_message }}</div>
-{% endfor %}
+{% if tag_alerts %}
+<div class="hints">
+  {% for tag in tag_alerts %}<div class="hint">{% tag_chip tag %}<span>{{ tag.alert_message }}</span></div>{% endfor %}
+</div>
+{% endif %}
 {% for a in protocols %}
-  <div class="alert alert-danger"><strong>⚑ {{ a.protocol.name }}</strong> – {{ a.trigger_summary }} · <a href="{{ a.get_absolute_url }}">gestisci</a></div>
+  <div class="alert alert-danger">{% icon "flag" %}<div class="alert-body"><strong>{{ a.protocol.name }}</strong> – {{ a.trigger_summary }} · <a href="{{ a.get_absolute_url }}">gestisci</a></div></div>
 {% endfor %}
 {% for r in active_restraints %}
-  <div class="alert alert-warning"><strong>Contenzione in corso:</strong> {{ r.get_restraint_type_display }} dal {{ r.occurred_at|date:"d/m H:i" }} ({{ r.duration_display }}) · <a href="{% url 'clinical:restraint_update' r.pk %}">aggiorna</a></div>
+  <div class="alert alert-warning">{% icon "clock" %}<div class="alert-body"><strong>Contenzione in corso:</strong> {{ r.get_restraint_type_display }} dal {{ r.occurred_at|date:"d/m H:i" }} ({{ r.duration_display }}) · <a href="{% url 'clinical:restraint_update' r.pk %}">aggiorna</a></div></div>
 {% endfor %}
 
 <div class="grid grid-4">
-  <div class="card stat"><span class="label">Terapie attive</span><span class="value">{{ therapies|length }}</span><span class="muted">+ {{ sos_therapies|length }} al bisogno</span></div>
-  <div class="card stat"><span class="label">Giorni dall'ultima evacuazione</span>
-    <span class="value" style="color: {% if days_since_evacuation >= 3 %}var(--danger){% elif days_since_evacuation == 2 %}var(--warn){% else %}inherit{% endif %}">{{ days_since_evacuation }}</span>
-    <span class="muted">{% if last_evacuation %}ultima {{ last_evacuation.occurred_at|date:"d/m H:i" }}{% else %}nessuna registrata{% endif %}</span></div>
-  <div class="card stat"><span class="label">SOS ultimi 7 giorni</span><span class="value">{{ sos_week }}</span></div>
-  <div class="card stat"><span class="label">PAI</span>
-    {% if pai %}<span class="value"><a href="{{ pai.get_absolute_url }}">v{{ pai.version }}</a></span><span class="muted">revisione entro {{ pai.review_due|date:"d/m/Y" }}</span>
-    {% else %}<span class="value">—</span><span class="muted">nessun PAI in vigore</span>{% endif %}</div>
+  <div class="card stat">
+    <span class="label">Terapie attive <span class="stat-icon">{% icon "pill" %}</span></span>
+    <span class="value">{{ therapies|length }}</span>
+    <small>+ {{ sos_therapies|length }} al bisogno (SOS)</small></div>
+  <div class="card stat {% if days_since_evacuation >= 3 %}tone-danger{% elif days_since_evacuation == 2 %}tone-warn{% endif %}">
+    <span class="label">Giorni senza evacuazione <span class="stat-icon">{% icon "timer" %}</span></span>
+    <span class="value">{{ days_since_evacuation }}</span>
+    <small>{% if last_evacuation %}ultima {{ last_evacuation.occurred_at|date:"d/m H:i" }}{% else %}nessuna registrata{% endif %}</small></div>
+  <div class="card stat {% if sos_week >= 3 %}tone-warn{% endif %}">
+    <span class="label">SOS ultimi 7 giorni <span class="stat-icon">{% icon "shield-check" %}</span></span>
+    <span class="value">{{ sos_week }}</span>
+    <small>somministrazioni al bisogno</small></div>
+  <div class="card stat {% if not pai %}tone-warn{% endif %}">
+    <span class="label">PAI <span class="stat-icon">{% icon "clipboard-check" %}</span></span>
+    {% if pai %}<span class="value"><a href="{{ pai.get_absolute_url }}">v{{ pai.version }}</a></span><small>revisione entro {{ pai.review_due|date:"d/m/Y" }}</small>
+    {% else %}<span class="value">—</span><small>nessun PAI in vigore</small>{% endif %}</div>
 </div>
 
 <div class="grid grid-2">
@@ -84,19 +94,19 @@
     <div class="card-head"><h2>Diario (7 giorni)</h2><div class="actions"><a class="btn btn-sm" href="{% url 'daily:guest_diary' guest.pk %}">Diario</a></div></div>
     <ul class="list-plain">
       {% for d in diary %}
-        <li>{% if d.is_relevant %}<span class="pill pill-warn">rilevante</span> {% endif %}<small class="muted">{{ d.occurred_at|date:"d/m H:i" }} · {{ d.created_by }}</small><br>{{ d.text|truncatechars:220 }}</li>
+        <li>{% if d.is_relevant %}<span class="pill pill-warn">rilevante</span> {% endif %}<small class="muted">{{ d.occurred_at|date:"d/m H:i" }} · {{ d.created_by|default:"—" }}</small><br>{{ d.text|truncatechars:220 }}</li>
       {% empty %}<li class="muted">Nessuna nota.</li>{% endfor %}
     </ul>
   </div>
 
   <div class="card">
-    <div class="card-head"><h2>Prossime visite</h2><div class="actions">{% if perms.appointments.add_appointment and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'appointments:create' %}?guest={{ guest.pk }}">+ Visita</a>{% endif %}</div></div>
+    <div class="card-head"><h2>Prossime visite</h2><div class="actions">{% if perms.appointments.add_appointment and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'appointments:create' %}?guest={{ guest.pk }}">{% icon "plus" %}Visita</a>{% endif %}</div></div>
     <ul class="list-plain">
       {% for a in appointments %}<li><a href="{{ a.get_absolute_url }}">{{ a.title }}</a> <small class="muted">{{ a.scheduled_at|date:"D d/m H:i" }} · {{ a.location }}</small></li>
       {% empty %}<li class="muted">Nessuna visita programmata.</li>{% endfor %}
     </ul>
     {% if emergency_contacts %}<hr><strong>Contatti in emergenza</strong>
-      <ul class="list-plain">{% for c in emergency_contacts %}<li>{{ c.name }} ({{ c.get_kind_display }}{% if c.relationship %}, {{ c.relationship }}{% endif %}) – <a href="tel:{{ c.phone }}">{{ c.phone }}</a></li>{% endfor %}</ul>
+      <ul class="list-plain">{% for c in emergency_contacts %}<li>{{ c.name }} <small>({{ c.get_kind_display }}{% if c.relationship %}, {{ c.relationship }}{% endif %})</small><br><a href="tel:{{ c.phone }}">{% icon "phone" %} {{ c.phone }}</a></li>{% endfor %}</ul>
     {% endif %}
   </div>
 </div>

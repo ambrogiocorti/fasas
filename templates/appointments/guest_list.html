@@ -1,8 +1,8 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}{{ guest }} – visite{% endblock %}
 {% block content %}
 {% include "guests/_header.html" %}
-<div class="page-head"><h2>Visite e controlli</h2><div class="actions">{% if perms.appointments.add_appointment and not guest.is_archived %}<a class="btn btn-primary btn-sm" href="{% url 'appointments:create' %}?guest={{ guest.pk }}">+ Appuntamento</a>{% endif %}</div></div>
+<div class="page-head"><h2>Visite e controlli</h2><div class="actions">{% if perms.appointments.add_appointment and not guest.is_archived %}<a class="btn btn-primary btn-sm" href="{% url 'appointments:create' %}?guest={{ guest.pk }}">{% icon "plus" %}Appuntamento</a>{% endif %}</div></div>
 <div class="card table-wrap"><table>
   <thead><tr><th>Data</th><th>Tipo</th><th>Descrizione</th><th>Luogo / medico</th><th>Stato</th><th>Esito</th></tr></thead>
   <tbody>{% for a in appointments %}

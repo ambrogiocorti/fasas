@@ -14,6 +14,15 @@
     }
   });
 
+  // Tasto "/" per andare alla ricerca (se non si sta già scrivendo in un campo)
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+    const tag = (document.activeElement && document.activeElement.tagName) || "";
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag) || document.activeElement.isContentEditable) return;
+    const input = document.querySelector("[data-search-input]");
+    if (input) { e.preventDefault(); input.focus(); input.select(); }
+  });
+
   // Conferma per azioni importanti: <button data-confirm="Messaggio">
   document.addEventListener("submit", function (e) {
     const btn = e.submitter;

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}{{ guest }} – parametri{% endblock %}
 {% block content %}
 {% include "guests/_header.html" %}
@@ -14,8 +14,8 @@
   </form>
   <div class="actions">
     {% if perms.clinical.add_parameterreading and not guest.is_archived %}
-      <a class="btn btn-sm" href="{% url 'clinical:parameter_create' guest.pk %}">+ Singolo valore</a>
-      <a class="btn btn-sm btn-primary" href="{% url 'clinical:quick_parameters' guest.pk %}">+ Rilevazione</a>
+      <a class="btn btn-sm" href="{% url 'clinical:parameter_create' guest.pk %}">{% icon "plus" %}Singolo valore</a>
+      <a class="btn btn-sm btn-primary" href="{% url 'clinical:quick_parameters' guest.pk %}">{% icon "plus" %}Rilevazione</a>
     {% endif %}
   </div>
 </div>

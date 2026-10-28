@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}Chiusura turni{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Blocco giornata – chiusura turni</h1></div>
@@ -13,7 +13,7 @@
       {% for s in row.shifts %}
         <td>
           {% if s.closure and s.closure.is_closed %}
-            <a href="{% url 'daily:closure_detail' s.closure.pk %}"><span class="pill pill-ok">🔒 chiuso</span></a>
+            <a href="{% url 'daily:closure_detail' s.closure.pk %}"><span class="pill pill-ok">{% icon "lock" %}chiuso</span></a>
             <small class="muted">{{ s.closure.closed_at|date:"d/m H:i" }} {% if s.closure.automatic %}auto{% else %}{{ s.closure.closed_by }}{% endif %}</small>
             {% if s.closure.summary.missing %}<br><span class="pill pill-warn">{{ s.closure.summary.missing|length }} mancanti</span>{% endif %}
           {% elif s.future %}<span class="muted">—</span>

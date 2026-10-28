@@ -1,22 +1,45 @@
-{% load static %}<!doctype html>
+{% load static fasas_tags %}<!doctype html>
 <html lang="it" data-theme="light">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">
-<title>Accesso · FASAS Digitale</title><link rel="stylesheet" href="{% static 'css/fasas.css' %}">
-<script>try{if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.dataset.theme='dark'}catch(e){}</script></head>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Accesso · FASAS Digitale</title>
+  <link rel="stylesheet" href="{% static 'css/fasas.css' %}">
+  <script>try{if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.dataset.theme='dark'}catch(e){}</script>
+</head>
 <body>
+{% include "partials/icons.html" %}
 <div class="auth">
-  <div class="card">
-    <div class="brand" style="padding-left:0"><span class="brand-mark">FAS</span><span>FASAS Digitale<small class="muted">Fascicolo Socio Assistenziale Sanitario</small></span></div>
-    {% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}
-    <form method="post" novalidate>
-      {% csrf_token %}
-      {% if form.non_field_errors %}<div class="alert alert-error">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>{% endif %}
-      <div class="field"><label for="id_username">Nome utente</label>{{ form.username }}</div>
-      <div class="field" style="margin-top:.8rem"><label for="id_password">Password</label>{{ form.password }}</div>
-      <input type="hidden" name="next" value="{{ next }}">
-      <div class="form-actions"><button class="btn btn-primary btn-lg" style="width:100%">Accedi</button></div>
-    </form>
-    <p class="muted" style="font-size:.8rem; margin-top:1rem">Accesso riservato al personale autorizzato. Ogni accesso e ogni operazione sono registrati.</p>
-  </div>
+  <section class="auth-brand">
+    <div>
+      <span class="brand-mark">{% icon "activity" %}</span>
+      <h1>FASAS Digitale</h1>
+      <p>Il fascicolo socio assistenziale sanitario della comunità: terapie, turni, protocolli e documenti in un unico posto, sempre tracciati.</p>
+      <ul>
+        <li>{% icon "pill" %}Giro farmaci e farmaci SOS per turno</li>
+        <li>{% icon "flag" %}Protocolli automatici e avvisi in tempo reale</li>
+        <li>{% icon "shield-check" %}Dati cifrati e registro di ogni modifica</li>
+      </ul>
+    </div>
+    <small>Accesso riservato al personale autorizzato.</small>
+  </section>
+  <section class="auth-panel">
+    <div class="card">
+      <h2>Accedi</h2>
+      <p class="muted">Usa le credenziali personali che ti ha assegnato l'amministratore.</p>
+      {% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}">{% icon "info" %}<div class="alert-body">{{ message }}</div></div>{% endfor %}
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert alert-error">{% icon "alert-circle" %}<div class="alert-body">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div></div>{% endif %}
+        <div class="field"><label for="id_username">Nome utente</label>{{ form.username }}</div>
+        <div class="field"><label for="id_password">Password</label>{{ form.password }}</div>
+        <input type="hidden" name="next" value="{{ next }}">
+        <div class="form-actions" style="border-top:0; padding-top:0"><button class="btn btn-primary btn-lg" style="width:100%">Accedi</button></div>
+      </form>
+      <p class="muted" style="font-size:.8rem; margin:1rem 0 0">Ogni accesso e ogni operazione vengono registrati. Sui terminali condivisi ricordati di uscire a fine turno.</p>
+    </div>
+  </section>
 </div>
-</body></html>
+</body>
+</html>

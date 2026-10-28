@@ -1,9 +1,12 @@
-<form class="filters" method="get">
-  <a class="btn btn-sm" href="?date={{ prev_day|date:'Y-m-d' }}&shift={{ shift }}">←</a>
-  <input type="date" name="date" value="{{ day|date:'Y-m-d' }}" aria-label="Giornata">
-  <select name="shift" aria-label="Turno">{% for code, label in shifts %}<option value="{{ code }}" {% if code == shift %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
-  <button class="btn btn-sm">Vai</button>
-  <a class="btn btn-sm" href="?date={{ next_day|date:'Y-m-d' }}&shift={{ shift }}">→</a>
-  <a class="btn btn-sm btn-ghost" href="?">Turno corrente</a>
-  {% if closed %}<span class="pill pill-warn">🔒 Turno chiuso: sola consultazione</span>{% endif %}
+{% load fasas_tags %}
+<form class="toolbar" method="get">
+  <span class="group">
+    <a class="btn btn-icon" href="?date={{ prev_day|date:'Y-m-d' }}&shift={{ shift }}" title="Giorno precedente" aria-label="Giorno precedente" style="width:var(--control)">{% icon "chevron-left" %}</a>
+    <input type="date" name="date" value="{{ day|date:'Y-m-d' }}" aria-label="Giornata">
+    <a class="btn btn-icon" href="?date={{ next_day|date:'Y-m-d' }}&shift={{ shift }}" title="Giorno successivo" aria-label="Giorno successivo" style="width:var(--control)">{% icon "chevron-right" %}</a>
+  </span>
+  <select name="shift" aria-label="Turno" onchange="this.form.submit()">{% for code, label in shifts %}<option value="{{ code }}" {% if code == shift %}selected{% endif %}>Turno {{ label|lower }}</option>{% endfor %}</select>
+  <button class="btn">Vai</button>
+  <a class="btn btn-ghost" href="?">Turno corrente</a>
+  {% if closed %}<span class="pill pill-warn">{% icon "lock" %}Turno chiuso: sola consultazione</span>{% endif %}
 </form>

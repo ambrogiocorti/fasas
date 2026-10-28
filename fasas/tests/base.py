@@ -1,4 +1,5 @@
 import datetime
+import io
 import shutil
 import tempfile
 from decimal import Decimal
@@ -22,7 +23,7 @@ _BACKUP = tempfile.mkdtemp(prefix="fasas-test-backup-")
 class FasasTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
-        call_command("fasas_setup", stdout=open("/dev/null", "w"))
+        call_command("fasas_setup", stdout=io.StringIO())
         cls.admin = cls.make_user("admin", Role.ADMIN)
         cls.coordinator = cls.make_user("coord", Role.COORDINATOR)
         cls.operator = cls.make_user("oper", Role.OPERATOR)

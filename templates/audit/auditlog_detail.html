@@ -1,8 +1,8 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}Audit #{{ object.pk }}{% endblock %}
 {% block content %}
 <div class="card" style="max-width: 960px">
-  <div class="card-head"><h1>Voce di audit #{{ object.pk }}</h1><div class="actions"><a class="btn btn-sm" href="{% url 'audit:list' %}">← Elenco</a></div></div>
+  <div class="card-head"><h1>Voce di audit #{{ object.pk }}</h1><div class="actions"><a class="btn btn-sm" href="{% url 'audit:list' %}">{% icon "arrow-left" %}Elenco</a></div></div>
   <table><tbody>
     <tr><th>Data/ora</th><td>{{ object.timestamp|date:"d/m/Y H:i:s" }}</td></tr>
     <tr><th>Utente</th><td>{{ object.username }}</td></tr>

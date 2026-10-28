@@ -1,15 +1,15 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}Registro turni{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Registro turni operatori</h1>
-  <div class="actions"><a class="btn btn-sm" href="?date={{ prev|date:'Y-m-d' }}">← Settimana prec.</a><a class="btn btn-sm" href="?">Oggi</a><a class="btn btn-sm" href="?date={{ next|date:'Y-m-d' }}">Settimana succ. →</a></div></div>
+  <div class="actions"><a class="btn btn-sm" href="?date={{ prev|date:'Y-m-d' }}">{% icon "arrow-left" %}Settimana prec.</a><a class="btn btn-sm" href="?">Oggi</a><a class="btn btn-sm" href="?date={{ next|date:'Y-m-d' }}">Settimana succ.{% icon "chevron-right" %}</a></div></div>
 <div class="card table-wrap">
   <table>
     <thead><tr><th>Giorno</th><th>Mattina</th><th>Pomeriggio</th><th>Notte</th></tr></thead>
     <tbody>
     {% for row in grid %}
       <tr {% if row.day == day %}style="background:var(--primary-soft)"{% endif %}><td class="nowrap"><strong>{{ row.day|date:"D d/m" }}</strong></td>
-        {% for s in row.shifts %}<td>{% for a in s.people %}<div>{{ a.user }}{% if a.is_shift_lead %} <span class="pill pill-info">resp.</span>{% endif %}{% if a.checked_in_at %} <small class="muted">✔ {{ a.checked_in_at|time:"H:i" }}</small>{% endif %}</div>{% empty %}<span class="muted">—</span>{% endfor %}</td>{% endfor %}</tr>
+        {% for s in row.shifts %}<td>{% for a in s.people %}<div>{{ a.user }}{% if a.is_shift_lead %} <span class="pill pill-info">resp.</span>{% endif %}{% if a.checked_in_at %} <small class="muted">{% icon "check" %} {{ a.checked_in_at|time:"H:i" }}</small>{% endif %}</div>{% empty %}<span class="muted">—</span>{% endfor %}</td>{% endfor %}</tr>
     {% endfor %}
     </tbody>
   </table>

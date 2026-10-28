@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}Evacuazioni{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Evacuazioni – {{ today|date:"d/m/Y" }}</h1>
@@ -13,12 +13,12 @@
         <td><a href="{% url 'daily:guest_daily' r.guest.pk %}"><strong>{{ r.guest }}</strong></a></td>
         <td class="num"><span class="pill {% if r.alert %}pill-danger{% elif r.warning %}pill-warn{% else %}pill-ok{% endif %}">{{ r.days }}</span></td>
         <td>{% if r.last %}{{ r.last.occurred_at|date:"d/m/Y H:i" }}{% else %}<span class="muted">nessuna registrata</span>{% endif %}</td>
-        {% if mode == 'A' %}<td>{% if r.recorded_today %}<span class="state state-ok">✔</span>{% else %}<span class="state state-warn">⚠</span>{% endif %}</td>{% endif %}
+        {% if mode == 'A' %}<td>{% if r.recorded_today %}{% state_icon "ok" %}{% else %}{% state_icon "missing" %}{% endif %}</td>{% endif %}
         <td class="num">
           {% if perms.daily.add_evacuationrecord %}
           <form method="post" action="{% url 'daily:evacuation_quick' r.guest.pk %}" class="inline-form">{% csrf_token %}
             <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <button class="btn btn-sm btn-ok" name="outcome" value="1">Evacuato</button>
+            <button class="btn btn-sm btn-ok" name="outcome" value="1">{% icon "check" %}Evacuato</button>
             {% if mode == 'A' %}<button class="btn btn-sm" name="outcome" value="0">Non evacuato</button>{% endif %}
           </form>
           <a class="btn btn-sm" href="{% url 'daily:evacuation_create' r.guest.pk %}">Dettagli…</a>

@@ -1,10 +1,10 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}Magazzino farmaci{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Magazzino farmaci</h1>
   <div class="actions">
     {% if perms.pharmacy.view_drug %}<a class="btn" href="{% url 'pharmacy:drug_list' %}">Catalogo farmaci</a>{% endif %}
-    {% if perms.pharmacy.add_stocklot %}<a class="btn btn-primary" href="{% url 'pharmacy:lot_load' %}">+ Carico</a>{% endif %}
+    {% if perms.pharmacy.add_stocklot %}<a class="btn btn-primary" href="{% url 'pharmacy:lot_load' %}">{% icon "plus" %}Carico</a>{% endif %}
   </div></div>
 <form class="filters" method="get">
   <input type="search" name="q" value="{{ q }}" placeholder="Farmaco o principio attivo">

@@ -1,14 +1,14 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}Evento critico{% endblock %}
 {% block content %}
 <div class="card" style="max-width: 760px; border-color: var(--danger)">
-  <h1 style="color: var(--danger)">⚠ Evento critico</h1>
+  <h1 style="color: var(--danger); display:flex; align-items:center; gap:.5rem">{% icon "alert" %}Evento critico</h1>
   <p class="muted">Registrazione immediata: coordinatori, medico e responsabili ricevono subito una notifica critica. I dettagli si possono completare dopo dalla scheda evento.</p>
-  <div class="alert alert-danger"><strong>Pericolo di vita?</strong> Chiama subito il <a href="tel:112"><strong>112</strong></a>, poi registra l'evento.</div>
+  <div class="alert alert-danger">{% icon "phone" %}<div class="alert-body"><strong>Pericolo di vita?</strong> Chiama subito il <a href="tel:112">112</a>, poi registra l'evento.</div></div>
   <form method="post" novalidate>
     {% csrf_token %}
     {% include "partials/form_fields.html" %}
-    <div class="form-actions"><button class="btn btn-emergency btn-lg">Registra e avvisa</button><a class="btn" href="javascript:history.back()">Annulla</a></div>
+    <div class="form-actions"><button class="btn btn-emergency btn-lg">{% icon "alert" %}Registra e avvisa</button><a class="btn" href="javascript:history.back()">Annulla</a></div>
   </form>
 </div>
 {% endblock %}

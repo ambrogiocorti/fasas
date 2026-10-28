@@ -1,10 +1,10 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}{{ guest }} – documenti{% endblock %}
 {% block content %}
 {% include "guests/_header.html" %}
 <div class="page-head"><h2>Documenti</h2>
   <form class="filters" method="get" style="margin:0"><select name="category" onchange="this.form.submit()"><option value="">Tutte le categorie</option>{% for c, l in categories %}<option value="{{ c }}" {% if category == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></form>
-  <div class="actions">{% if perms.documents.add_document and not guest.is_archived %}<a class="btn btn-primary btn-sm" href="{% url 'documents:create' guest.pk %}">+ Carica documento</a>{% endif %}</div></div>
+  <div class="actions">{% if perms.documents.add_document and not guest.is_archived %}<a class="btn btn-primary btn-sm" href="{% url 'documents:create' guest.pk %}">{% icon "plus" %}Carica documento</a>{% endif %}</div></div>
 <div class="card table-wrap">
   <table>
     <thead><tr><th>Documento</th><th>Categoria</th><th>Data</th><th>Versione</th><th>Scadenza</th><th></th></tr></thead>
@@ -14,7 +14,7 @@
         <td>{{ d.get_category_display }}</td><td>{{ d.document_date|date:"d/m/Y"|default:"—" }}</td>
         <td>v{{ v.number }}{% if v.is_signed %} <span class="pill pill-ok">firmato</span>{% endif %}</td>
         <td>{% if d.expires_on %}<span class="pill {% if d.expires_on < now.date %}pill-danger{% endif %}">{{ d.expires_on|date:"d/m/Y" }}</span>{% endif %}</td>
-        <td class="num nowrap">{% if v %}<a class="btn btn-sm" href="{% url 'documents:view' v.pk %}" target="_blank" rel="noopener">Apri</a> <a class="btn btn-sm" href="{% url 'documents:download' v.pk %}">Scarica</a>{% endif %}</td></tr>
+        <td class="num nowrap">{% if v %}<a class="btn btn-sm" href="{% url 'documents:view' v.pk %}" target="_blank" rel="noopener">Apri</a> <a class="btn btn-sm" href="{% url 'documents:download' v.pk %}">{% icon "download" %}Scarica</a>{% endif %}</td></tr>
     {% endwith %}{% empty %}<tr><td colspan="6" class="empty">Nessun documento.</td></tr>{% endfor %}
     </tbody>
   </table>

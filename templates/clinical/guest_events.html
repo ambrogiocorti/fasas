@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}{{ guest }} – eventi{% endblock %}
 {% block content %}
 {% include "guests/_header.html" %}
@@ -8,8 +8,8 @@
     <select name="type" onchange="this.form.submit()"><option value="">Tutti i tipi</option>{% for c, l in types %}<option value="{{ c }}" {% if request.GET.type == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
   </form>
   <div class="actions">{% if not guest.is_archived %}
-    {% if perms.clinical.add_restraint %}<a class="btn btn-sm" href="{% url 'clinical:restraint_create' guest.pk %}">+ Contenzione</a>{% endif %}
-    {% if perms.clinical.add_clinicalevent %}<a class="btn btn-sm btn-primary" href="{% url 'clinical:event_create' guest.pk %}">+ Evento</a>{% endif %}
+    {% if perms.clinical.add_restraint %}<a class="btn btn-sm" href="{% url 'clinical:restraint_create' guest.pk %}">{% icon "plus" %}Contenzione</a>{% endif %}
+    {% if perms.clinical.add_clinicalevent %}<a class="btn btn-sm btn-primary" href="{% url 'clinical:event_create' guest.pk %}">{% icon "plus" %}Evento</a>{% endif %}
   {% endif %}</div>
 </div>
 <div class="card table-wrap">

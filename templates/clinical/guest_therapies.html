@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}{{ guest }} – terapie{% endblock %}
 {% block content %}
 {% include "guests/_header.html" %}
@@ -7,8 +7,8 @@
   <div class="actions">
     <a class="btn btn-sm" href="{% url 'clinical:guest_administrations' guest.pk %}">Storico somministrazioni</a>
     {% if perms.clinical.add_therapy and not guest.is_archived %}
-      <a class="btn btn-sm" href="{% url 'clinical:therapy_create' guest.pk %}?sos=1">+ Farmaco SOS</a>
-      <a class="btn btn-sm btn-primary" href="{% url 'clinical:therapy_create' guest.pk %}">+ Nuova terapia</a>
+      <a class="btn btn-sm" href="{% url 'clinical:therapy_create' guest.pk %}?sos=1">{% icon "plus" %}Farmaco SOS</a>
+      <a class="btn btn-sm btn-primary" href="{% url 'clinical:therapy_create' guest.pk %}">{% icon "plus" %}Nuova terapia</a>
     {% endif %}
   </div>
 </div>

@@ -4,81 +4,91 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="{% if ui_theme == 'dark' %}#0c1117{% else %}#f3f5f8{% endif %}">
   <title>{% block title %}FASAS{% endblock %} · {{ community.name|default:"FASAS Digitale" }}</title>
   <link rel="stylesheet" href="{% static 'css/fasas.css' %}">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f5f99'/%3E%3Cpath d='M13 7h6v6h6v6h-6v6h-6v-6H7v-6h6z' fill='white'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231d5fa0'/%3E%3Cpath d='M27 16h-5l-4 11-6-22-4 11H5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 </head>
 <body>
-{% with url=request.resolver_match.namespace %}
+{% include "partials/icons.html" %}
+{% with url=request.resolver_match.namespace name=request.resolver_match.url_name %}
 <div class="layout">
   <aside class="sidebar" aria-label="Menu principale">
     <div class="brand">
-      <span class="brand-mark">FAS</span>
-      <span>FASAS Digitale<small class="muted">{{ community.name }}</small></span>
+      <span class="brand-mark">{% icon "activity" %}</span>
+      <span class="brand-name">FASAS Digitale<small>{{ community.name }}</small></span>
     </div>
     <nav class="nav">
-      <a href="{% url 'core:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><span class="ico">◧</span>Cruscotto turno</a>
-      <a href="{% url 'guests:list' %}" class="{% if url == 'guests' %}active{% endif %}"><span class="ico">👤</span>Ospiti</a>
+      <a href="{% url 'core:dashboard' %}" class="{% if name == 'dashboard' %}active{% endif %}">{% icon "dashboard" %}Cruscotto turno</a>
+      <a href="{% url 'guests:list' %}" class="{% if url == 'guests' %}active{% endif %}">{% icon "user" %}Ospiti</a>
 
       <div class="nav-section">Turno</div>
-      {% if perms.clinical.view_therapyadministration %}<a href="{% url 'clinical:board' %}" class="{% if request.resolver_match.url_name == 'board' %}active{% endif %}"><span class="ico">💊</span>Giro farmaci</a>{% endif %}
-      {% if perms.daily.view_checklistcheck %}<a href="{% url 'daily:checklist' %}" class="{% if request.resolver_match.url_name == 'checklist' %}active{% endif %}"><span class="ico">☑</span>Checklist turno</a>{% endif %}
-      {% if perms.daily.view_dailyrecord %}<a href="{% url 'daily:register' %}" class="{% if request.resolver_match.url_name == 'register' %}active{% endif %}"><span class="ico">📒</span>Registro giornaliero</a>{% endif %}
-      {% if perms.daily.view_evacuationrecord %}<a href="{% url 'daily:evacuations' %}" class="{% if request.resolver_match.url_name == 'evacuations' %}active{% endif %}"><span class="ico">◔</span>Evacuazioni</a>{% endif %}
-      {% if perms.protocols.view_protocolactivation %}<a href="{% url 'protocols:activations' %}" class="{% if request.resolver_match.url_name == 'activations' %}active{% endif %}"><span class="ico">⚑</span>Protocolli attivi</a>{% endif %}
-      {% if perms.clinical.validate_sos %}<a href="{% url 'clinical:sos_pending' %}" class="{% if request.resolver_match.url_name == 'sos_pending' %}active{% endif %}"><span class="ico">✓</span>SOS da validare</a>{% endif %}
-      {% if perms.daily.view_shiftclosure %}<a href="{% url 'daily:closures' %}" class="{% if request.resolver_match.url_name == 'closures' %}active{% endif %}"><span class="ico">🔒</span>Chiusura turni</a>{% endif %}
-      {% if perms.daily.view_shiftassignment %}<a href="{% url 'daily:roster' %}" class="{% if request.resolver_match.url_name == 'roster' %}active{% endif %}"><span class="ico">🗓</span>Registro turni</a>{% endif %}
+      {% if perms.clinical.view_therapyadministration %}<a href="{% url 'clinical:board' %}" class="{% if name == 'board' %}active{% endif %}">{% icon "pill" %}Giro farmaci</a>{% endif %}
+      {% if perms.daily.view_checklistcheck %}<a href="{% url 'daily:checklist' %}" class="{% if name == 'checklist' %}active{% endif %}">{% icon "clipboard-check" %}Checklist turno</a>{% endif %}
+      {% if perms.daily.view_dailyrecord %}<a href="{% url 'daily:register' %}" class="{% if name == 'register' %}active{% endif %}">{% icon "book" %}Registro giornaliero</a>{% endif %}
+      {% if perms.daily.view_evacuationrecord %}<a href="{% url 'daily:evacuations' %}" class="{% if name == 'evacuations' %}active{% endif %}">{% icon "timer" %}Evacuazioni</a>{% endif %}
+      {% if perms.protocols.view_protocolactivation %}<a href="{% url 'protocols:activations' %}" class="{% if name == 'activations' or name == 'activation_detail' %}active{% endif %}">{% icon "flag" %}Protocolli attivi</a>{% endif %}
+      {% if perms.clinical.validate_sos %}<a href="{% url 'clinical:sos_pending' %}" class="{% if name == 'sos_pending' %}active{% endif %}">{% icon "shield-check" %}SOS da validare</a>{% endif %}
+      {% if perms.daily.view_shiftclosure %}<a href="{% url 'daily:closures' %}" class="{% if name == 'closures' or name == 'close_shift' or name == 'closure_detail' %}active{% endif %}">{% icon "lock" %}Chiusura turni</a>{% endif %}
+      {% if perms.daily.view_shiftassignment %}<a href="{% url 'daily:roster' %}" class="{% if name == 'roster' %}active{% endif %}">{% icon "user-check" %}Registro turni</a>{% endif %}
 
       <div class="nav-section">Struttura</div>
-      {% if perms.appointments.view_appointment %}<a href="{% url 'appointments:list' %}" class="{% if url == 'appointments' %}active{% endif %}"><span class="ico">📅</span>Appuntamenti</a>{% endif %}
-      {% if perms.pharmacy.view_stocklot %}<a href="{% url 'pharmacy:stock' %}" class="{% if url == 'pharmacy' %}active{% endif %}"><span class="ico">📦</span>Magazzino farmaci</a>{% endif %}
-      {% if perms.reports.view_generatedreport %}<a href="{% url 'reports:list' %}" class="{% if url == 'reports' %}active{% endif %}"><span class="ico">📄</span>Report</a>{% endif %}
-      <a href="{% url 'search:search' %}" class="{% if url == 'search' %}active{% endif %}"><span class="ico">⌕</span>Ricerca avanzata</a>
-      <a href="{% url 'notifications:list' %}" class="{% if url == 'notifications' and request.resolver_match.url_name == 'list' %}active{% endif %}"><span class="ico">🔔</span>Notifiche{% if unread_notifications %}<span class="count">{{ unread_notifications }}</span>{% endif %}</a>
+      {% if perms.appointments.view_appointment %}<a href="{% url 'appointments:list' %}" class="{% if url == 'appointments' %}active{% endif %}">{% icon "calendar" %}Appuntamenti</a>{% endif %}
+      {% if perms.pharmacy.view_stocklot %}<a href="{% url 'pharmacy:stock' %}" class="{% if url == 'pharmacy' %}active{% endif %}">{% icon "package" %}Magazzino farmaci</a>{% endif %}
+      {% if perms.reports.view_generatedreport %}<a href="{% url 'reports:list' %}" class="{% if url == 'reports' %}active{% endif %}">{% icon "file-text" %}Report</a>{% endif %}
+      <a href="{% url 'search:search' %}" class="{% if url == 'search' %}active{% endif %}">{% icon "search" %}Ricerca avanzata</a>
+      <a href="{% url 'notifications:list' %}" class="{% if url == 'notifications' and name == 'list' %}active{% endif %}">{% icon "bell" %}Notifiche{% if unread_notifications %}<span class="count">{{ unread_notifications }}</span>{% endif %}</a>
 
       <div class="nav-section">Amministrazione</div>
-      <a href="{% url 'core:settings' %}" class="{% if request.resolver_match.url_name == 'settings' %}active{% endif %}"><span class="ico">⚙</span>Impostazioni</a>
-      {% if perms.accounts.view_user %}<a href="{% url 'accounts:user_list' %}" class="{% if request.resolver_match.url_name == 'user_list' %}active{% endif %}"><span class="ico">👥</span>Utenti e permessi</a>{% endif %}
-      {% if perms.audit.view_auditlog %}<a href="{% url 'audit:list' %}" class="{% if url == 'audit' %}active{% endif %}"><span class="ico">🛡</span>Audit log</a>{% endif %}
-      {% if perms.accounts.view_accesslog %}<a href="{% url 'accounts:access_log' %}" class="{% if request.resolver_match.url_name == 'access_log' %}active{% endif %}"><span class="ico">🔑</span>Log accessi</a>{% endif %}
-      {% if perms.backups.manage_backup %}<a href="{% url 'backups:list' %}" class="{% if url == 'backups' %}active{% endif %}"><span class="ico">💾</span>Backup</a>{% endif %}
+      <a href="{% url 'core:settings' %}" class="{% if name == 'settings' or name == 'config' %}active{% endif %}">{% icon "sliders" %}Impostazioni</a>
+      {% if perms.accounts.view_user %}<a href="{% url 'accounts:user_list' %}" class="{% if name == 'user_list' or name == 'user_update' or name == 'user_permissions' or name == 'user_create' %}active{% endif %}">{% icon "users" %}Utenti e permessi</a>{% endif %}
+      {% if perms.audit.view_auditlog %}<a href="{% url 'audit:list' %}" class="{% if url == 'audit' %}active{% endif %}">{% icon "shield" %}Audit log</a>{% endif %}
+      {% if perms.accounts.view_accesslog %}<a href="{% url 'accounts:access_log' %}" class="{% if name == 'access_log' %}active{% endif %}">{% icon "key" %}Log accessi</a>{% endif %}
+      {% if perms.backups.manage_backup %}<a href="{% url 'backups:list' %}" class="{% if url == 'backups' %}active{% endif %}">{% icon "database" %}Backup</a>{% endif %}
     </nav>
+    <div class="user-card">
+      <span class="avatar-sm" aria-hidden="true">{{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}</span>
+      <span class="who"><a href="{% url 'accounts:profile' %}" title="Il mio profilo">{{ request.user.get_full_name|default:request.user.username }}</a><small>{{ request.user.get_role_display }}</small></span>
+      <form method="post" action="{% url 'accounts:logout' %}" class="inline-form">
+        {% csrf_token %}
+        <button class="icon-btn ghost" title="Esci" aria-label="Esci">{% icon "log-out" %}</button>
+      </form>
+    </div>
   </aside>
 
   <div class="main">
     <header class="topbar">
-      <button class="icon-btn menu-toggle" type="button" data-nav-toggle aria-label="Apri menu">☰</button>
-      <span class="shift-badge" title="Turno in corso">
-        <span class="dot"></span><span class="hide-mobile">Turno&nbsp;</span>{{ current_shift.label }} · {{ current_shift.day|date:"d/m" }}
+      <button class="icon-btn menu-toggle" type="button" data-nav-toggle aria-label="Apri menu">{% icon "menu" %}</button>
+      <span class="shift-badge shift-{{ current_shift.code }}" title="Turno in corso">
+        <span class="dot"></span><span><span class="hide-xs">Turno </span>{{ current_shift.label|lower }}</span><span class="muted">{{ current_shift.day|date:"d/m" }}</span>
       </span>
       <form class="search" action="{% url 'search:search' %}" method="get" role="search">
-        <input type="search" name="q" placeholder="Cerca ospite, farmaco, evento, documento…" aria-label="Ricerca globale" value="{{ request.GET.q|default:'' }}">
+        {% icon "search" %}
+        <input type="search" name="q" placeholder="Cerca ospite, farmaco, evento…" aria-label="Ricerca globale" value="{{ request.GET.q|default:'' }}" data-search-input>
+        <kbd title="Premi / per cercare">/</kbd>
       </form>
       <span class="spacer"></span>
       {% if perms.clinical.add_clinicalevent %}
-      <a class="btn btn-emergency" href="{% url 'clinical:emergency' %}{% if guest %}?guest={{ guest.pk }}{% endif %}">⚠ <span class="hide-mobile">Evento critico</span></a>
+      <a class="btn btn-emergency" href="{% url 'clinical:emergency' %}{% if guest %}?guest={{ guest.pk }}{% endif %}" title="Registra un evento critico">{% icon "alert" %}<span class="hide-mobile">Evento critico</span></a>
       {% endif %}
-      <a class="icon-btn" href="{% url 'notifications:list' %}" data-notifications-url="{% url 'notifications:count' %}" aria-label="Notifiche">🔔<span class="badge" {% if not unread_notifications %}hidden{% endif %}>{{ unread_notifications }}</span></a>
+      <a class="icon-btn" href="{% url 'notifications:list' %}" data-notifications-url="{% url 'notifications:count' %}" aria-label="Notifiche" title="Notifiche">{% icon "bell" %}<span class="badge" {% if not unread_notifications %}hidden{% endif %}>{{ unread_notifications }}</span></a>
       <form method="post" action="{% url 'accounts:set_theme' %}" class="inline-form">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ request.get_full_path }}">
         {% if ui_theme == "dark" %}
-          <button class="icon-btn" name="theme" value="light" title="Tema chiaro" aria-label="Passa al tema chiaro">☀</button>
+          <button class="icon-btn" name="theme" value="light" title="Tema chiaro" aria-label="Passa al tema chiaro">{% icon "sun" %}</button>
         {% else %}
-          <button class="icon-btn" name="theme" value="dark" title="Tema scuro" aria-label="Passa al tema scuro">☾</button>
+          <button class="icon-btn" name="theme" value="dark" title="Tema scuro" aria-label="Passa al tema scuro">{% icon "moon" %}</button>
         {% endif %}
-      </form>
-      <a class="icon-btn hide-mobile" href="{% url 'accounts:profile' %}" title="{{ request.user }} – {{ request.user.get_role_display }}" aria-label="Profilo">{{ request.user.first_name|first|default:request.user.username|first|upper }}</a>
-      <form method="post" action="{% url 'accounts:logout' %}" class="inline-form">
-        {% csrf_token %}
-        <button class="icon-btn" title="Esci" aria-label="Esci">⏻</button>
       </form>
     </header>
 
     <main class="content">
       {% for message in messages %}
-        <div class="alert alert-{{ message.tags|default:'info' }}" role="status">{{ message }}</div>
+        <div class="alert alert-{{ message.tags|default:'info' }}" role="status">
+          {% if message.level_tag == 'success' %}{% icon "check-circle" %}{% elif message.level_tag == 'error' %}{% icon "alert-circle" %}{% elif message.level_tag == 'warning' %}{% icon "alert" %}{% else %}{% icon "info" %}{% endif %}
+          <div class="alert-body">{{ message }}</div>
+        </div>
       {% endfor %}
       {% block content %}{% endblock %}
     </main>
@@ -86,10 +96,10 @@
 </div>
 {% endwith %}
 <div class="toast" id="critical-toast" role="alert">
-  <button type="button" aria-label="Chiudi">×</button>
+  <button type="button" aria-label="Chiudi">{% icon "x" %}</button>
   <strong data-title></strong>
   <div data-message></div>
-  <a href="{% url 'notifications:list' %}">Apri le notifiche</a>
+  <a href="{% url 'notifications:list' %}">Apri le notifiche →</a>
 </div>
 <div class="chart-tip" id="chart-tip"></div>
 <script src="{% static 'js/fasas.js' %}"></script>

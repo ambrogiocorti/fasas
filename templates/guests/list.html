@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-head">
   <h1>Ospiti</h1>
-  <div class="actions">{% if perms.guests.add_guest %}<a class="btn btn-primary" href="{% url 'guests:create' %}">+ Nuovo ospite</a>{% endif %}</div>
+  <div class="actions">{% if perms.guests.add_guest %}<a class="btn btn-primary" href="{% url 'guests:create' %}">{% icon "plus" %}Nuovo ospite</a>{% endif %}</div>
 </div>
 <form class="filters" method="get">
   <input type="search" name="q" value="{{ q }}" placeholder="Nome, cognome, CF, camera">
@@ -29,7 +29,7 @@
         <td>{% for t in g.tags.all %}{% tag_chip t %} {% endfor %}</td>
         <td><span class="pill {% if g.status == 'active' %}pill-ok{% elif g.status == 'hospitalized' %}pill-warn{% endif %}">{{ g.get_status_display }}</span></td>
         <td class="hide-mobile">
-          {% if g.open_protocols %}<span class="pill pill-danger">⚑ {{ g.open_protocols }} protocoll{{ g.open_protocols|pluralize:"o,i" }}</span>{% endif %}
+          {% if g.open_protocols %}<span class="pill pill-danger">{% icon "flag" %}{{ g.open_protocols }} protocoll{{ g.open_protocols|pluralize:"o,i" }}</span>{% endif %}
           {% if g.allergy_count %}<span class="pill pill-warn">allergie</span>{% endif %}
         </td>
       </tr>

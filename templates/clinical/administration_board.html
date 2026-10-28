@@ -2,37 +2,41 @@
 {% block title %}Giro farmaci{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>Giro farmaci – {{ shift_label }} {{ day|date:"l d/m/Y" }}</h1>
-  <div class="actions"><span class="pill {% if done == total %}pill-ok{% else %}pill-warn{% endif %}">{{ done }}/{{ total }} dosi registrate</span></div>
+  <div><h1>Giro farmaci</h1><span class="subtitle">Turno {{ shift_label|lower }} · {{ day|date:"l d/m/Y" }}</span></div>
+  <div class="actions" style="min-width:220px">
+    <div style="flex:1">
+      <div style="display:flex; justify-content:space-between; font-size:.84rem"><strong>{{ done }}/{{ total }} dosi registrate</strong><span class="muted">{{ done|percent:total }}%</span></div>
+      <div class="progress" style="margin-top:.35rem"><span style="width: {{ done|percent:total }}%"></span></div>
+    </div>
+  </div>
 </div>
 {% include "partials/shift_nav.html" %}
-<div class="progress" style="margin-bottom:1rem"><span style="width: {{ done|percent:total }}%"></span></div>
 {% for guest, doses in grouped.items %}
   <div class="card">
     <div class="card-head">
       <h2><a href="{{ guest.get_absolute_url }}">{{ guest.last_name }} {{ guest.first_name }}</a></h2>
       {% for t in guest.tags.all %}{% tag_chip t %}{% endfor %}
-      <div class="actions">{% if perms.clinical.add_therapyadministration %}<a class="btn btn-sm" href="{% url 'clinical:sos_administer' guest.pk %}">+ SOS</a>{% endif %}</div>
+      <div class="actions">{% if perms.clinical.add_therapyadministration %}<a class="btn btn-sm" href="{% url 'clinical:sos_administer' guest.pk %}">{% icon "plus" %}SOS</a>{% endif %}</div>
     </div>
-    {% for t in guest.tags.all %}{% if t.alert_message %}<div class="alert alert-info">{{ t.name }}: {{ t.alert_message }}</div>{% endif %}{% endfor %}
-    {% with allergies=guest.allergies.all %}{% if allergies %}<div class="allergy-banner">⚠ Allergie: {% for a in allergies %}{{ a.substance }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}{% endwith %}
+    {% with allergies=guest.allergies.all %}{% if allergies %}<div class="allergy-banner">{% icon "alert" %}<span>Allergie: {% for a in allergies %}{{ a.substance }}{% if not forloop.last %}, {% endif %}{% endfor %}</span></div>{% endif %}{% endwith %}
+    {% for t in guest.tags.all %}{% if t.alert_message %}{% if forloop.first %}<div class="hints">{% endif %}<div class="hint">{% icon "info" %}<span><strong>{{ t.name }}:</strong> {{ t.alert_message }}</span></div>{% endif %}{% if forloop.last %}</div>{% endif %}{% endfor %}
     {% for d in doses %}
       <div class="dose-row {% if d.done %}done{% elif d.overdue %}overdue{% endif %}">
         <div class="time">{{ d.time|time:"H:i" }}</div>
-        <div><strong>{{ d.therapy.drug }}</strong> – {{ d.therapy.dose_display }} <small class="muted">{{ d.therapy.get_route_display }}</small>
+        <div><span class="drug">{{ d.therapy.drug }}</span> – {{ d.therapy.dose_display }} <small class="muted">· {{ d.therapy.get_route_display }}</small>{% if d.overdue %} <span class="pill pill-danger">in ritardo</span>{% endif %}
           {% if d.therapy.instructions %}<br><small>{{ d.therapy.instructions }}</small>{% endif %}
           {% if d.done %}<br><small class="muted">{{ d.administration.get_status_display }} alle {{ d.administration.occurred_at|time:"H:i" }} da {{ d.administration.created_by }}{% if d.administration.notes %} – {{ d.administration.notes }}{% endif %}</small>{% endif %}
         </div>
         <div class="dose-actions">
           {% if d.done %}
-            <span class="pill {% if d.administration.status == 'given' %}pill-ok{% else %}pill-warn{% endif %}">{{ d.administration.get_status_display }}</span>
+            <span class="pill {% if d.administration.status == 'given' %}pill-ok{% else %}pill-warn{% endif %}">{% if d.administration.status == 'given' %}{% icon "check" %}{% endif %}{{ d.administration.get_status_display }}</span>
           {% elif not closed and perms.clinical.add_therapyadministration %}
-            <form method="post" action="{% url 'clinical:administer' d.therapy.pk %}" class="inline-form" style="display:flex; gap:.3rem; flex-wrap:wrap">
+            <form method="post" action="{% url 'clinical:administer' d.therapy.pk %}">
               {% csrf_token %}
               <input type="hidden" name="day" value="{{ d.day|date:'Y-m-d' }}"><input type="hidden" name="time" value="{{ d.time|time:'H:i' }}">
               <input type="hidden" name="next" value="{{ request.get_full_path }}">
-              <input type="text" name="notes" placeholder="Note" style="width:9rem" aria-label="Note">
-              <button class="btn btn-sm btn-ok" name="status" value="given">✔ Somministrato</button>
+              <input type="text" name="notes" placeholder="Note (facoltative)" aria-label="Note">
+              <button class="btn btn-sm btn-ok" name="status" value="given">{% icon "check" %}Somministrato</button>
               <button class="btn btn-sm" name="status" value="refused" data-confirm="Registrare il rifiuto dell'ospite?">Rifiutato</button>
               <button class="btn btn-sm" name="status" value="not_given" data-confirm="Registrare la mancata somministrazione? Indicare il motivo nelle note.">Non somm.</button>
             </form>

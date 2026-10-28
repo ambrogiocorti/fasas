@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}{{ pai }}{% endblock %}
 {% block content %}
 {% include "guests/_header.html" %}
@@ -22,7 +22,7 @@
 </div>
 {% for code, label, goals in areas %}
   <div class="card table-wrap">
-    <div class="card-head"><h3>{{ label }}</h3><div class="actions">{% if pai.is_editable and perms.pai.change_pai %}<a class="btn btn-sm" href="{% url 'pai:goal_create' pai.pk %}?area={{ code }}">+ Obiettivo</a>{% endif %}</div></div>
+    <div class="card-head"><h3>{{ label }}</h3><div class="actions">{% if pai.is_editable and perms.pai.change_pai %}<a class="btn btn-sm" href="{% url 'pai:goal_create' pai.pk %}?area={{ code }}">{% icon "plus" %}Obiettivo</a>{% endif %}</div></div>
     <table>
       <thead><tr><th>Obiettivo</th><th>Intervento</th><th>Responsabile</th><th>Verifica</th><th>Esito</th><th></th></tr></thead>
       <tbody>{% for g in goals %}
@@ -31,7 +31,7 @@
           <td><span class="pill {% if g.outcome == 'achieved' %}pill-ok{% elif g.outcome == 'not_achieved' %}pill-danger{% elif g.outcome == 'partial' %}pill-warn{% endif %}">{{ g.get_outcome_display }}</span>{% if g.verification_notes %}<br><small>{{ g.verification_notes }}</small>{% endif %}</td>
           <td class="num nowrap">
             {% if pai.is_editable and perms.pai.change_pai %}<a class="btn btn-sm" href="{% url 'pai:goal_edit' pai.pk g.pk %}">Modifica</a>
-              <form method="post" action="{% url 'pai:goal_delete' pai.pk g.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm" data-confirm="Rimuovere l'obiettivo dalla bozza?">✕</button></form>
+              <form method="post" action="{% url 'pai:goal_delete' pai.pk g.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm" data-confirm="Rimuovere l'obiettivo dalla bozza?" title="Rimuovi" aria-label="Rimuovi obiettivo">{% icon "x" %}</button></form>
             {% elif pai.status == 'active' and perms.pai.change_paigoal and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'pai:goal_verify' pai.pk g.pk %}">Verifica</a>{% endif %}
           </td></tr>
       {% empty %}<tr><td colspan="6" class="empty">Nessun obiettivo per quest'area.</td></tr>{% endfor %}</tbody>

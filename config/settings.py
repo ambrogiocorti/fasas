@@ -4,6 +4,8 @@ Impostazioni del sistema FASAS Digitale.
 Tutta la configurazione sensibile arriva da variabili d'ambiente (vedi .env.example).
 In produzione il database è PostgreSQL (Supabase) tramite DATABASE_URL.
 """
+import codecs
+import io
 import os
 from pathlib import Path
 
@@ -11,7 +13,18 @@ import dj_database_url
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+
+
+def load_env_file(path):
+    """Legge .env in UTF-8 o UTF-16 (su Windows PowerShell salva «echo ... > .env» in UTF-16)."""
+    if not path.exists():
+        return
+    raw = path.read_bytes()
+    encoding = "utf-16" if raw.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)) else "utf-8-sig"
+    load_dotenv(stream=io.StringIO(raw.decode(encoding)))
+
+
+load_env_file(BASE_DIR / ".env")
 
 
 def env_bool(name, default=False):

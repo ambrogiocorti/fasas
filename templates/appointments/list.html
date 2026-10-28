@@ -1,7 +1,7 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}Appuntamenti sanitari{% endblock %}
 {% block content %}
-<div class="page-head"><h1>Appuntamenti sanitari</h1><div class="actions">{% if perms.appointments.add_appointment %}<a class="btn btn-primary" href="{% url 'appointments:create' %}">+ Nuovo appuntamento</a>{% endif %}</div></div>
+<div class="page-head"><h1>Appuntamenti sanitari</h1><div class="actions">{% if perms.appointments.add_appointment %}<a class="btn btn-primary" href="{% url 'appointments:create' %}">{% icon "plus" %}Nuovo appuntamento</a>{% endif %}</div></div>
 <form class="filters" method="get">
   <select name="period"><option value="upcoming" {% if period == 'upcoming' %}selected{% endif %}>Prossimi</option><option value="past" {% if period == 'past' %}selected{% endif %}>Passati</option></select>
   <select name="kind"><option value="">Tutti i tipi</option>{% for c, l in kinds %}<option value="{{ c }}" {% if request.GET.kind == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>

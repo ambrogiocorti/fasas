@@ -5,7 +5,10 @@
   <div class="actions"><span class="pill {% if status.done == status.total %}pill-ok{% else %}pill-warn{% endif %}">{{ status.done }}/{{ status.total }} completate</span>
   {% if perms.daily.close_shift and not closed %}<a class="btn btn-sm" href="{% url 'daily:close_shift' %}?date={{ day|date:'Y-m-d' }}&shift={{ shift }}">Chiudi turno</a>{% endif %}</div></div>
 {% include "partials/shift_nav.html" %}
-<p class="muted">✔ completato · ⚠ mancante · — non applicabile. Le voci automatiche si completano registrando farmaci, pasti, igiene, parametri ed evacuazioni; le voci manuali si spuntano qui.</p>
+<div class="legend">
+  <span>{% state_icon "ok" %} completato</span><span>{% state_icon "missing" %} mancante</span><span>{% state_icon "na" %} non applicabile</span>
+</div>
+<p class="muted" style="font-size:.88rem">Le voci automatiche si completano registrando farmaci, pasti, igiene, parametri ed evacuazioni; le voci manuali si spuntano qui.</p>
 {% if status.rows %}
 <div class="card table-wrap">
   <table class="checklist-table">
@@ -26,14 +29,14 @@
                 <button name="action" value="undo" title="Annulla la spunta ({{ cell.check.done_by }})">{% state_icon cell.state %}</button>
               {% elif cell.state == 'missing' %}
                 <button name="action" value="done" title="Segna come fatto">{% state_icon cell.state %}</button>
-                <button name="action" value="na" title="Non applicabile" class="muted" style="font-size:.75rem">n/a</button>
+                <button name="action" value="na" title="Segna come non applicabile" class="na">n/a</button>
               {% else %}{% state_icon cell.state %}{% endif %}
             </form>
             {% endif %}
           </td>
           {% endfor %}
         {% else %}
-          <td colspan="{{ status.guests|length }}" style="text-align:left">
+          <td colspan="{{ status.guests|length }}" style="text-align:left; position:static">
             {% with cell=row.cells.0 %}
             <form method="post" action="{% url 'daily:checklist_toggle' %}" class="cell-form">{% csrf_token %}
               <input type="hidden" name="date" value="{{ day|date:'Y-m-d' }}"><input type="hidden" name="shift" value="{{ shift }}"><input type="hidden" name="item" value="{{ row.item.pk }}">

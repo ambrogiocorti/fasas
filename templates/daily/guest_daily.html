@@ -1,13 +1,13 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}{{ guest }} – registro{% endblock %}
 {% block content %}
 {% include "guests/_header.html" %}
 <div class="page-head">
   <h2>Registro giornaliero</h2>
   <div class="actions">{% if not guest.is_archived %}
-    {% if perms.daily.add_evacuationrecord %}<a class="btn btn-sm" href="{% url 'daily:evacuation_create' guest.pk %}">+ Evacuazione</a>{% endif %}
-    {% if perms.daily.add_dailyrecord %}<a class="btn btn-sm" href="{% url 'daily:record_create' guest.pk %}?category=meal">+ Pasto</a>
-    <a class="btn btn-sm btn-primary" href="{% url 'daily:record_create' guest.pk %}">+ Registrazione</a>{% endif %}
+    {% if perms.daily.add_evacuationrecord %}<a class="btn btn-sm" href="{% url 'daily:evacuation_create' guest.pk %}">{% icon "plus" %}Evacuazione</a>{% endif %}
+    {% if perms.daily.add_dailyrecord %}<a class="btn btn-sm" href="{% url 'daily:record_create' guest.pk %}?category=meal">{% icon "plus" %}Pasto</a>
+    <a class="btn btn-sm btn-primary" href="{% url 'daily:record_create' guest.pk %}">{% icon "plus" %}Registrazione</a>{% endif %}
   {% endif %}</div>
 </div>
 <div class="grid grid-3">
@@ -22,7 +22,7 @@
     {% for r in records %}
       <tr class="{% if r.is_voided %}voided{% endif %}"><td class="nowrap">{{ r.occurred_at|date:"d/m H:i" }}</td><td>{{ r.get_category_display }}</td>
         <td>{% if r.meal %}<strong>{{ r.get_meal_display }}</strong> {{ r.get_intake_display }} {% endif %}{{ r.description|truncatechars:140 }}<br><small class="muted keep">{{ r.created_by }}</small></td>
-        <td class="num nowrap keep">{% if not r.is_voided and not guest.is_archived %}{% if perms.daily.change_dailyrecord %}<a class="btn btn-sm" href="{% url 'daily:record_update' r.pk %}">✎</a>{% endif %}{% if perms.daily.delete_dailyrecord %} <a class="btn btn-sm" href="{% url 'daily:record_void' r.pk %}" title="Annulla">✕</a>{% endif %}{% endif %}</td></tr>
+        <td class="num nowrap keep">{% if not r.is_voided and not guest.is_archived %}{% if perms.daily.change_dailyrecord %}<a class="btn btn-sm" href="{% url 'daily:record_update' r.pk %}" title="Modifica" aria-label="Modifica">{% icon "pencil" %}</a>{% endif %}{% if perms.daily.delete_dailyrecord %} <a class="btn btn-sm" href="{% url 'daily:record_void' r.pk %}" title="Annulla registrazione" aria-label="Annulla registrazione">{% icon "x" %}</a>{% endif %}{% endif %}</td></tr>
     {% empty %}<tr><td class="empty">Nessuna registrazione.</td></tr>{% endfor %}
     </tbody></table>
   </div>
@@ -33,7 +33,7 @@
       <tr class="{% if e.is_voided %}voided{% endif %}"><td class="nowrap">{{ e.occurred_at|date:"d/m H:i" }}</td>
         <td><span class="pill {% if e.outcome %}pill-ok{% else %}pill-warn{% endif %}">{{ e.outcome|yesno:"SI,NO" }}</span>{% if e.assisted %} <small>dopo intervento</small>{% endif %}</td>
         <td>{{ e.get_consistency_display }} {{ e.get_amount_display }} {{ e.notes }}<br><small class="muted keep">{{ e.created_by }}</small></td>
-        <td class="num nowrap keep">{% if not e.is_voided and not guest.is_archived %}{% if perms.daily.change_evacuationrecord %}<a class="btn btn-sm" href="{% url 'daily:evacuation_update' e.pk %}">✎</a>{% endif %}{% if perms.daily.delete_evacuationrecord %} <a class="btn btn-sm" href="{% url 'daily:evacuation_void' e.pk %}" title="Annulla">✕</a>{% endif %}{% endif %}</td></tr>
+        <td class="num nowrap keep">{% if not e.is_voided and not guest.is_archived %}{% if perms.daily.change_evacuationrecord %}<a class="btn btn-sm" href="{% url 'daily:evacuation_update' e.pk %}" title="Modifica" aria-label="Modifica">{% icon "pencil" %}</a>{% endif %}{% if perms.daily.delete_evacuationrecord %} <a class="btn btn-sm" href="{% url 'daily:evacuation_void' e.pk %}" title="Annulla registrazione" aria-label="Annulla registrazione">{% icon "x" %}</a>{% endif %}{% endif %}</td></tr>
     {% empty %}<tr><td class="empty">Nessuna evacuazione registrata.</td></tr>{% endfor %}
     </tbody></table>
   </div>

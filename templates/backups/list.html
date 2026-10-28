@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}Backup{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Backup</h1>
@@ -14,7 +14,7 @@
       <td>{% if b.verify_ok %}<span class="pill pill-ok">integro</span>{% elif b.verify_ok is False %}<span class="pill pill-danger">KO</span>{% else %}—{% endif %}<br><small>{{ b.verified_at|date:"d/m H:i" }}</small></td>
       <td class="num nowrap">{% if b.status == 'ok' and not b.deleted_at %}
         <form method="post" action="{% url 'backups:verify' b.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm">Verifica</button></form>
-        <a class="btn btn-sm" href="{% url 'backups:download' b.pk %}">Scarica</a>{% endif %}</td></tr>
+        <a class="btn btn-sm" href="{% url 'backups:download' b.pk %}">{% icon "download" %}Scarica</a>{% endif %}</td></tr>
   {% empty %}<tr><td colspan="7" class="empty">Nessun backup eseguito.</td></tr>{% endfor %}</tbody>
 </table></div>
 {% endblock %}

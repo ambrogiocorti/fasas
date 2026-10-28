@@ -1,11 +1,11 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}{{ page_title }}{% endblock %}
 {% block content %}
 <div class="page-head">
   <h1>{{ page_title }}</h1>
   <div class="actions">
-    <a class="btn" href="{% url 'core:settings' %}">← Impostazioni</a>
-    {% if can_add %}<a class="btn btn-primary" href="{{ create_url }}">+ Nuovo</a>{% endif %}
+    <a class="btn" href="{% url 'core:settings' %}">{% icon "arrow-left" %}Impostazioni</a>
+    {% if can_add %}<a class="btn btn-primary" href="{{ create_url }}">{% icon "plus" %}Nuovo</a>{% endif %}
   </div>
 </div>
 {% if searchable %}

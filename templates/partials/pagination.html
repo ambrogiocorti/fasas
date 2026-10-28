@@ -1,8 +1,8 @@
 {% load fasas_tags %}
 {% if page_obj and page_obj.paginator.num_pages > 1 %}
 <nav class="filters" aria-label="Pagine">
-  {% if page_obj.has_previous %}<a class="btn btn-sm" href="{% qs page=page_obj.previous_page_number %}">← Precedente</a>{% endif %}
+  {% if page_obj.has_previous %}<a class="btn btn-sm" href="{% qs page=page_obj.previous_page_number %}">{% icon "arrow-left" %}Precedente</a>{% endif %}
   <span class="muted">Pagina {{ page_obj.number }} di {{ page_obj.paginator.num_pages }}</span>
-  {% if page_obj.has_next %}<a class="btn btn-sm" href="{% qs page=page_obj.next_page_number %}">Successiva →</a>{% endif %}
+  {% if page_obj.has_next %}<a class="btn btn-sm" href="{% qs page=page_obj.next_page_number %}">Successiva{% icon "chevron-right" %}</a>{% endif %}
 </nav>
 {% endif %}

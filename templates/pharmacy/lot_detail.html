@@ -1,7 +1,7 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}{{ lot }}{% endblock %}
 {% block content %}
-<div class="page-head"><h1>{{ lot.drug }} – lotto {{ lot.lot_number }}</h1><div class="actions"><a class="btn" href="{% url 'pharmacy:stock' %}">← Magazzino</a></div></div>
+<div class="page-head"><h1>{{ lot.drug }} – lotto {{ lot.lot_number }}</h1><div class="actions"><a class="btn" href="{% url 'pharmacy:stock' %}">{% icon "arrow-left" %}Magazzino</a></div></div>
 <div class="grid grid-2">
   <div class="card"><table><tbody>
     <tr><th>Giacenza</th><td><strong>{{ lot.quantity|floatformat:"-2" }} {{ lot.drug.stock_unit }}</strong></td></tr>

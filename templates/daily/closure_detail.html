@@ -1,10 +1,10 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load fasas_tags %}
 {% block title %}{{ closure }}{% endblock %}
 {% block content %}
 <div class="card" style="max-width: 860px">
   <h1>{{ closure }}</h1>
   <table><tbody>
-    <tr><th>Stato</th><td>{% if closure.is_closed %}<span class="pill pill-ok">🔒 chiuso</span>{% else %}<span class="pill pill-warn">riaperto il {{ closure.reopened_at|date:"d/m/Y H:i" }} da {{ closure.reopened_by }}: {{ closure.reopen_reason }}</span>{% endif %}</td></tr>
+    <tr><th>Stato</th><td>{% if closure.is_closed %}<span class="pill pill-ok">{% icon "lock" %}chiuso</span>{% else %}<span class="pill pill-warn">riaperto il {{ closure.reopened_at|date:"d/m/Y H:i" }} da {{ closure.reopened_by }}: {{ closure.reopen_reason }}</span>{% endif %}</td></tr>
     <tr><th>Chiuso il</th><td>{{ closure.closed_at|date:"d/m/Y H:i" }} {% if closure.automatic %}(automatico){% else %}da {{ closure.closed_by }}{% endif %}</td></tr>
     <tr><th>Checklist</th><td>{{ closure.summary.checklist_done }}/{{ closure.summary.checklist_total }}</td></tr>
     <tr><th>Consegne</th><td>{{ closure.handover_notes|linebreaksbr|default:"—" }}</td></tr>
