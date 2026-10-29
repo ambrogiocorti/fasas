@@ -43,6 +43,7 @@ MENU = [
         Item("Evacuazioni", "timer", "daily:evacuations", "daily.view_evacuationrecord", active=("daily:evacuations",)),
         Item("Chiusura turni", "lock", "daily:closures", "daily.view_shiftclosure",
              active=("daily:closures", "daily:close_shift", "daily:closure_detail")),
+        Item("Senza rete", "wifi-off", "offline:records", "offline.use_offline", active=("offline:records",)),
         Item("Registro turni", "user-check", "daily:roster", "daily.view_shiftassignment", active=("daily:roster",)),
     ]),
     Section("Clinica", [

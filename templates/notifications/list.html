@@ -2,7 +2,8 @@
 {% block title %}Notifiche{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Notifiche</h1>
-  <div class="actions"><a class="btn btn-sm" href="?{% if not request.GET.unread %}unread=1{% endif %}">{% if request.GET.unread %}Mostra tutte{% else %}Solo non lette{% endif %}</a>
+  <div class="actions"><a class="btn btn-sm" href="{% url 'notifications:devices' %}">{% icon "smartphone" %}Notifiche sul telefono</a>
+  <a class="btn btn-sm" href="?{% if not request.GET.unread %}unread=1{% endif %}">{% if request.GET.unread %}Mostra tutte{% else %}Solo non lette{% endif %}</a>
   <form method="post" action="{% url 'notifications:mark_all_read' %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm">Segna tutte come lette</button></form></div></div>
 <div class="card">
   <ul class="list-plain">

@@ -10,6 +10,8 @@
 | Backup | Archivio cifrato AES-256-GCM a blocchi con chiave separata (`FASAS_BACKUP_KEY`); il formato rileva blocchi alterati, riordinati o troncati. Manifest con SHA-256 di ogni componente, verifica automatica dopo ogni backup. |
 | Database su Supabase | Dopo ogni `migrate` viene attivata la Row Level Security su tutte le tabelle e revocato ogni privilegio ai ruoli `anon` e `authenticated`: le API REST di Supabase non possono leggere i dati. Connessione con TLS (`DATABASE_SSL_REQUIRE=1`). |
 | Trasporto | In produzione: HTTPS obbligatorio, HSTS, cookie `Secure`/`HttpOnly`, `SameSite=Lax`, protezione CSRF, `X-Frame-Options: DENY`, `nosniff`. |
+| Dispositivi (senza rete) | Pacchetto del turno e registrazioni in attesa cifrati nel browser con AES-256-GCM; la chiave si apre solo con la password dell'utente (PBKDF2) e si chiude all'uscita e per inattività. Il service worker non memorizza pagine né dati sanitari. Dettagli in [NOTIFICHE_E_SENZA_RETE.md](NOTIFICHE_E_SENZA_RETE.md). |
+| Notifiche push ed email | Contenuto push cifrato end-to-end (RFC 8291); per default né push né email contengono nomi o dati sanitari, solo il tipo di avviso. |
 
 ## Accessi
 

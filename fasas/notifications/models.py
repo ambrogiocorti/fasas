@@ -19,6 +19,7 @@ class NotificationKind(models.TextChoices):
     BACKUP = "backup", "Esito backup"
     AUDIT_BROKEN = "audit_chain_broken", "Integrità audit log"
     REPORT = "report_ready", "Report programmato generato"
+    OFFLINE_SYNC = "offline_sync", "Registrazioni senza rete da verificare"
 
 
 DEFAULT_ROLES = {
@@ -37,6 +38,14 @@ DEFAULT_ROLES = {
     NotificationKind.BACKUP: ["admin"],
     NotificationKind.AUDIT_BROKEN: ["admin"],
     NotificationKind.REPORT: ["coordinator"],
+    NotificationKind.OFFLINE_SYNC: ["coordinator"],
+}
+
+# Tipi inviati di default anche come notifica push sui dispositivi iscritti (modificabile dall'amministratore).
+DEFAULT_PUSH = {
+    NotificationKind.PROTOCOL, NotificationKind.EMERGENCY, NotificationKind.CRITICAL_EVENT,
+    NotificationKind.SOS_VALIDATION, NotificationKind.APPOINTMENT_TODAY, NotificationKind.BACKUP,
+    NotificationKind.AUDIT_BROKEN,
 }
 
 # Una notifica arriva solo a chi può aprire ciò a cui rimanda, qualunque ruolo sia configurato.
@@ -56,6 +65,7 @@ REQUIRED_PERMISSION = {
     NotificationKind.BACKUP: "backups.manage_backup",
     NotificationKind.AUDIT_BROKEN: "audit.view_auditlog",
     NotificationKind.REPORT: "reports.view_generatedreport",
+    NotificationKind.OFFLINE_SYNC: "offline.view_offlinerecord",
 }
 
 
@@ -66,6 +76,7 @@ class NotificationSetting(models.Model):
     enabled = models.BooleanField("attiva", default=True)
     roles = models.JSONField("ruoli destinatari", default=list, blank=True)
     send_email = models.BooleanField("invia anche email", default=False)
+    send_push = models.BooleanField("invia anche notifica push", default=False)
 
     class Meta:
         verbose_name = "impostazione notifiche"
@@ -110,3 +121,26 @@ class Notification(models.Model):
     @property
     def is_read(self):
         return self.read_at is not None
+
+
+class PushSubscription(models.Model):
+    """Un browser (telefono, tablet, PC) su cui l'utente ha attivato le notifiche push."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="push_subscriptions")
+    endpoint = models.URLField("endpoint", max_length=1000, unique=True)
+    p256dh = models.CharField(max_length=200)
+    auth = models.CharField(max_length=100)
+    label = models.CharField("dispositivo", max_length=120, blank=True)
+    user_agent = models.CharField(max_length=255, blank=True)
+    active = models.BooleanField("attiva", default=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    last_success_at = models.DateTimeField("ultimo invio riuscito", null=True, blank=True)
+    failure_count = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "dispositivo per notifiche push"
+        verbose_name_plural = "dispositivi per notifiche push"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user} – {self.label or 'dispositivo'}"

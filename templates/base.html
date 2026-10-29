@@ -6,10 +6,15 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="{% if ui_theme == 'dark' %}#0c1117{% else %}#f3f5f8{% endif %}">
   <title>{% block title %}FASAS{% endblock %} · {{ community.name|default:"FASAS Digitale" }}</title>
+  <meta name="csrf-token" content="{{ csrf_token }}">
   <link rel="stylesheet" href="{% static 'css/fasas.css' %}">
+  <link rel="manifest" href="{% url 'manifest' %}">
+  <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="FASAS">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231d5fa0'/%3E%3Cpath d='M27 16h-5l-4 11-6-22-4 11H5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 </head>
-<body>
+<body data-sw-url="{% url 'service_worker' %}"{% if perms.offline.use_offline %} data-offline-user="{{ request.user.username }}" data-offline-idle="{{ request.fasas_config.session_timeout_minutes }}" data-offline-pack-url="{% url 'offline:pack' %}" data-offline-sync-url="{% url 'offline:sync' %}"{% endif %}>
 {% include "partials/icons.html" %}
 <div class="layout">
   <aside class="sidebar" aria-label="Menu principale">
@@ -28,7 +33,7 @@
     <div class="user-card">
       <span class="avatar-sm" aria-hidden="true">{{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}</span>
       <span class="who"><a href="{% url 'accounts:profile' %}" title="Il mio profilo">{{ request.user.get_full_name|default:request.user.username }}</a><small>{{ request.user.get_role_display }}</small></span>
-      <form method="post" action="{% url 'accounts:logout' %}" class="inline-form">
+      <form method="post" action="{% url 'accounts:logout' %}" class="inline-form" data-offline-logout>
         {% csrf_token %}
         <button class="icon-btn ghost" title="Esci" aria-label="Esci">{% icon "log-out" %}</button>
       </form>
@@ -67,6 +72,7 @@
     </header>
 
     <main class="content">
+      <div class="alert alert-info" id="offline-sync-note" role="status" hidden>{% icon "refresh" %}<div class="alert-body" data-text></div></div>
       {% for message in messages %}
         <div class="alert alert-{{ message.tags|default:'info' }}" role="status">
           {% if message.level_tag == 'success' %}{% icon "check-circle" %}{% elif message.level_tag == 'error' %}{% icon "alert-circle" %}{% elif message.level_tag == 'warning' %}{% icon "alert" %}{% else %}{% icon "info" %}{% endif %}
@@ -85,6 +91,7 @@
 </div>
 <div class="chart-tip" id="chart-tip"></div>
 <script src="{% static 'js/fasas.js' %}"></script>
+<script src="{% static 'js/offline.js' %}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

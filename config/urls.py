@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.urls import include, path
 
+from fasas.offline import views as offline_views
+
 admin.site.site_header = "FASAS Digitale – amministrazione tecnica"
 admin.site.site_title = "FASAS"
 
@@ -22,6 +24,9 @@ urlpatterns = [
     path("audit/", include("fasas.audit.urls")),
     path("cerca/", include("fasas.search.urls")),
     path("importa/", include("fasas.imports.urls")),
+    path("offline/", include("fasas.offline.urls")),
+    path("sw.js", offline_views.service_worker, name="service_worker"),
+    path("manifest.webmanifest", offline_views.manifest, name="manifest"),
     path("api/", include("fasas.api.urls")),
     path("gestione-tecnica/", admin.site.urls),
 ]

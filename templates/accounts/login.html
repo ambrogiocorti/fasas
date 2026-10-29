@@ -29,7 +29,7 @@
       <h2>Accedi</h2>
       <p class="muted">Usa le credenziali personali che ti ha assegnato l'amministratore.</p>
       {% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}">{% icon "info" %}<div class="alert-body">{{ message }}</div></div>{% endfor %}
-      <form method="post" novalidate>
+      <form method="post" novalidate data-offline-login>
         {% csrf_token %}
         {% if form.non_field_errors %}<div class="alert alert-error">{% icon "alert-circle" %}<div class="alert-body">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div></div>{% endif %}
         <div class="field"><label for="id_username">Nome utente</label>{{ form.username }}</div>
@@ -41,5 +41,6 @@
     </div>
   </section>
 </div>
+<script src="{% static 'js/offline.js' %}"></script>
 </body>
 </html>

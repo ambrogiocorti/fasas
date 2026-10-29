@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Notifiche sul telefono{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Notifiche sul telefono</h1><span class="subtitle">Ricevi gli avvisi importanti (protocolli, emergenze, SOS da validare) anche quando FASAS non è aperto.</span></div>
+  <div class="actions"><a class="btn" href="{% url 'notifications:list' %}">{% icon "bell" %}Notifiche</a></div>
+</div>
+
+{% if not push_enabled %}
+  <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Le notifiche push non sono ancora attive sul server: chiedere all'amministratore di configurarle.</div></div>
+{% else %}
+<div class="card" data-push data-public-key="{{ public_key }}" data-subscribe-url="{% url 'notifications:push_subscribe' %}" data-unsubscribe-url="{% url 'notifications:push_unsubscribe' %}">
+  <div class="card-head"><h2>{% icon "smartphone" %} Questo dispositivo</h2></div>
+  <p data-push-status class="muted">Controllo in corso…</p>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="button" data-push-enable hidden>{% icon "bell" %}Attiva le notifiche su questo dispositivo</button>
+    <button class="btn" type="button" data-push-disable hidden>Disattiva su questo dispositivo</button>
+  </div>
+  <div class="alert alert-info" data-push-ios hidden>{% icon "info" %}<div class="alert-body">Su iPhone e iPad le notifiche funzionano solo dopo aver aggiunto FASAS alla schermata Home: tocca <strong>Condividi</strong> → <strong>Aggiungi alla schermata Home</strong>, poi apri FASAS dall'icona e torna su questa pagina.</div></div>
+  <p><small class="muted">Per riservatezza la notifica mostra solo il tipo di avviso (es. «Protocollo attivato»), mai il nome dell'ospite: i dettagli si vedono dopo aver aperto FASAS e fatto l'accesso. Sui tablet condivisi del reparto le notifiche arrivano all'ultimo utente che le ha attivate.</small></p>
+</div>
+{% endif %}
+
+<div class="card table-wrap">
+  <div class="card-head"><h2>I miei dispositivi</h2>
+    <div class="actions">{% if subscriptions and push_enabled %}<form method="post" action="{% url 'notifications:push_test' %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm">Invia una notifica di prova</button></form>{% endif %}</div></div>
+  <table>
+    <thead><tr><th>Dispositivo</th><th>Attivato</th><th>Ultimo invio riuscito</th><th></th></tr></thead>
+    <tbody>{% for s in subscriptions %}
+      <tr><td>{{ s.label|default:"Dispositivo" }}{% if s.failure_count %} <span class="pill pill-warn">{{ s.failure_count }} invii falliti</span>{% endif %}</td>
+        <td>{{ s.created_at|date:"d/m/Y H:i" }}</td><td>{{ s.last_success_at|date:"d/m/Y H:i"|default:"—" }}</td>
+        <td class="num"><form method="post" action="{% url 'notifications:push_unsubscribe' %}" class="inline-form">{% csrf_token %}<input type="hidden" name="pk" value="{{ s.pk }}"><button class="btn btn-sm" data-confirm="Rimuovere questo dispositivo?">Rimuovi</button></form></td></tr>
+    {% empty %}<tr><td colspan="4" class="empty">Nessun dispositivo: attiva le notifiche dal telefono o dal tablet che usi in turno.</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% endblock %}

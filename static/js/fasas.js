@@ -164,4 +164,74 @@
   document.addEventListener("DOMContentLoaded", renderCharts);
   let resizeTimer;
   window.addEventListener("resize", function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderCharts, 200); });
+
+  // Service worker: notifiche push e modalità senza rete
+  const swUrl = document.body && document.body.dataset.swUrl;
+  if (swUrl && "serviceWorker" in navigator) {
+    navigator.serviceWorker.register(swUrl, { scope: "/" }).catch(function () { /* browser senza supporto */ });
+  }
+
+  // Notifiche push sul dispositivo (pagina «Notifiche sul telefono»)
+  const pushBox = document.querySelector("[data-push]");
+  if (pushBox) {
+    const status = pushBox.querySelector("[data-push-status]");
+    const enableBtn = pushBox.querySelector("[data-push-enable]");
+    const disableBtn = pushBox.querySelector("[data-push-disable]");
+    const csrf = (document.querySelector("meta[name=csrf-token]") || {}).content || "";
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+    const keyBytes = function (b64) {
+      const pad = "=".repeat((4 - (b64.length % 4)) % 4);
+      const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
+      return Uint8Array.from(raw, function (c) { return c.charCodeAt(0); });
+    };
+    const post = function (url, body) {
+      return fetch(url, { method: "POST", credentials: "same-origin", body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrf } });
+    };
+    const show = function (text, enabled) {
+      status.textContent = text;
+      enableBtn.hidden = enabled !== false;
+      disableBtn.hidden = enabled !== true;
+    };
+    const refresh = function () {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+        if (isIos && !standalone) pushBox.querySelector("[data-push-ios]").hidden = false;
+        show("Questo browser non supporta le notifiche push.", null);
+        return;
+      }
+      if (Notification.permission === "denied") {
+        show("Le notifiche sono bloccate nelle impostazioni del browser per questo sito: sbloccarle e ricaricare la pagina.", null);
+        return;
+      }
+      navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+        if (sub) show("Notifiche attive su questo dispositivo.", true);
+        else show("Notifiche non attive su questo dispositivo.", false);
+      });
+    };
+    enableBtn.addEventListener("click", function () {
+      enableBtn.disabled = true;
+      Notification.requestPermission().then(function (permission) {
+        if (permission !== "granted") throw new Error("permesso");
+        return navigator.serviceWorker.ready;
+      }).then(function (reg) {
+        return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(pushBox.dataset.publicKey) });
+      }).then(function (sub) {
+        return post(pushBox.dataset.subscribeUrl, sub.toJSON());
+      }).then(function (r) {
+        if (!r.ok) throw new Error("server");
+        window.location.reload();
+      }).catch(function () {
+        enableBtn.disabled = false;
+        show("Attivazione non riuscita: concedere il permesso alle notifiche e riprovare.", false);
+      });
+    });
+    disableBtn.addEventListener("click", function () {
+      navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+        if (!sub) return null;
+        return post(pushBox.dataset.unsubscribeUrl, { endpoint: sub.endpoint }).then(function () { return sub.unsubscribe(); });
+      }).then(function () { window.location.reload(); });
+    });
+    refresh();
+  }
 })();

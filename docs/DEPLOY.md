@@ -46,6 +46,13 @@ cd /opt/fasas/app && sudo -u fasas python3 -m venv .venv && sudo -u fasas .venv/
 sudo -u fasas .venv/bin/python manage.py fasas_genkey
 ```
 
+```bash
+sudo -u fasas .venv/bin/python manage.py fasas_vapid_keys
+```
+
+(la seconda chiave serve alle notifiche push sui telefoni: va generata una volta sola e conservata, vedi
+[NOTIFICHE_E_SENZA_RETE.md](NOTIFICHE_E_SENZA_RETE.md)).
+
 Copiare `.env.example` in `.env`, inserire le chiavi generate e i dati del database, poi:
 
 ```bash

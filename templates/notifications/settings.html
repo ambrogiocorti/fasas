@@ -2,15 +2,17 @@
 {% block title %}Impostazioni notifiche{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Impostazioni notifiche</h1><div class="actions"><a class="btn" href="{% url 'core:settings' %}">{% icon "arrow-left" %}Impostazioni</a></div></div>
-<p class="muted">Per ogni tipo di notifica scegliere quali ruoli la ricevono. Le email (se attive) non contengono dati sanitari: solo un avviso di accedere al sistema.</p>
+<p class="muted">Per ogni tipo di notifica scegliere quali ruoli la ricevono. Email e notifiche push non contengono dati sanitari né nomi: solo il tipo di avviso e il collegamento al sistema. Le push arrivano sui dispositivi su cui ogni utente le ha attivate (<a href="{% url 'notifications:devices' %}">Notifiche sul telefono</a>).</p>
+{% if not push_enabled %}<div class="alert alert-warning">{% icon "smartphone" %}<div class="alert-body">Notifiche push non attive sul server: generare la chiave con <span class="mono">manage.py fasas_vapid_keys</span> e impostarla in FASAS_VAPID_PRIVATE_KEY.</div></div>{% endif %}
 <form method="post">{% csrf_token %}
 <div class="card table-wrap"><table>
-  <thead><tr><th>Notifica</th><th>Attiva</th>{% for code, label in roles %}<th>{{ label }}</th>{% endfor %}<th>Email</th></tr></thead>
+  <thead><tr><th>Notifica</th><th>Attiva</th>{% for code, label in roles %}<th>{{ label }}</th>{% endfor %}<th>Email</th><th>Push</th></tr></thead>
   <tbody>{% for s in settings_list %}
     <tr><td><strong>{{ s.get_kind_display }}</strong></td>
       <td><input type="checkbox" name="enabled_{{ s.pk }}" {% if s.enabled %}checked{% endif %} aria-label="Attiva"></td>
       {% for code, label in roles %}<td><input type="checkbox" name="role_{{ s.pk }}_{{ code }}" {% if code in s.roles %}checked{% endif %} aria-label="{{ label }}"></td>{% endfor %}
-      <td><input type="checkbox" name="email_{{ s.pk }}" {% if s.send_email %}checked{% endif %} aria-label="Email"></td></tr>
+      <td><input type="checkbox" name="email_{{ s.pk }}" {% if s.send_email %}checked{% endif %} aria-label="Email"></td>
+      <td><input type="checkbox" name="push_{{ s.pk }}" {% if s.send_push %}checked{% endif %} aria-label="Push"></td></tr>
   {% endfor %}</tbody>
 </table></div>
 <div class="form-actions"><button class="btn btn-primary">Salva</button></div>

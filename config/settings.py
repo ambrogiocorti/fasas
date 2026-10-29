@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     "fasas.backups",
     "fasas.search",
     "fasas.imports",
+    "fasas.offline",
     "fasas.api",
 ]
 
@@ -120,6 +121,9 @@ DATABASES = {
 }
 # Ogni richiesta è atomica: una modifica e il suo audit log vengono salvati insieme o per niente.
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
+if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
+    # SQLite (prove e sviluppo): transazioni IMMEDIATE evitano «database is locked» con richieste contemporanee
+    DATABASES["default"].setdefault("OPTIONS", {}).update({"transaction_mode": "IMMEDIATE", "timeout": 20})
 
 AUTH_USER_MODEL = "accounts.User"
 AUTHENTICATION_BACKENDS = ["fasas.accounts.backends.FasasPermissionBackend"]
@@ -212,6 +216,12 @@ FASAS_CSC_OAUTH_SCOPE = os.environ.get("FASAS_CSC_OAUTH_SCOPE", "service")
 FASAS_CSC_TOKEN = os.environ.get("FASAS_CSC_TOKEN", "")
 FASAS_CSC_TIMEOUT = int(os.environ.get("FASAS_CSC_TIMEOUT", "30"))
 FASAS_CSC_PROVIDER_NAME = os.environ.get("FASAS_CSC_PROVIDER_NAME", "")  # nome mostrato ai medici, es. «InfoCert»
+
+# Notifiche push (Web Push). Chiave generata con «manage.py fasas_vapid_keys»; in sviluppo se ne deriva una da SECRET_KEY.
+FASAS_VAPID_PRIVATE_KEY = os.environ.get("FASAS_VAPID_PRIVATE_KEY", "")
+FASAS_VAPID_SUBJECT = os.environ.get("FASAS_VAPID_SUBJECT", "mailto:amministrazione@fasas.invalid")
+FASAS_PUSH_SHOW_DETAILS = env_bool("FASAS_PUSH_SHOW_DETAILS", False)  # titolo e messaggio completi sul telefono
+FASAS_PUSH_ASYNC = env_bool("FASAS_PUSH_ASYNC", True)
 
 if DEBUG and not FASAS_ENCRYPTION_KEYS:
     # Chiave fissa SOLO per sviluppo: in produzione la mancanza della chiave è un errore.

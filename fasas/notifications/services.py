@@ -4,7 +4,14 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction
 
-from .models import DEFAULT_ROLES, REQUIRED_PERMISSION, Notification, NotificationKind, NotificationSetting
+from .models import (
+    DEFAULT_PUSH,
+    DEFAULT_ROLES,
+    REQUIRED_PERMISSION,
+    Notification,
+    NotificationKind,
+    NotificationSetting,
+)
 
 logger = logging.getLogger("fasas.notifications")
 
@@ -19,7 +26,8 @@ LEVEL_FOR_KIND = {
 def setting_for(kind):
     setting = NotificationSetting.objects.filter(kind=kind).first()
     if setting is None:
-        setting = NotificationSetting(kind=kind, enabled=True, roles=list(DEFAULT_ROLES.get(kind, ["admin"])))
+        setting = NotificationSetting(kind=kind, enabled=True, roles=list(DEFAULT_ROLES.get(kind, ["admin"])),
+                                      send_push=kind in DEFAULT_PUSH)
     return setting
 
 
@@ -56,11 +64,16 @@ def notify(kind, title, message="", *, link="", guest=None, level=None, dedup_ke
                 ))
         except IntegrityError:
             continue
+    if setting.send_push and created:
+        from . import push
+
+        transaction.on_commit(lambda: push.dispatch(created))
     if setting.send_email and created:
         emails = [n.recipient.email for n in created if n.recipient.email]
         if emails:
             # Le email non contengono dati sanitari: solo un avviso con il rimando al sistema.
-            transaction.on_commit(lambda: _send_email(title, emails))
+            label = NotificationKind(kind).label if kind in NotificationKind.values else "Notifica"
+            transaction.on_commit(lambda: _send_email(label, emails))
     return created
 
 
@@ -81,4 +94,5 @@ def unread_for(user):
 
 def ensure_default_settings():
     for kind in NotificationKind.values:
-        NotificationSetting.objects.get_or_create(kind=kind, defaults={"roles": list(DEFAULT_ROLES.get(kind, ["admin"]))})
+        NotificationSetting.objects.get_or_create(kind=kind, defaults={
+            "roles": list(DEFAULT_ROLES.get(kind, ["admin"])), "send_push": kind in DEFAULT_PUSH})

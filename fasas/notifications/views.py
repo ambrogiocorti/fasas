@@ -1,7 +1,9 @@
+import json
+
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.core.paginator import Paginator
-from django.http import JsonResponse
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -9,7 +11,8 @@ from django.views.decorators.http import require_POST
 
 from fasas.accounts.models import Role
 
-from .models import Notification, NotificationSetting
+from . import push
+from .models import Notification, NotificationSetting, PushSubscription
 from .services import ensure_default_settings, unread_for
 
 
@@ -59,8 +62,81 @@ def notification_settings(request):
         for setting in settings_list:
             setting.enabled = bool(request.POST.get(f"enabled_{setting.pk}"))
             setting.send_email = bool(request.POST.get(f"email_{setting.pk}"))
+            setting.send_push = bool(request.POST.get(f"push_{setting.pk}"))
             setting.roles = [r for r in Role.values if request.POST.get(f"role_{setting.pk}_{r}")]
             setting.save()
         messages.success(request, "Impostazioni notifiche salvate.")
         return redirect("notifications:settings")
-    return render(request, "notifications/settings.html", {"settings_list": settings_list, "roles": Role.choices})
+    return render(request, "notifications/settings.html", {
+        "settings_list": settings_list, "roles": Role.choices, "push_enabled": push.is_enabled(),
+    })
+
+
+def open_notification(request, pk):
+    """Destinazione del tocco su una notifica push: la segna come letta e apre il collegamento."""
+    notification = get_object_or_404(Notification, pk=pk, recipient=request.user)
+    if notification.read_at is None:
+        notification.read_at = timezone.now()
+        notification.save(update_fields=["read_at"])
+    target = notification.link
+    if not target or not url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
+        return redirect("notifications:list")
+    return redirect(target)
+
+
+def devices(request):
+    return render(request, "notifications/devices.html", {
+        "subscriptions": PushSubscription.objects.filter(user=request.user),
+        "push_enabled": push.is_enabled(), "public_key": push.public_key(),
+    })
+
+
+def _device_label(user_agent):
+    ua = user_agent.lower()
+    system = next((name for key, name in [("iphone", "iPhone"), ("ipad", "iPad"), ("android", "Android"),
+                                           ("windows", "Windows"), ("mac os", "Mac"), ("linux", "Linux")] if key in ua), "")
+    browser = next((name for key, name in [("edg/", "Edge"), ("firefox", "Firefox"), ("chrome", "Chrome"),
+                                            ("safari", "Safari")] if key in ua), "browser")
+    return f"{browser} su {system}" if system else browser
+
+
+@require_POST
+def push_subscribe(request):
+    try:
+        data = json.loads(request.body)
+        endpoint, keys = data["endpoint"], data["keys"]
+        p256dh, auth = keys["p256dh"], keys["auth"]
+    except (ValueError, KeyError, TypeError):
+        return HttpResponseBadRequest("Iscrizione non valida")
+    if not str(endpoint).startswith("https://") or len(endpoint) > 1000:
+        return HttpResponseBadRequest("Endpoint non valido")
+    user_agent = request.META.get("HTTP_USER_AGENT", "")[:255]
+    PushSubscription.objects.update_or_create(endpoint=endpoint, defaults={
+        "user": request.user, "p256dh": p256dh[:200], "auth": auth[:100], "user_agent": user_agent,
+        "label": (data.get("label") or _device_label(user_agent))[:120], "active": True, "failure_count": 0,
+    })
+    return JsonResponse({"ok": True})
+
+
+@require_POST
+def push_unsubscribe(request):
+    if request.content_type == "application/json":
+        try:
+            endpoint = json.loads(request.body).get("endpoint", "")
+        except ValueError:
+            return HttpResponseBadRequest("Richiesta non valida")
+        PushSubscription.objects.filter(user=request.user, endpoint=endpoint).delete()
+        return JsonResponse({"ok": True})
+    PushSubscription.objects.filter(user=request.user, pk=request.POST.get("pk")).delete()
+    messages.success(request, "Dispositivo rimosso: non riceverà più notifiche.")
+    return redirect("notifications:devices")
+
+
+@require_POST
+def push_test(request):
+    sent = push.send_test(request.user)
+    if sent:
+        messages.success(request, f"Notifica di prova inviata a {sent} dispositiv{'o' if sent == 1 else 'i'}.")
+    else:
+        messages.error(request, "Nessun dispositivo ha ricevuto la prova: riattivare le notifiche sul dispositivo.")
+    return redirect("notifications:devices")

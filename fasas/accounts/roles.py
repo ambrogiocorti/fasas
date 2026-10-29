@@ -39,6 +39,8 @@ OPERATOR = VIEW_CARE + [
     "daily.close_shift",
     "protocols.change_protocolactivation", "protocols.add_protocolactionlog",
     "appointments.view_appointment", "appointments.change_appointment",
+    # Continuità senza rete: pacchetto del turno sul dispositivo e foglio di emergenza stampabile
+    "offline.use_offline",
 ]
 
 # Coordinatore sanitario (spec. §2): gestisce le cartelle, modifica i protocolli sanitari, valida le
@@ -67,6 +69,7 @@ COORDINATOR = OPERATOR + [
     "reports.view_reportschedule", "reports.add_reportschedule", "reports.change_reportschedule",
     # Passaggio dal cartaceo: importa anagrafiche, terapie, giacenze e documenti scansionati
     "imports.view_importbatch", "imports.add_importbatch",
+    "offline.view_offlinerecord",
 ]
 
 # Medico (spec. §2): modifica le terapie, prescrive i farmaci, firma digitalmente i documenti sanitari.

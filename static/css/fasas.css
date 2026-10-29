@@ -81,6 +81,7 @@
 
 /* --- Base ----------------------------------------------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { font-size: 15px; -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; font-family: var(--font); background: var(--bg); color: var(--text);
@@ -589,3 +590,24 @@ form h3:first-of-type { margin-top: .5rem; }
 /* Passi numerati (importazione) */
 .steps { margin: .25rem 0 0; padding-left: 1.3rem; display: grid; gap: .5rem; }
 .steps li { padding-left: .2rem; }
+
+/* Modalità senza rete */
+.offline-bar { position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem;
+  padding: .6rem 1rem; background: var(--surface); border-bottom: 1px solid var(--border); }
+.offline-bar strong { color: var(--primary); }
+.offline-spacer { flex: 1; }
+.offline-user { font-weight: 600; }
+.offline-content { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+.offline-guest + .offline-guest { margin-top: .9rem; }
+.offline-guest h3 { margin: .2rem 0 .4rem; display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.offline-actions { display: inline-flex; flex-wrap: wrap; gap: .35rem; justify-content: flex-end; }
+.offline-unlock { max-width: 520px; margin: 2rem auto; }
+.offline-dialog { width: min(640px, calc(100vw - 32px)); border: 1px solid var(--border); border-radius: var(--radius, 12px);
+  background: var(--surface); color: var(--text); padding: 1.2rem; }
+.offline-dialog::backdrop { background: rgba(10, 20, 30, .45); }
+.offline-toast { position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%); z-index: 30; padding: .7rem 1rem;
+  border-radius: 10px; background: var(--text); color: var(--surface); box-shadow: 0 6px 24px rgba(0,0,0,.2); }
+@media print {
+  .offline-bar, .offline-actions, .offline-toast { display: none !important; }
+  .offline-content { padding: 0; }
+}

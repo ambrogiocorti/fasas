@@ -54,6 +54,8 @@ class CommunityMiddleware:
 class SessionIdleTimeoutMiddleware:
     """Disconnette dopo N minuti di inattività: i terminali di reparto sono condivisi."""
 
+    PASSIVE_PREFIXES = ("/notifiche/conteggio", "/offline/stato", "/offline/pacchetto", "/sw.js", "/manifest.webmanifest")
+
     def __init__(self, get_response):
         self.get_response = get_response
 
@@ -67,8 +69,8 @@ class SessionIdleTimeoutMiddleware:
                 logout(request)
                 messages.warning(request, "Sessione scaduta per inattività: accedi di nuovo.")
                 return redirect(f"{reverse(settings.LOGIN_URL)}?next={request.path}")
-            # Il polling delle notifiche non deve tenere viva la sessione.
-            if not request.path.startswith("/notifiche/conteggio"):
+            # Le richieste automatiche (contatore notifiche, stato offline, service worker) non tengono viva la sessione.
+            if not request.path.startswith(self.PASSIVE_PREFIXES):
                 request.session["fasas_last_activity"] = now
         return self.get_response(request)
 
@@ -77,11 +79,15 @@ class LoginRequiredMiddleware:
     """Ogni pagina richiede l'accesso, tranne login, statici e API (che autenticano da sé)."""
 
     EXEMPT_PREFIXES = ("/accesso/", "/static/", "/api/", "/salute/")
+    # Involucro dell'app (nessun dato) e servizi offline che rispondono da sé 401 senza sessione.
+    EXEMPT_PATHS = {"/sw.js", "/manifest.webmanifest", "/offline/", "/offline/stato/", "/offline/pacchetto/",
+                    "/offline/sincronizza/"}
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        if not request.user.is_authenticated and not request.path.startswith(self.EXEMPT_PREFIXES):
+        if (not request.user.is_authenticated and not request.path.startswith(self.EXEMPT_PREFIXES)
+                and request.path not in self.EXEMPT_PATHS):
             return redirect(f"{reverse(settings.LOGIN_URL)}?next={request.path}")
         return self.get_response(request)

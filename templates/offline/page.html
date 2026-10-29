@@ -1,0 +1,33 @@
+{% load static %}<!doctype html>
+<html lang="it" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#1d5fa0">
+  <title>FASAS · modalità senza rete</title>
+  <link rel="stylesheet" href="{% static 'css/fasas.css' %}">
+  <link rel="icon" href="{% static 'img/icon-192.png' %}">
+  <script>try{if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.dataset.theme='dark'}catch(e){}</script>
+</head>
+<body class="offline-page">
+  <header class="offline-bar">
+    <strong>FASAS</strong>
+    <span class="pill" data-net>…</span>
+    <span class="offline-user" data-user></span>
+    <span class="offline-spacer"></span>
+    <span class="muted"><span data-pending>0</span> da inviare</span>
+    <a class="btn btn-sm btn-primary" href="{{ login_url }}" data-login hidden>Accedi</a>
+    <a class="btn btn-sm" href="/" data-back hidden>Torna a FASAS</a>
+    <button class="btn btn-sm" type="button" data-print hidden>Stampa</button>
+    <button class="btn btn-sm" type="button" data-lock hidden>Blocca</button>
+  </header>
+  <main class="content offline-content" data-offline-app data-status-url="{{ status_url }}" data-pack-url="{{ pack_url }}" data-sync-url="{{ sync_url }}" data-login-url="{{ login_url }}">
+    <div data-main><div class="card"><p class="muted">Caricamento…</p></div></div>
+  </main>
+  <dialog id="offline-dialog" class="offline-dialog"></dialog>
+  <div id="offline-toast" class="offline-toast" role="status" hidden></div>
+  <noscript><p>La modalità senza rete richiede JavaScript.</p></noscript>
+  <script src="{% static 'js/offline.js' %}"></script>
+</body>
+</html>
