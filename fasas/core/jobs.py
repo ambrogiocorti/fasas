@@ -19,6 +19,7 @@ JOBS = {
     "report_retention": ("fasas.reports.services.purge_expired_reports", "Eliminazione report oltre la conservazione"),
     "backup": ("fasas.backups.services.scheduled_backup", "Backup cifrato giornaliero e verifica"),
     "audit_verify": ("fasas.audit.services.scheduled_chain_verification", "Verifica integrità audit log"),
+    "imports_cleanup": ("fasas.imports.documents.cleanup_stale", "Cancellazione dei file di importazioni non confermate"),
 }
 
 

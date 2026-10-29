@@ -27,4 +27,5 @@ app.conf.beat_schedule = {
     "pulizia-report-scaduti": {"task": "fasas.run_job", "schedule": crontab(hour=1, minute=45), "args": ("report_retention",)},
     "backup-giornaliero": {"task": "fasas.run_job", "schedule": crontab(hour=2, minute=30), "args": ("backup",)},
     "verifica-catena-audit": {"task": "fasas.run_job", "schedule": crontab(hour=3, minute=30), "args": ("audit_verify",)},
+    "pulizia-importazioni": {"task": "fasas.run_job", "schedule": crontab(hour=3, minute=50), "args": ("imports_cleanup",)},
 }

@@ -65,6 +65,8 @@ COORDINATOR = OPERATOR + [
     "pai.add_pai", "pai.change_pai", "pai.approve_pai", "pai.add_paigoal", "pai.change_paigoal", "pai.delete_paigoal",
     "reports.view_generatedreport", "reports.add_generatedreport",
     "reports.view_reportschedule", "reports.add_reportschedule", "reports.change_reportschedule",
+    # Passaggio dal cartaceo: importa anagrafiche, terapie, giacenze e documenti scansionati
+    "imports.view_importbatch", "imports.add_importbatch",
 ]
 
 # Medico (spec. §2): modifica le terapie, prescrive i farmaci, firma digitalmente i documenti sanitari.

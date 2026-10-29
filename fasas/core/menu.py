@@ -59,6 +59,7 @@ MENU = [
         Item("Magazzino farmaci", "package", "pharmacy:stock", "pharmacy.view_stocklot", namespace="pharmacy"),
         Item("Report", "file-text", "reports:list", "reports.view_generatedreport", namespace="reports"),
         Item("Ricerca avanzata", "search", "search:search", "guests.view_guest", namespace="search"),
+        Item("Importa dal cartaceo", "upload", "imports:home", "imports.add_importbatch", namespace="imports"),
     ]),
     Section("Sistema", [
         Item("Utenti e permessi", "users", "accounts:user_list", "accounts.view_user",

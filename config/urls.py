@@ -21,6 +21,7 @@ urlpatterns = [
     path("backup/", include("fasas.backups.urls")),
     path("audit/", include("fasas.audit.urls")),
     path("cerca/", include("fasas.search.urls")),
+    path("importa/", include("fasas.imports.urls")),
     path("api/", include("fasas.api.urls")),
     path("gestione-tecnica/", admin.site.urls),
 ]

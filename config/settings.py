@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     "fasas.reports",
     "fasas.backups",
     "fasas.search",
+    "fasas.imports",
     "fasas.api",
 ]
 

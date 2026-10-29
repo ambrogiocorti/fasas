@@ -111,6 +111,7 @@ In alternativa a Celery, un crontab dell'utente `fasas`:
 15 1 * * *    cd /opt/fasas/app && .venv/bin/python manage.py fasas_jobs reports report_retention
 30 2 * * *    cd /opt/fasas/app && .venv/bin/python manage.py fasas_jobs backup
 30 3 * * *    cd /opt/fasas/app && .venv/bin/python manage.py fasas_jobs audit_verify
+50 3 * * *    cd /opt/fasas/app && .venv/bin/python manage.py fasas_jobs imports_cleanup
 ```
 
 ### nginx

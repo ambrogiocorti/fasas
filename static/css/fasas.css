@@ -585,3 +585,7 @@ form h3:first-of-type { margin-top: .5rem; }
 
 /* separatore senza titolo nel menu */
 .nav-section.nav-gap { margin: .9rem .6rem .5rem; height: 1px; background: var(--border); }
+
+/* Passi numerati (importazione) */
+.steps { margin: .25rem 0 0; padding-left: 1.3rem; display: grid; gap: .5rem; }
+.steps li { padding-left: .2rem; }

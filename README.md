@@ -25,6 +25,7 @@ tracciata in ogni modifica, cifrata a riposo e organizzata attorno al lavoro rea
 | **Report** | registro giornaliero, farmaci, eventi, parametri, protocolli in PDF ed Excel, su richiesta o programmati (giornalieri, settimanali, mensili), conservati 1–5 anni |
 | **Esportazione cartella** | PDF unico con tutta la cartella e gli allegati, per il trasferimento dell'ospite |
 | **Sicurezza e tracciabilità** | ruoli e permessi granulari per utente, audit log non cancellabile con catena di hash, blocco delle modifiche (24 h / motivazione / solo coordinatore), chiusura del turno, cartelle archiviate in sola lettura, log accessi con IP e dispositivo, blocco dopo tentativi falliti, disconnessione per inattività, restrizione per rete |
+| **Passaggio dal cartaceo** | modello Excel per anagrafiche, contatti, diagnosi, allergie, terapie in corso e giacenze con anteprima degli errori; caricamento massivo dei documenti scansionati abbinati all'ospite – guida in [docs/IMPORTAZIONE.md](docs/IMPORTAZIONE.md) |
 | **Continuità** | backup giornaliero cifrato AES-256-GCM con verifica di integrità e ripristino |
 | **Altro** | ricerca globale con filtri, notifiche configurabili per ruolo, tema scuro (automatico nel turno di notte), interfaccia utilizzabile da tablet e smartphone, API REST per una futura app mobile |
 
@@ -135,6 +136,7 @@ fasas/notifications notifiche e impostazioni per ruolo
 fasas/reports      report PDF/Excel, programmazione, esportazione cartella
 fasas/backups      backup cifrati, verifica, ripristino
 fasas/search       ricerca globale
+fasas/imports      importazione dal FASAS cartaceo (Excel e scansioni)
 fasas/api          API REST (DRF) per l'app mobile futura
 templates/, static/ interfaccia (HTML, CSS, JavaScript senza dipendenze esterne)
 ```
