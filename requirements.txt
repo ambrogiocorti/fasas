@@ -10,6 +10,7 @@ defusedxml>=0.7  # lettura sicura dei file Excel caricati
 pypdf>=5.0
 pyHanko>=0.25
 aiohttp>=3.9  # firma remota (API CSC)
+pywebpush>=2.0  # notifiche push (Web Push con chiavi VAPID)
 celery[redis]>=5.4
 gunicorn>=22
 # Opzionale: storage S3 per i file cifrati
