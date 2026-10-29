@@ -32,7 +32,7 @@ python manage.py fasas_demo --skip-if-exists
 
 echo.
 echo Apri http://127.0.0.1:8000
-echo Utenti: admin, coordinatore, operatore, medico - password: Demo-Fasas-2026!
+echo Utenti: admin, coordinatore, operatore, medico, amministrativo - password: Demo-Fasas-2026!
 echo Per fermare il sistema premi CTRL+C oppure chiudi questa finestra.
 echo.
 start "" /min cmd /c "ping -n 5 127.0.0.1 >nul & start http://127.0.0.1:8000"

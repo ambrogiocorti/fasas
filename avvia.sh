@@ -21,7 +21,7 @@ python manage.py migrate --verbosity 0
 python manage.py fasas_demo --skip-if-exists
 echo
 echo "Apri http://127.0.0.1:8000"
-echo "Utenti: admin, coordinatore, operatore, medico - password: Demo-Fasas-2026!"
+echo "Utenti: admin, coordinatore, operatore, medico, amministrativo - password: Demo-Fasas-2026!"
 echo "Per fermare il sistema premi CTRL+C."
 echo
 ( sleep 4; command -v open >/dev/null && open http://127.0.0.1:8000 || xdg-open http://127.0.0.1:8000 ) >/dev/null 2>&1 &

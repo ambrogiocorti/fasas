@@ -1,0 +1,64 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Presenze{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Presenze – {{ label }}</h1>
+    <span class="subtitle">{% if month.is_closed %}Mese chiuso il {{ month.closed_at|date:"d/m/Y" }} da {{ month.closed_by }}: valori definitivi per la rendicontazione{% else %}Calcolate dai movimenti degli ospiti (ingressi, ricoveri, rientri in famiglia, dimissioni) e dalle correzioni{% endif %}</span>
+  </div>
+  <div class="actions">
+    <a class="btn" href="?mese={{ prev|date:'Y-m' }}">{% icon "chevron-left" %}</a>
+    <a class="btn" href="?mese={{ next|date:'Y-m' }}">{% icon "chevron-right" %}</a>
+    <a class="btn" href="{% url 'billing:attendance_excel' %}?mese={{ first|date:'Y-m' }}">{% icon "download" %}Excel</a>
+    {% if perms.billing.view_feestatement %}<a class="btn" href="{% url 'billing:statements' %}?mese={{ first|date:'Y-m' }}">{% icon "receipt" %}Prospetti</a>{% endif %}
+  </div>
+</div>
+
+{% if month.is_closed %}
+  <div class="alert alert-success">{% icon "lock" %}<div class="alert-body">Presenze chiuse.{% if month.notes %} Note: {{ month.notes }}{% endif %}</div></div>
+{% elif can_close %}
+  <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Il mese è terminato: controllare le presenze e chiuderle per la rendicontazione e i prospetti.</div></div>
+{% endif %}
+
+<div class="grid grid-4">
+  <div class="card stat"><span class="label">Giornate di presenza</span><span class="value">{{ totals.present }}</span></div>
+  <div class="card stat"><span class="label">Assenze per ricovero</span><span class="value">{{ totals.hospital }}</span></div>
+  <div class="card stat"><span class="label">Rientri / assenze programmate</span><span class="value">{{ totals.family }}</span></div>
+  <div class="card stat"><span class="label">Altre assenze</span><span class="value">{{ totals.absent }}</span></div>
+</div>
+
+<div class="card table-wrap">
+  <table class="attendance">
+    <thead><tr><th class="att-name">Ospite</th>{% for d in days %}<th class="att-day{% if d.day in weekend %} weekend{% endif %}{% if d == today %} today{% endif %}">{{ d.day }}<br><small>{{ d|date:"D"|slice:":1" }}</small></th>{% endfor %}<th class="num">P</th><th class="num">H</th><th class="num">F</th><th class="num">A</th></tr></thead>
+    <tbody>
+    {% for guest, values, c, corrected in rows %}
+      <tr><td class="att-name"><strong>{{ guest.last_name }} {{ guest.first_name }}</strong><br><small class="muted mono">{{ guest.fiscal_code }}</small></td>
+        {% for day, code in values.items %}
+          <td class="att att-{% if code == '-' %}none{% else %}{{ code }}{% endif %}{% if day in corrected %} corrected{% endif %}">{% if not month.is_closed and perms.billing.add_attendancecorrection %}<a href="{% url 'billing:correction' guest.pk %}?giorno={{ first|date:'Y-m' }}-{{ day|stringformat:'02d' }}&stato={{ code }}" title="Correggi il {{ day }}">{{ code }}</a>{% else %}{{ code }}{% endif %}</td>
+        {% endfor %}
+        <td class="num"><strong>{{ c.present }}</strong></td><td class="num">{{ c.hospital }}</td><td class="num">{{ c.family }}</td><td class="num">{{ c.absent }}</td></tr>
+    {% empty %}<tr><td colspan="40" class="empty">Nessun ospite in carico nel mese.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  <p class="att-legend">{% for code, text in statuses %}<span class="att att-{% if code == '-' %}none{% else %}{{ code }}{% endif %}">{{ code }}</span> {{ text }}{% if not forloop.last %} · {% endif %}{% endfor %} · <span class="att corrected">x</span> corretto a mano</p>
+</div>
+
+{% if perms.billing.close_attendance %}
+  {% if can_close %}
+  <div class="card" style="max-width: 760px">
+    <h2>Chiudi le presenze di {{ label }}</h2>
+    <form method="post" action="{% url 'billing:close_month' %}">{% csrf_token %}<input type="hidden" name="mese" value="{{ first|date:'Y-m' }}">
+      {% include "partials/form_fields.html" with form=close_form %}
+      <div class="form-actions"><button class="btn btn-primary">{% icon "lock" %}Chiudi il mese</button></div></form>
+  </div>
+  {% elif month.is_closed %}
+  <div class="card" style="max-width: 760px">
+    <h2>Riapri le presenze</h2>
+    <p class="muted">Solo se ci sono errori: la riapertura è registrata nell'audit log ed elimina le bozze dei prospetti del mese. Non è possibile se ci sono prospetti già emessi.</p>
+    <form method="post" action="{% url 'billing:reopen_month' %}">{% csrf_token %}<input type="hidden" name="mese" value="{{ first|date:'Y-m' }}">
+      {% include "partials/form_fields.html" with form=reopen_form %}
+      <div class="form-actions"><button class="btn" data-confirm="Riaprire le presenze del mese?">Riapri</button></div></form>
+  </div>
+  {% endif %}
+{% endif %}
+{% endblock %}

@@ -33,22 +33,26 @@ Anche le notifiche arrivano solo a chi ha il permesso di vedere ciò a cui riman
 | Coordinatore sanitario | *Coordinamento* | gestisce le cartelle ospiti, modifica i protocolli sanitari, valida le informazioni sanitarie (SOS, PAI), autorizza le modifiche oltre la finestra, magazzino, visite, report |
 | Medico | *Area medica* | consulta la cartella clinica, prescrive e modifica le terapie, valida gli SOS, registra diagnosi e allergie, firma digitalmente i documenti sanitari |
 | Amministratore | *Pannello di sistema* | gestisce utenti e permessi, configura il sistema, i protocolli e le notifiche, controlla audit log e log accessi, gestisce i backup – **non consulta le cartelle cliniche** |
+| Amministrativo | *Amministrazione* | ruolo aggiuntivo per l'ufficio amministrativo: presenze per la rendicontazione, rette, prospetti e incassi – vede nome, codice fiscale e giorni di presenza/assenza, **non la cartella clinica** |
 
-| Permesso (esempi) | Operatore | Coordinatore | Medico | Amministratore |
-|---|:-:|:-:|:-:|:-:|
-| Consultare le cartelle degli ospiti | ✔ | ✔ | ✔ | ✖ |
-| Somministrazioni, parametri, diario, registro, checklist, chiusura turno | ✔ | ✔ | ✖ | ✖ |
-| Registrare eventi clinici | ✔ | ✔ | ✔ | ✖ |
-| Annullare eventi e registrazioni | ✖ | ✔ | ✖ | ✖ |
-| Prescrivere / modificare terapie | ✖ | ✔ (trascrizione) | ✔ | ✖ |
-| Validare farmaci SOS | ✖ | ✔ | ✔ | ✖ |
-| Modificare dati oltre la finestra di 24 h | ✖ | ✔ | ✔ | ✖ |
-| Firmare digitalmente | ✖ | ✖ | ✔ | ✖ |
-| Creare e approvare il PAI | ✖ | ✔ | ✖ | ✖ |
-| Nuovi ospiti, archiviazione, esportazione della cartella | ✖ | ✔ | ✖ | ✖ |
-| Magazzino farmaci, report | ✖ | ✔ | ✖ | ✖ |
-| Protocolli automatici (regole) | ✖ | ✔ | ✖ | ✔ |
-| Utenti, configurazione, impostazioni notifiche, audit, log accessi, backup | ✖ | ✖ | ✖ | ✔ |
+| Permesso (esempi) | Operatore | Coordinatore | Medico | Amministratore | Amministrativo |
+|---|:-:|:-:|:-:|:-:|:-:|
+| Consultare le cartelle degli ospiti | ✔ | ✔ | ✔ | ✖ | ✖ |
+| Somministrazioni, parametri, diario, registro, checklist, chiusura turno | ✔ | ✔ | ✖ | ✖ | ✖ |
+| Lavorare senza rete sul dispositivo | ✔ | ✔ | ✖ | ✖ | ✖ |
+| Registrare eventi clinici | ✔ | ✔ | ✔ | ✖ | ✖ |
+| Annullare eventi e registrazioni | ✖ | ✔ | ✖ | ✖ | ✖ |
+| Prescrivere / modificare terapie | ✖ | ✔ (trascrizione) | ✔ | ✖ | ✖ |
+| Validare farmaci SOS | ✖ | ✔ | ✔ | ✖ | ✖ |
+| Modificare dati oltre la finestra di 24 h | ✖ | ✔ | ✔ | ✖ | ✖ |
+| Firmare digitalmente | ✖ | ✖ | ✔ | ✖ | ✖ |
+| Creare e approvare il PAI | ✖ | ✔ | ✖ | ✖ | ✖ |
+| Nuovi ospiti, archiviazione, esportazione, importazione dal cartaceo | ✖ | ✔ | ✖ | ✖ | ✖ |
+| Magazzino farmaci, report | ✖ | ✔ | ✖ | ✖ | ✖ |
+| Presenze del mese (correzione e chiusura) | ✖ | ✔ | ✖ | ✖ | ✔ |
+| Rette, prospetti, incassi | ✖ | ✖ | ✖ | ✖ | ✔ |
+| Protocolli automatici (regole) | ✖ | ✔ | ✖ | ✔ | ✖ |
+| Utenti, configurazione, impostazioni notifiche, audit, log accessi, backup | ✖ | ✖ | ✖ | ✔ | ✖ |
 
 L'amministratore può concedere o negare singoli permessi a singoli utenti (pagina *Utenti → Permessi*), per
 esempio dare a un medico l'approvazione del PAI; ogni variazione è nell'audit log. I permessi predefiniti dei ruoli

@@ -10,6 +10,7 @@ class Role(models.TextChoices):
     COORDINATOR = "coordinator", "Coordinatore sanitario"
     OPERATOR = "operator", "Operatore"
     DOCTOR = "doctor", "Medico"
+    ADMINISTRATIVE = "administrative", "Amministrativo"
 
 
 class User(AbstractUser):

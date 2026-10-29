@@ -11,6 +11,6 @@ python manage.py migrate --verbosity 0
 python manage.py fasas_demo --skip-if-exists
 echo
 echo "FASAS Digitale è avviato: si apre nella scheda «Porte» (porta 8000)."
-echo "Utenti: admin, coordinatore, operatore, medico – password: Demo-Fasas-2026!"
+echo "Utenti: admin, coordinatore, operatore, medico, amministrativo – password: Demo-Fasas-2026!"
 echo
 exec python manage.py runserver 0.0.0.0:8000

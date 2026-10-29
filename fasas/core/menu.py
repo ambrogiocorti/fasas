@@ -11,6 +11,7 @@ DASHBOARD_LABELS = {
     "coordinator": "Coordinamento",
     "doctor": "Area medica",
     "admin": "Pannello di sistema",
+    "administrative": "Amministrazione",
 }
 
 
@@ -61,6 +62,14 @@ MENU = [
         Item("Report", "file-text", "reports:list", "reports.view_generatedreport", namespace="reports"),
         Item("Ricerca avanzata", "search", "search:search", "guests.view_guest", namespace="search"),
         Item("Importa dal cartaceo", "upload", "imports:home", "imports.add_importbatch", namespace="imports"),
+    ]),
+    Section("Amministrazione", [
+        Item("Presenze", "calendar-days", "billing:attendance", "billing.view_attendancemonth",
+             active=("billing:attendance", "billing:correction")),
+        Item("Rette", "wallet", "billing:fees", "billing.view_guestfeeline",
+             active=("billing:fees", "billing:fee_create", "billing:fee_update", "billing:settings")),
+        Item("Prospetti e incassi", "receipt", "billing:statements", "billing.view_feestatement",
+             active=("billing:statements", "billing:statement")),
     ]),
     Section("Sistema", [
         Item("Utenti e permessi", "users", "accounts:user_list", "accounts.view_user",

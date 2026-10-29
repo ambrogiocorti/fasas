@@ -250,4 +250,11 @@ def admin(request):
     }
 
 
-BUILDERS = {"operator": operator, "coordinator": coordinator, "doctor": doctor, "admin": admin}
+def administrative(request):
+    from fasas.billing.views import billing_overview
+
+    return billing_overview()
+
+
+BUILDERS = {"operator": operator, "coordinator": coordinator, "doctor": doctor, "admin": admin,
+            "administrative": administrative}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Prospetti{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Prospetti e incassi – {{ label }}</h1><span class="subtitle">Prospetti mensili di retta per ogni ospite e pagante, dalle presenze chiuse del mese</span></div>
+  <div class="actions">
+    <a class="btn" href="?mese={{ prev|date:'Y-m' }}">{% icon "chevron-left" %}</a>
+    <a class="btn" href="?mese={{ next|date:'Y-m' }}">{% icon "chevron-right" %}</a>
+    {% if month %}<a class="btn" href="{% url 'billing:statements_excel' %}?mese={{ first|date:'Y-m' }}">{% icon "download" %}Excel</a>{% endif %}
+  </div>
+</div>
+
+{% if not month.is_closed %}
+  <div class="alert alert-warning">{% icon "lock" %}<div class="alert-body">Le presenze di {{ label }} non sono ancora chiuse: <a href="{% url 'billing:attendance' %}?mese={{ first|date:'Y-m' }}">controllarle e chiuderle</a> per generare i prospetti.</div></div>
+{% else %}
+  <div class="form-actions" style="border-top:0; padding-top:0">
+    {% if perms.billing.add_feestatement %}<form method="post" action="{% url 'billing:generate' %}" class="inline-form">{% csrf_token %}<input type="hidden" name="mese" value="{{ first|date:'Y-m' }}"><button class="btn">{% icon "refresh" %}Genera / aggiorna le bozze</button></form>{% endif %}
+    {% if drafts and perms.billing.issue_statement %}<form method="post" action="{% url 'billing:issue_all' %}" class="inline-form">{% csrf_token %}<input type="hidden" name="mese" value="{{ first|date:'Y-m' }}"><button class="btn btn-primary" data-confirm="Emettere tutte le {{ drafts }} bozze? Riceveranno un numero progressivo.">{% icon "check" %}Emetti le {{ drafts }} bozze</button></form>{% endif %}
+  </div>
+{% endif %}
+
+<form class="filters" method="get"><input type="hidden" name="mese" value="{{ first|date:'Y-m' }}">
+  <select name="stato"><option value="">Tutti gli stati</option>{% for code, text in statuses %}<option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ text }}</option>{% endfor %}</select>
+  <button class="btn">Filtra</button>
+  {% if summary.n %}<span class="muted">{{ summary.n }} prospetti · € {{ summary.total|floatformat:2 }}</span>{% endif %}
+</form>
+
+<div class="card table-wrap"><table>
+  <thead><tr><th>Numero</th><th>Ospite</th><th>Intestatario</th><th class="num">Totale €</th><th class="num">Residuo €</th><th>Stato</th><th></th></tr></thead>
+  <tbody>{% for s in statements %}
+    <tr><td class="mono nowrap">{{ s.number|default:"bozza" }}{% if s.issue_date %}<br><small class="muted">{{ s.issue_date|date:"d/m/Y" }}</small>{% endif %}</td>
+      <td>{{ s.guest.last_name }} {{ s.guest.first_name }}</td><td>{{ s.payer_name }}<br><small class="muted">{{ s.get_payer_display }}</small></td>
+      <td class="num">{{ s.total|floatformat:2 }}</td><td class="num">{% if s.status != 'draft' and s.status != 'cancelled' %}{{ s.balance|floatformat:2 }}{% endif %}</td>
+      <td><span class="pill {% if s.status == 'paid' %}pill-ok{% elif s.is_overdue %}pill-danger{% elif s.status == 'issued' %}pill-info{% elif s.status == 'draft' %}pill-warn{% endif %}">{% if s.is_overdue %}scaduto{% else %}{{ s.get_status_display }}{% endif %}</span></td>
+      <td class="num nowrap"><a class="btn btn-sm" href="{{ s.get_absolute_url }}">Apri</a> <a class="btn btn-sm" href="{% url 'billing:statement_pdf' s.pk %}" target="_blank">PDF</a></td></tr>
+  {% empty %}<tr><td colspan="7" class="empty">Nessun prospetto per il mese.</td></tr>{% endfor %}</tbody>
+</table></div>
+
+{% if overdue %}
+<div class="card table-wrap">
+  <div class="card-head"><h2>Prospetti scaduti non pagati</h2></div>
+  <table><tbody>{% for s in overdue %}<tr><td class="mono">{{ s.number }}</td><td>{{ s.guest.last_name }} {{ s.guest.first_name }}</td><td>{{ s.payer_name }}</td><td class="nowrap">scaduto il {{ s.due_date|date:"d/m/Y" }}</td><td class="num">€ {{ s.total|floatformat:2 }}</td><td class="num"><a class="btn btn-sm" href="{{ s.get_absolute_url }}">Apri</a></td></tr>{% endfor %}</tbody></table>
+</div>
+{% endif %}
+{% endblock %}

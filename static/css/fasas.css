@@ -611,3 +611,21 @@ form h3:first-of-type { margin-top: .5rem; }
   .offline-bar, .offline-actions, .offline-toast { display: none !important; }
   .offline-content { padding: 0; }
 }
+
+/* Presenze mensili */
+table.attendance { font-size: .78rem; }
+table.attendance th.att-day { text-align: center; padding: .3rem .1rem; min-width: 1.7rem; font-weight: 600; }
+table.attendance th.att-day small { font-weight: 400; color: var(--text-muted); }
+table.attendance th.weekend { background: var(--surface-3); }
+table.attendance th.today { color: var(--primary); }
+table.attendance td.att-name, table.attendance th.att-name { position: sticky; left: 0; background: var(--surface); z-index: 1; min-width: 12rem; }
+.att { text-align: center; padding: .25rem .1rem !important; font-weight: 650; font-family: var(--font-mono, monospace); border-radius: 4px; }
+td.att a { color: inherit; text-decoration: none; display: block; }
+.att-P { background: var(--ok-soft); color: var(--ok-text); }
+.att-H { background: var(--danger-soft); color: var(--danger-text); }
+.att-F { background: var(--warn-soft); color: var(--warn-text); }
+.att-A { background: var(--surface-3); color: var(--text-2); }
+.att-none { color: var(--text-muted); }
+.att.corrected { box-shadow: inset 0 0 0 2px var(--primary); }
+.att-legend { font-size: .78rem; color: var(--text-muted); margin: .6rem .4rem 0; }
+.att-legend .att { display: inline-block; min-width: 1.4rem; }

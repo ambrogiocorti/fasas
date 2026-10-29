@@ -19,6 +19,7 @@ USERS = [
     ("coordinatore", "Carlo", "Coordinatore", "coordinator", "Infermiere"),
     ("operatore", "Olga", "Operatrice", "operator", "OSS"),
     ("medico", "Marta", "Medico", "doctor", "Medico di struttura"),
+    ("amministrativo", "Paolo", "Amministrativo", "administrative", "Ufficio amministrativo"),
 ]
 
 GUESTS = [
@@ -59,6 +60,14 @@ class Command(BaseCommand):
         from fasas.guests.models import Guest
 
         if Guest.objects.exists() and options["skip_if_exists"]:
+            from fasas.accounts.models import User
+
+            if User.objects.filter(username="admin", email="admin@example.invalid").exists():
+                # Database di prova creato da una versione precedente: si aggiungono solo le novità della demo
+                call_command("fasas_setup", stdout=self.stdout)
+                with audit_context(source="demo"):
+                    users = self._users()
+                    self._billing(users)
             self.stdout.write("Dati presenti: i dati demo non vengono ricaricati.")
             return
         if Guest.objects.exists() and not options["force"]:
@@ -71,20 +80,10 @@ class Command(BaseCommand):
         ))
 
     def _create(self):
-        from fasas.accounts.models import User
         from fasas.guests.models import ClinicalTag
         from fasas.pharmacy.models import Drug, DrugInteraction
 
-        users = {}
-        for username, first, last, role, qualification in USERS:
-            user, created = User.objects.get_or_create(username=username, defaults={
-                "first_name": first, "last_name": last, "role": role, "qualification": qualification,
-                "email": f"{username}@example.invalid",
-            })
-            if created:
-                user.set_password(DEMO_PASSWORD)
-                user.save()
-            users[role] = user
+        users = self._users()
 
         tags = {}
         for name, color, alert, escalate in TAGS:
@@ -104,6 +103,57 @@ class Command(BaseCommand):
         coordinator = users["coordinator"]
         with audit_context(user=users["operator"]):
             self._populate(users, tags, drugs, coordinator)
+
+    def _users(self):
+        from fasas.accounts.models import User
+
+        users = {}
+        for username, first, last, role, qualification in USERS:
+            user, created = User.objects.get_or_create(username=username, defaults={
+                "first_name": first, "last_name": last, "role": role, "qualification": qualification,
+                "email": f"{username}@example.invalid",
+            })
+            if created:
+                user.set_password(DEMO_PASSWORD)
+                user.save()
+            users[role] = user
+        return users
+
+    def _billing(self, users):
+        """Rette di esempio e qualche movimento nel mese precedente, per provare presenze e prospetti."""
+        from fasas.billing.models import BillingSettings, GuestFeeLine
+        from fasas.billing.services import month_start, shift_month
+        from fasas.guests.models import AdmissionEvent, Guest
+
+        if GuestFeeLine.objects.exists():
+            return
+        settings = BillingSettings.get()
+        if not settings.payee_name:
+            settings.payee_name = "Cooperativa Sociale Esempio (dati di fantasia)"
+            settings.payee_tax_code = "00000000000"
+            settings.iban = "IT00X0000000000000000000000"
+            settings.save()
+        previous = shift_month(month_start(), -1)
+        with audit_context(user=users["administrative"]):
+            for guest in Guest.objects.filter(fiscal_code__in=[g[4] for g in GUESTS]):
+                start = guest.admission_date
+                GuestFeeLine.objects.create(guest=guest, description="Quota sanitaria", payer="region",
+                                            payer_name="ATS di esempio", daily_rate=Decimal("78.50"), valid_from=start)
+                GuestFeeLine.objects.create(guest=guest, description="Quota sociale", payer="municipality",
+                                            payer_name="Comune di Milano", daily_rate=Decimal("42.00"),
+                                            hospital_percent=70, family_percent=70, absent_percent=70, valid_from=start)
+                GuestFeeLine.objects.create(guest=guest, description="Compartecipazione", payer="guest",
+                                            payer_name=f"Elena {guest.last_name} (amministratore di sostegno)",
+                                            daily_rate=Decimal("15.00"), hospital_percent=100, family_percent=100,
+                                            absent_percent=100, max_absence_days=20, valid_from=start)
+        with audit_context(user=users["coordinator"]):
+            for cf, moves in [("VRDLCU69S25L219Z", [("hospitalization", 8), ("return", 14)]),
+                              ("BNCGLI85L42H501Y", [("absence", 20), ("return", 23)])]:
+                guest = Guest.objects.filter(fiscal_code=cf).first()
+                if guest and not guest.admission_events.filter(date__gte=previous, date__lt=month_start()).exists():
+                    for kind, day in moves:
+                        AdmissionEvent.objects.create(guest=guest, kind=kind, date=previous.replace(day=day),
+                                                      notes="Movimento dimostrativo")
 
     def _populate(self, users, tags, drugs, coordinator):
         from fasas.appointments.models import Appointment
@@ -215,3 +265,4 @@ class Command(BaseCommand):
         from fasas.protocols.engine import run_periodic_checks
 
         run_periodic_checks()
+        self._billing(users)

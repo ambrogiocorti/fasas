@@ -1,0 +1,35 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Amministrazione{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Amministrazione</h1><span class="subtitle">Presenze per la rendicontazione, rette, prospetti e incassi. Questo ruolo non consulta la cartella clinica.</span></div>
+  <div class="actions"><a class="btn btn-primary" href="{% url 'billing:attendance' %}?mese={{ previous|date:'Y-m' }}">{% icon "calendar-days" %}Presenze di {{ previous|date:"F" }}</a></div>
+</div>
+
+{% if not prev_month.is_closed %}
+  <div class="alert alert-warning">{% icon "lock" %}<div class="alert-body">Le presenze di {{ previous|date:"F Y" }} non sono ancora chiuse: <a href="{% url 'billing:attendance' %}?mese={{ previous|date:'Y-m' }}">controllarle e chiuderle</a>, poi generare i prospetti.</div></div>
+{% endif %}
+
+<div class="grid grid-4">
+  <div class="card stat"><span class="label">Ospiti in carico questo mese <span class="stat-icon">{% icon "users" %}</span></span><span class="value">{{ current_rows|length }}</span></div>
+  <div class="card stat {% if drafts %}tone-warn{% endif %}"><span class="label">Prospetti in bozza <span class="stat-icon">{% icon "receipt" %}</span></span><span class="value"><a href="{% url 'billing:statements' %}?mese={{ previous|date:'Y-m' }}">{{ drafts }}</a></span><small>da controllare ed emettere</small></div>
+  <div class="card stat"><span class="label">Emesso nel mese <span class="stat-icon">{% icon "wallet" %}</span></span><span class="value" style="font-size:1.4rem">€ {{ issued_month|floatformat:2 }}</span></div>
+  <div class="card stat {% if overdue %}tone-danger{% endif %}"><span class="label">Da incassare <span class="stat-icon">{% icon "clock" %}</span></span><span class="value" style="font-size:1.4rem">€ {{ receivable|floatformat:2 }}</span><small>{{ overdue|length }} prospetti scaduti</small></div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card table-wrap">
+    <div class="card-head"><h2>Prospetti scaduti</h2><div class="actions"><a class="btn btn-sm" href="{% url 'billing:statements' %}">Prospetti</a></div></div>
+    <table><tbody>{% for s in overdue %}<tr><td class="mono">{{ s.number }}</td><td>{{ s.guest.last_name }} {{ s.guest.first_name }}</td><td>{{ s.payer_name }}</td><td class="nowrap">{{ s.due_date|date:"d/m/Y" }}</td><td class="num">€ {{ s.balance|floatformat:2 }}</td></tr>{% empty %}<tr><td class="empty">Nessun prospetto scaduto.</td></tr>{% endfor %}</tbody></table>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Rette da configurare</h2><div class="actions"><a class="btn btn-sm" href="{% url 'billing:fees' %}">Rette</a></div></div>
+    <ul class="list-plain">{% for g in without_fees %}<li><span class="pill pill-warn">senza retta</span> {{ g.last_name }} {{ g.first_name }} <a class="btn btn-sm" href="{% url 'billing:fee_create' g.pk %}">{% icon "plus" %}Voce</a></li>{% empty %}<li class="muted">Tutti gli ospiti hanno la retta configurata.</li>{% endfor %}</ul>
+  </div>
+  <div class="card table-wrap span-2">
+    <div class="card-head"><h2>Presenze di {{ current|date:"F" }} finora</h2><div class="actions"><a class="btn btn-sm" href="{% url 'billing:attendance' %}">Apri</a></div></div>
+    <table><thead><tr><th>Ospite</th><th class="num">Presenze</th><th class="num">Ricovero</th><th class="num">Famiglia</th><th class="num">Altre assenze</th></tr></thead>
+      <tbody>{% for guest, values, c, corrected in current_rows %}<tr><td>{{ guest.last_name }} {{ guest.first_name }}</td><td class="num">{{ c.present }}</td><td class="num">{{ c.hospital }}</td><td class="num">{{ c.family }}</td><td class="num">{{ c.absent }}</td></tr>{% empty %}<tr><td colspan="5" class="empty">Nessun ospite.</td></tr>{% endfor %}</tbody></table>
+  </div>
+</div>
+{% endblock %}

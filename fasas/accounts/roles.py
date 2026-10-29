@@ -70,6 +70,9 @@ COORDINATOR = OPERATOR + [
     # Passaggio dal cartaceo: importa anagrafiche, terapie, giacenze e documenti scansionati
     "imports.view_importbatch", "imports.add_importbatch",
     "offline.view_offlinerecord",
+    # Presenze per la rendicontazione: controlla, corregge e chiude il mese
+    "billing.view_attendancemonth", "billing.add_attendancecorrection", "billing.change_attendancecorrection",
+    "billing.close_attendance",
 ]
 
 # Medico (spec. §2): modifica le terapie, prescrive i farmaci, firma digitalmente i documenti sanitari.
@@ -101,11 +104,24 @@ ADMIN = [
     "reports.view_reportschedule", "reports.add_reportschedule", "reports.change_reportschedule",
 ]
 
+# Amministrativo (ufficio amministrativo, oltre la spec. §2): presenze per la rendicontazione, rette, prospetti
+# e incassi. Vede anagrafica essenziale e giorni di presenza/assenza, non la cartella clinica.
+ADMINISTRATIVE = [
+    "billing.view_attendancemonth", "billing.add_attendancecorrection", "billing.change_attendancecorrection",
+    "billing.close_attendance",
+    "billing.view_guestfeeline", "billing.add_guestfeeline", "billing.change_guestfeeline",
+    "billing.view_feestatement", "billing.add_feestatement", "billing.change_feestatement", "billing.issue_statement",
+    "billing.view_feepayment", "billing.add_feepayment",
+    "billing.view_billingsettings", "billing.change_billingsettings",
+    "notifications.view_notification",
+]
+
 ROLE_PERMISSIONS = {
     Role.OPERATOR: OPERATOR,
     Role.COORDINATOR: COORDINATOR,
     Role.DOCTOR: DOCTOR,
     Role.ADMIN: ADMIN,
+    Role.ADMINISTRATIVE: ADMINISTRATIVE,
 }
 
 
