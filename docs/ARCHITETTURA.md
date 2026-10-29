@@ -75,7 +75,18 @@ Definiti in `fasas/core/jobs.py`, eseguiti da Celery beat (`config/celery.py`) o
 | 27 | Modalità scura | `static/css/fasas.css` (`[data-theme=dark]`), automatica nel turno di notte |
 | 28 | Stack Python/Django/DRF/PostgreSQL Supabase, storage cifrato o S3 | `requirements.txt`, `config/settings.py` (`DATABASE_URL`, `FASAS_S3_BUCKET`) |
 | 29 | 10–100 ospiti, accessi simultanei, archiviazione a lungo termine | PostgreSQL, indici su turno/data, file cifrati su filesystem o S3 |
-| 30 | Architettura futura: più comunità, integrazioni regionali, app mobile | modello `Community`, API REST `/api/v1/` con token, servizi di dominio riusabili |
+| 30 | Architettura futura: più comunità, integrazioni regionali, app mobile | modello `Community`, API REST `/api/v1/` con token, servizi di dominio riusabili; app installabile (PWA) |
+
+### Moduli aggiunti oltre la specifica
+
+| Modulo | Implementazione |
+|---|---|
+| Importazione dal cartaceo | `imports` (`ImportBatch`, `spec.py` colonne del modello, `services.run_workbook_import`, `documents.py` scansioni) |
+| Firma remota qualificata | `signatures/csc.py` (API CSC v1 con pyHanko), livelli PAdES in `signatures/providers.py` |
+| Notifiche push | `notifications/push.py` (Web Push VAPID), `PushSubscription`, service worker `templates/pwa/sw.js` |
+| Lavoro senza rete | `offline` (`pack.py` pacchetto del turno, `sync.py` sincronizzazione idempotente, `OfflineRecord`, `emergency.py`), `static/js/offline.js` (cifratura AES-GCM nel browser) |
+| Presenze e rette | `billing` (`AttendanceMonth`/`AttendanceMonthRow`, `GuestFeeLine`, `FeeStatement`, `FeePayment`, `services.guest_days`) |
+| Turni del personale | `staffing` (`RotaEntry`, `RotaMonth`, `LeaveRequest`, `ShiftChange`, `services.month_grid` con copertura e riposi) |
 
 ## Schema del database
 

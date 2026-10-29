@@ -156,17 +156,18 @@ Il software è completo, ma un sistema che tratta dati sanitari richiede passagg
    o dal direttore sanitario (campo «validato da» di ogni protocollo). Lo stesso vale per la tabella delle interazioni.
 2. **Firma digitale qualificata**: serve il contratto di firma remota di un prestatore qualificato (QTSP) che offra
    le API CSC; la configurazione è descritta in [docs/FIRMA_DIGITALE.md](docs/FIRMA_DIGITALE.md).
-3. **GDPR**: registro dei trattamenti, valutazione d'impatto (DPIA, obbligatoria per dati sanitari su larga scala
-   o di soggetti vulnerabili), nomina del responsabile del trattamento per hosting e Supabase, informative.
-4. **Conservazione a norma**: i report e l'esportazione PDF non sostituiscono la conservazione digitale a norma
-   (Linee guida AgID) se richiesta dalla regione o dall'ente: valutare l'invio a un conservatore accreditato.
-5. **Requisiti regionali**: struttura e contenuti minimi del FASAS sono definiti dalle normative regionali
-   (es. DGR della Lombardia per le strutture sociosanitarie): verificarli con l'ATS/ASL di riferimento.
+3. **GDPR**: registro dei trattamenti, valutazione d'impatto (DPIA), informative, nomina dei responsabili del
+   trattamento e degli amministratori di sistema: bozze in [docs/gdpr/](docs/gdpr/README.md), da completare con il
+   DPO o un consulente.
+4. **Requisiti regionali e conservazione a norma**: contenuti e tenuta del FASAS secondo la normativa regionale,
+   accesso per la vigilanza, eventuale dematerializzazione: checklist per l'ATS in
+   [docs/gdpr/CHECKLIST_ATS.md](docs/gdpr/CHECKLIST_ATS.md).
+5. **Backup fuori sede**: oggi i backup cifrati restano sul server; opzioni e proposta in [docs/ROADMAP.md](docs/ROADMAP.md).
 6. **Chiavi**: conservare `FASAS_ENCRYPTION_KEYS` e `FASAS_BACKUP_KEY` anche fuori dal server (es. cassaforte
    o password manager della direzione). Senza le chiavi documenti e backup non sono recuperabili.
 7. **Prova di ripristino**: eseguire periodicamente un ripristino completo su un database di prova.
 
-Dettagli in [docs/SICUREZZA.md](docs/SICUREZZA.md) e [docs/DEPLOY.md](docs/DEPLOY.md).
+Dettagli in [docs/SICUREZZA.md](docs/SICUREZZA.md) e [docs/DEPLOY.md](docs/DEPLOY.md); stato dei lavori in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Crediti
 

@@ -96,7 +96,11 @@ I dati trattati sono dati relativi alla salute (art. 9 GDPR) di persone vulnerab
 - valutazione d'impatto (DPIA);
 - nomina a responsabile del trattamento (art. 28) del fornitore di hosting e di Supabase; scelta di una regione UE;
 - procedure per la gestione dei data breach (72 ore) e per l'esercizio dei diritti;
-- formazione degli operatori e assegnazione di credenziali personali (mai condivise).
+- formazione degli operatori e assegnazione di credenziali personali (mai condivise);
+- informativa al personale sui log di accessi e operazioni (art. 4 c. 3 L. 300/1970) e designazione degli
+  amministratori di sistema.
+
+Bozze di DPIA, registro, informative e nomine in [gdpr/](gdpr/README.md).
 
 ## Segnalare un problema di sicurezza
 
