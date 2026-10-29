@@ -282,6 +282,22 @@ class CIESignatureTests(FasasTestCase):
         self.assertFalse(Signature.objects.exists())  # la prova non crea documenti
         self.assertContains(self.client.get(reverse("signatures:credential")), "catena verificata")
 
+    # 16b. La prova funziona anche prima di configurare le CA: firma valida ma catena dichiarata non verificata
+    def test_test_signature_without_trust_roots(self):
+        with override_settings(FASAS_CIE_TRUST_ROOTS="", FASAS_CIE_INTERMEDIATES=""):
+            request = cie.create_test_request(self.doctor)
+            status, data = self.device.sign_flow(request.pk, self.card)
+            self.assertEqual((status, data["status"]), (200, "signed"), data)
+            self.assertFalse(data["verification"]["trusted"])
+            request.refresh_from_db()
+            self.assertIn("CA della CIE non configurate", request.verification["chain_note"])
+            self.login(self.doctor)
+            state = self.client.get(reverse("signatures:cie_status", args=[request.pk])).json()
+            self.assertEqual(state["status"], "signed")
+            self.assertFalse(state["verification"]["trusted"])
+            with self.assertRaises(SignatureError):  # i documenti veri restano bloccati
+                self.start()
+
     # 17. Solo HTTPS in produzione e firma bloccata senza le CA della CIE
     def test_https_and_trust_required(self):
         with override_settings(FASAS_CIE_ALLOW_HTTP=False):

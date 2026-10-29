@@ -42,14 +42,47 @@ def cmd_diagnose(args):
     print(f"Carta sul lettore: {'sì' if info.get('card_present') else 'no'}")
     if info.get("card_present"):
         try:
-            from cryptography import x509
-
-            cert = x509.load_der_x509_certificate(card.certificate())
-            print(f"Certificato: {cert.subject.rfc4514_string()} – valido fino al {cert.not_valid_after_utc:%d/%m/%Y}")
+            describe_certificate(card.certificate())
         except CardError as exc:
             print(f"Certificato: {exc}")
         except ImportError:
             print("Certificato: letto (installare «cryptography» per vederne i dati).")
+
+
+CF_RE = r"[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]"
+
+
+def describe_certificate(der):
+    """Dati pubblici del certificato: servono a capire perché il FASAS lo accetta o lo rifiuta (nessun PIN)."""
+    import re
+
+    from cryptography import x509
+    from cryptography.x509.oid import AuthorityInformationAccessOID, NameOID
+
+    if der[:1] == b"\x30" and der[1] & 0x80:  # il file sul chip può avere zeri di riempimento in coda
+        count = der[1] & 0x7F
+        der = der[:2 + count + int.from_bytes(der[2:2 + count], "big")]
+    cert = x509.load_der_x509_certificate(der)
+    print(f"Titolare: {cert.subject.rfc4514_string()}")
+    print(f"Emittente: {cert.issuer.rfc4514_string()}")
+    print(f"Validità: {cert.not_valid_before_utc:%d/%m/%Y} – {cert.not_valid_after_utc:%d/%m/%Y}")
+    values = [a.value for oid in (NameOID.COMMON_NAME, NameOID.SERIAL_NUMBER)
+              for a in cert.subject.get_attributes_for_oid(oid)]
+    codes = sorted({c for v in values for c in re.findall(CF_RE, str(v).upper())})
+    print(f"Codice fiscale letto: {', '.join(codes) or 'NON TROVATO (il FASAS rifiuterà la firma)'}")
+    try:
+        usage = cert.extensions.get_extension_for_class(x509.KeyUsage).value
+        print(f"Uso della chiave: firma digitale {'sì' if usage.digital_signature else 'no'}, "
+              f"non ripudio {'sì' if usage.content_commitment else 'no'}")
+    except x509.ExtensionNotFound:
+        print("Uso della chiave: non indicato (il FASAS rifiuterà la firma)")
+    try:
+        aia = cert.extensions.get_extension_for_class(x509.AuthorityInformationAccess).value
+        for item in aia:
+            kind = "certificato dell'emittente" if item.access_method == AuthorityInformationAccessOID.CA_ISSUERS else "OCSP"
+            print(f"{kind}: {item.access_location.value}")
+    except x509.ExtensionNotFound:
+        pass
 
 
 def cmd_console(args):
