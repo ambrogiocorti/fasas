@@ -33,8 +33,10 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -r requirements.txt ruff
-      - run: ruff check fasas config
+      - name: SoftHSM2 (modulo PKCS#11 reale per i test del FASAS Signer)
+        run: sudo apt-get update && sudo apt-get install -y softhsm2
+      - run: pip install -r requirements.txt -r signer/requirements.txt ruff
+      - run: ruff check fasas config signer
       - name: Imposta database
         if: matrix.database == 'postgres'
         run: echo "DATABASE_URL=postgres://fasas:fasas@localhost:5432/fasas" >> "$GITHUB_ENV"

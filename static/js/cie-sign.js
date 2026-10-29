@@ -29,6 +29,10 @@
   let timer = null;
 
   function hintFor(s) {
+    if (s.error_code === "pin_wrong") {
+      return "PIN errato." + (s.pin_attempts_left != null ? " Tentativi rimasti: " + s.pin_attempts_left + "." : "") +
+        " Riprova su FASAS Signer: dopo 3 errori il PIN si blocca.";
+    }
     if (s.status === "waiting") {
       if (!s.devices) return "Nessun FASAS Signer abbinato: abbinalo in Impostazioni › Firma digitale.";
       if (!s.device_online) return "Avvia FASAS Signer sul computer con il lettore: la richiesta comparirà lì.";
@@ -37,13 +41,7 @@
         : "Conferma la richiesta su FASAS Signer (controlla che il codice coincida).";
     }
     if (s.status === "card") return "Carta letta: controllo del certificato e preparazione del documento…";
-    if (s.status === "authorizing") {
-      if (s.error_code === "pin_wrong") {
-        return "PIN errato." + (s.pin_attempts_left != null ? " Tentativi rimasti: " + s.pin_attempts_left + "." : "") +
-          " Riprova su FASAS Signer: dopo 3 errori il PIN si blocca.";
-      }
-      return "Digita su FASAS Signer le ultime 4 cifre del PIN della CIE.";
-    }
+    if (s.status === "authorizing") return "Digita su FASAS Signer il PIN della CIE (sul computer le ultime 4 cifre).";
     if (s.status === "signing") return "Non allontanare la carta dal lettore.";
     if (s.status === "verifying") return "Verifica crittografica della firma e archiviazione del documento…";
     return "";

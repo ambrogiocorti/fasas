@@ -1,0 +1,9 @@
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+# Codice di terze parti scaricato da scripts/fetch_ias.sh (non versionato)
+app/src/main/java/it/ipzs/cieidsdk/nfc/
+app/src/main/java/it/ipzs/cieidsdk/exceptions/
+app/THIRD_PARTY_*

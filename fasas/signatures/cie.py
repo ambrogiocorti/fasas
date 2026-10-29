@@ -368,8 +368,9 @@ def report_state(request_id, device, nonce, state, attempts_left=None):
     """Avanzamento visibile nel FASAS: carta mancante/rilevata, PIN errato (con tentativi rimasti), firma in corso."""
     if state not in DEVICE_STATES:
         raise SignatureError("Stato non riconosciuto.", "bad_state")
+    # Sul telefono (NFC) il PIN si verifica all'apertura del canale sicuro, prima di leggere il certificato
     allowed = {"card_missing": (Status.WAITING,), "card": (Status.WAITING,),
-               "pin_wrong": (Status.AUTHORIZING,), "signing": (Status.AUTHORIZING,)}[state]
+               "pin_wrong": (Status.WAITING, Status.CARD, Status.AUTHORIZING), "signing": (Status.AUTHORIZING,)}[state]
     with transaction.atomic():
         request = _locked(request_id, device, nonce, states=allowed)
         if state == "card_missing":
