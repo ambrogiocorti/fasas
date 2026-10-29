@@ -73,12 +73,12 @@ Il sistema produce firme **PAdES** (PDF firmati), verificabili con qualsiasi sof
 
 - Con un certificato **qualificato** rilasciato da un prestatore iscritto all'elenco di fiducia europeo (QTSP)
   la firma è una Firma Elettronica Qualificata, equivalente alla firma autografa (Reg. UE 910/2014 eIDAS, CAD).
-- Modalità supportata subito: certificato personale PKCS#12 (`.p12`/`.pfx`), conservato cifrato; la passphrase
-  non viene salvata e va inserita a ogni firma. Marca temporale opzionale con `FASAS_SIGNATURE_TSA_URL`.
-- Firma remota con OTP: `RemoteQTSPProvider` in `fasas/signatures/providers.py` è il punto in cui collegare le API
-  del provider scelto (Aruba, InfoCert, Namirial…), una volta stipulato il contratto.
-- La verifica sul server controlla integrità e validità crittografica; l'attendibilità del certificato va confermata
-  con un software che usi la lista di fiducia europea.
+- **Firma remota qualificata** tramite API CSC del prestatore: al prestatore arriva solo l'impronta del documento;
+  password, PIN e OTP non vengono salvati. In alternativa certificato personale PKCS#12 (`.p12`/`.pfx`)
+  conservato cifrato, con passphrase da inserire a ogni firma.
+- Livelli PAdES B-B, B-T (marca temporale RFC 3161), B-LT e B-LTA (`FASAS_SIGNATURE_LEVEL`).
+- La verifica sul server controlla integrità, validità crittografica e marca temporale; con le CA dei prestatori in
+  `FASAS_SIGNATURE_TRUST_ROOTS` anche la catena di fiducia. Guida completa in [FIRMA_DIGITALE.md](FIRMA_DIGITALE.md).
 
 ## GDPR – adempimenti a carico della struttura
 

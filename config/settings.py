@@ -195,9 +195,23 @@ FASAS_TRUSTED_PROXY_COUNT = int(os.environ.get("FASAS_TRUSTED_PROXY_COUNT", "0")
 # Tentativi di accesso falliti prima del blocco temporaneo
 FASAS_LOGIN_MAX_FAILURES = int(os.environ.get("FASAS_LOGIN_MAX_FAILURES", "5"))
 FASAS_LOGIN_LOCKOUT_MINUTES = int(os.environ.get("FASAS_LOGIN_LOCKOUT_MINUTES", "15"))
-# Provider firma digitale: "pkcs12" (certificato dell'utente) o "remote" (firma remota QTSP)
-FASAS_SIGNATURE_PROVIDER = os.environ.get("FASAS_SIGNATURE_PROVIDER", "pkcs12")
-FASAS_SIGNATURE_TSA_URL = os.environ.get("FASAS_SIGNATURE_TSA_URL", "")
+# Firma digitale (docs/FIRMA_DIGITALE.md). Ogni medico sceglie il proprio strumento: certificato PKCS#12
+# o firma remota qualificata presso un prestatore (QTSP) tramite API CSC.
+FASAS_SIGNATURE_TSA_URL = os.environ.get("FASAS_SIGNATURE_TSA_URL", "")  # marca temporale RFC 3161
+FASAS_SIGNATURE_TSA_USER = os.environ.get("FASAS_SIGNATURE_TSA_USER", "")
+FASAS_SIGNATURE_TSA_PASSWORD = os.environ.get("FASAS_SIGNATURE_TSA_PASSWORD", "")
+FASAS_SIGNATURE_LEVEL = os.environ.get("FASAS_SIGNATURE_LEVEL", "")  # B-B, B-T, B-LT, B-LTA (vuoto: B-T se c'è la TSA)
+FASAS_SIGNATURE_TRUST_ROOTS = os.environ.get("FASAS_SIGNATURE_TRUST_ROOTS", "")  # file PEM con le CA dei QTSP
+FASAS_CSC_SERVICE_URL = os.environ.get("FASAS_CSC_SERVICE_URL", "")  # URL base delle API CSC del prestatore
+FASAS_CSC_API_VERSION = os.environ.get("FASAS_CSC_API_VERSION", "v1")
+FASAS_CSC_AUTH = os.environ.get("FASAS_CSC_AUTH", "basic")  # basic | oauth2 | token
+FASAS_CSC_OAUTH_TOKEN_URL = os.environ.get("FASAS_CSC_OAUTH_TOKEN_URL", "")
+FASAS_CSC_CLIENT_ID = os.environ.get("FASAS_CSC_CLIENT_ID", "")
+FASAS_CSC_CLIENT_SECRET = os.environ.get("FASAS_CSC_CLIENT_SECRET", "")
+FASAS_CSC_OAUTH_SCOPE = os.environ.get("FASAS_CSC_OAUTH_SCOPE", "service")
+FASAS_CSC_TOKEN = os.environ.get("FASAS_CSC_TOKEN", "")
+FASAS_CSC_TIMEOUT = int(os.environ.get("FASAS_CSC_TIMEOUT", "30"))
+FASAS_CSC_PROVIDER_NAME = os.environ.get("FASAS_CSC_PROVIDER_NAME", "")  # nome mostrato ai medici, es. «InfoCert»
 
 if DEBUG and not FASAS_ENCRYPTION_KEYS:
     # Chiave fissa SOLO per sviluppo: in produzione la mancanza della chiave è un errore.

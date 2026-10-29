@@ -9,9 +9,15 @@ class SigningCredential(models.Model):
 
     - pkcs12: certificato personale (.p12/.pfx) cifrato con la chiave di sistema; la passphrase
       NON viene mai salvata e va digitata a ogni firma.
-    - remote: firma remota presso un prestatore qualificato (QTSP: Aruba, InfoCert, Namirial...);
-      qui si salva solo l'identificativo dell'utente presso il provider, l'OTP si digita a ogni firma.
+    - remote: firma remota presso un prestatore qualificato (QTSP) tramite API CSC; si salvano
+      solo l'utente e l'identificativo della credenziale presso il prestatore. Password, PIN e OTP
+      si digitano a ogni firma e non vengono mai salvati.
     """
+
+    class OTPType(models.TextChoices):
+        NONE = "", "Nessuno"
+        OFFLINE = "offline", "OTP da app o dispositivo"
+        ONLINE = "online", "OTP via SMS"
 
     class Kind(models.TextChoices):
         PKCS12 = "pkcs12", "Certificato PKCS#12"
@@ -21,6 +27,9 @@ class SigningCredential(models.Model):
     kind = models.CharField("tipo", max_length=10, choices=Kind.choices, default=Kind.PKCS12)
     storage_name = models.CharField(max_length=255, blank=True, editable=False)
     remote_user_id = models.CharField("utente presso il provider di firma remota", max_length=150, blank=True)
+    remote_credential_id = models.CharField("identificativo credenziale (CSC)", max_length=255, blank=True)
+    remote_pin_required = models.BooleanField("richiede PIN", default=False)
+    remote_otp_type = models.CharField("tipo OTP", max_length=10, choices=OTPType.choices, blank=True)
     certificate_subject = models.CharField("titolare certificato", max_length=255, blank=True)
     certificate_issuer = models.CharField("emittente", max_length=255, blank=True)
     certificate_serial = models.CharField("seriale", max_length=100, blank=True)

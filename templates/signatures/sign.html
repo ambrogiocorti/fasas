@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Firma digitale{% endblock %}
+{% block content %}
+{% include "guests/_header.html" with compact=True %}
+<div class="card" style="max-width: 860px">
+  <div class="card-head"><h1>Firma digitale – {{ version }}</h1></div>
+  {% if not credential %}
+    <div class="alert alert-warning">{% icon "key" %}<div class="alert-body">Prima di firmare configura il tuo strumento di firma: <a href="{% url 'signatures:credential' %}">certificato o firma remota</a>.</div></div>
+  {% else %}
+    <p class="muted">La firma PAdES viene apposta al PDF e crea una nuova versione del documento; l'originale resta archiviato.
+      {% if remote %}Al prestatore{% if provider_name %} ({{ provider_name }}){% endif %} viene inviata solo l'impronta del documento, non il documento.{% endif %}
+      Password, PIN e OTP non vengono salvati.</p>
+    <p><small>Firmi come <strong>{{ credential.certificate_subject|default:credential.get_kind_display }}</strong> · {{ credential.get_kind_display }}</small></p>
+
+    {% if remote and credential.remote_otp_type == 'online' %}
+      <div class="card" style="background: var(--surface-2)">
+        {% if token_active %}
+          <div class="alert alert-success">{% icon "smartphone" %}<div class="alert-body">SMS inviato: inserisci l'OTP ricevuto qui sotto entro pochi minuti.</div></div>
+        {% else %}
+          <form method="post" class="inline-form">{% csrf_token %}<input type="hidden" name="action" value="send_otp">
+            {% if needs_password %}<label for="otp-password">Password del servizio di firma</label>
+            <input id="otp-password" type="password" name="password" autocomplete="off" required>{% endif %}
+            <button class="btn">{% icon "smartphone" %}Invia OTP via SMS</button>
+          </form>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <form method="post" novalidate>{% csrf_token %}
+      {% include "partials/form_fields.html" %}
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">{% icon "pen" %}Firma</button>
+        <a class="btn" href="{{ version.document.get_absolute_url }}">Annulla</a>
+      </div>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

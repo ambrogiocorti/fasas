@@ -21,7 +21,7 @@ tracciata in ogni modifica, cifrata a riposo e organizzata attorno al lavoro rea
 | **PAI** | aree sanitaria, autonomia, comportamentale, sociale; obiettivi, interventi, responsabili, verifiche; versioni e revisioni; PDF archiviato e firmabile |
 | **Visite** | appuntamenti con accompagnatore, esito e referto; promemoria «visita domani» e «visita oggi» |
 | **Documenti** | carta d'identità, tessera sanitaria, certificati, consensi, relazioni, PAI: cifrati, versionati, con limite di dimensione e registro degli accessi |
-| **Firma digitale** | firma PAdES dei PDF con il certificato del medico (PKCS#12) e punto di integrazione per la firma remota qualificata (QTSP); verifica delle firme |
+| **Firma digitale** | firma remota qualificata del medico tramite API CSC del prestatore (PIN + OTP da app o SMS) o certificato PKCS#12; PAdES B-B/B-T/B-LT/B-LTA con marca temporale; verifica delle firme – guida in [docs/FIRMA_DIGITALE.md](docs/FIRMA_DIGITALE.md) |
 | **Report** | registro giornaliero, farmaci, eventi, parametri, protocolli in PDF ed Excel, su richiesta o programmati (giornalieri, settimanali, mensili), conservati 1–5 anni |
 | **Esportazione cartella** | PDF unico con tutta la cartella e gli allegati, per il trasferimento dell'ospite |
 | **Sicurezza e tracciabilità** | ruoli e permessi granulari per utente, audit log non cancellabile con catena di hash, blocco delle modifiche (24 h / motivazione / solo coordinatore), chiusura del turno, cartelle archiviate in sola lettura, log accessi con IP e dispositivo, blocco dopo tentativi falliti, disconnessione per inattività, restrizione per rete |
@@ -147,9 +147,8 @@ Il software è completo, ma un sistema che tratta dati sanitari richiede passagg
 
 1. **Validazione clinica dei protocolli**: soglie e azioni predefinite sono esempi; vanno approvate dal medico
    o dal direttore sanitario (campo «validato da» di ogni protocollo). Lo stesso vale per la tabella delle interazioni.
-2. **Firma digitale qualificata**: per il pieno valore legale serve un certificato qualificato di un QTSP
-   (smart card esportabile in PKCS#12 o firma remota). L'integrazione con le API del provider scelto va completata
-   in `fasas/signatures/providers.py` (`RemoteQTSPProvider`).
+2. **Firma digitale qualificata**: serve il contratto di firma remota di un prestatore qualificato (QTSP) che offra
+   le API CSC; la configurazione è descritta in [docs/FIRMA_DIGITALE.md](docs/FIRMA_DIGITALE.md).
 3. **GDPR**: registro dei trattamenti, valutazione d'impatto (DPIA, obbligatoria per dati sanitari su larga scala
    o di soggetti vulnerabili), nomina del responsabile del trattamento per hosting e Supabase, informative.
 4. **Conservazione a norma**: i report e l'esportazione PDF non sostituiscono la conservazione digitale a norma

@@ -14,7 +14,8 @@
         <tr><th>Data dichiarata</th><td>{{ r.signed_at|date:"d/m/Y H:i"|default:"—" }}</td></tr>
         <tr><th>Integrità contenuto</th><td>{% if r.intact %}<span class="pill pill-ok">documento integro</span>{% else %}<span class="pill pill-danger">documento ALTERATO</span>{% endif %}</td></tr>
         <tr><th>Firma crittografica</th><td>{% if r.valid %}<span class="pill pill-ok">valida</span>{% else %}<span class="pill pill-danger">non valida</span>{% endif %}</td></tr>
-        <tr><th>Catena di fiducia</th><td>{% if r.trusted %}<span class="pill pill-ok">certificato attendibile</span>{% else %}<span class="pill pill-warn">non verificata sul server</span> <small class="muted">verificare con un software di verifica che usi l'elenco europeo dei prestatori qualificati</small>{% endif %}</td></tr>
+        <tr><th>Catena di fiducia</th><td>{% if r.trusted %}<span class="pill pill-ok">certificato attendibile</span>{% else %}<span class="pill pill-warn">non verificata sul server</span> <small class="muted">{% if trust_configured %}il certificato non appartiene ai prestatori configurati in FASAS_SIGNATURE_TRUST_ROOTS{% else %}verificare con un software che usi l'elenco europeo dei prestatori qualificati (es. DiKe, Firma OK!, Adobe Reader con EUTL){% endif %}</small>{% endif %}</td></tr>
+        <tr><th>Marca temporale</th><td>{% if r.timestamped %}<span class="pill pill-ok">presente</span>{% else %}<span class="pill">assente</span> <small class="muted">data e ora sono quelle dichiarate dal firmatario</small>{% endif %}</td></tr>
         <tr><th>Copertura</th><td>{% if r.covers_whole_document %}intero documento{% else %}parziale (ci sono modifiche successive alla firma){% endif %}</td></tr>
       </tbody></table>
       {% endif %}
