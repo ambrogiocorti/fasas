@@ -1,0 +1,47 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}I miei turni{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>I miei turni</h1><span class="subtitle">Calendario pubblicato, richieste di ferie e permessi, cambi turno con i colleghi</span></div>
+  <div class="actions"><a class="btn" href="{% url 'staffing:rota' %}">{% icon "calendar-days" %}Calendario di tutti</a></div></div>
+
+{% if incoming %}
+<div class="card">
+  <div class="card-head"><h2>Proposte dai colleghi</h2></div>
+  <ul class="list-plain">{% for c in incoming %}
+    <li><strong>{{ c.requester }}</strong> – {{ c.get_kind_display|lower }} del {{ c.date|date:"D d/m" }}:
+      {% if c.kind == 'swap' %}tu faresti {{ c.get_requester_code_display|lower }}, lui/lei {{ c.get_colleague_code_display|lower }}{% else %}copriresti il turno di {{ c.get_requester_code_display|lower }}{% endif %}{% if c.note %} <small class="muted">({{ c.note }})</small>{% endif %}
+      <form method="post" action="{% url 'staffing:respond_change' c.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm btn-primary" name="accept" value="1">Accetto</button><button class="btn btn-sm" name="accept" value="0">Rifiuto</button></form></li>
+  {% endfor %}</ul>
+</div>
+{% endif %}
+
+<div class="grid grid-2">
+  {% for m in months %}
+  <div class="card">
+    <div class="card-head"><h2>{{ m.label|capfirst }}</h2>{% if not m.month.is_published %}<span class="pill">non ancora pubblicato</span>{% endif %}</div>
+    {% if m.days %}
+      <div class="my-rota">{% for x in m.offset %}<div></div>{% endfor %}{% for d, e in m.days %}<div class="my-day{% if d == today %} today{% endif %}{% if d < today %} past{% endif %}"><small>{{ d|date:"D" }} {{ d.day }}</small><span class="att code-{{ e.code|default:'none' }}">{{ e.code|default:"·" }}</span></div>{% endfor %}</div>
+    {% else %}<p class="muted">Il calendario di questo mese non è ancora stato pubblicato.</p>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<div class="grid grid-2">
+  {% if leave_form %}
+  <div class="card"><h2>{% icon "calendar" %} Chiedi ferie o permesso</h2>
+    <form method="post" novalidate>{% csrf_token %}{% include "partials/form_fields.html" with form=leave_form compact=True %}
+      <div class="form-actions"><button class="btn btn-primary">Invia al coordinatore</button></div></form>
+    <ul class="list-plain">{% for l in leaves %}<li><span class="pill {% if l.status == 'approved' %}pill-ok{% elif l.status == 'rejected' %}pill-danger{% elif l.status == 'pending' %}pill-warn{% endif %}">{{ l.get_status_display }}</span> {{ l.get_kind_display }} {{ l.start|date:"d/m" }}–{{ l.end|date:"d/m" }} ({{ l.days }} gg){% if l.decision_note %} <small class="muted">{{ l.decision_note }}</small>{% endif %}
+      {% if l.status == 'pending' %}<form method="post" action="{% url 'staffing:cancel_leave' l.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm">Ritira</button></form>{% endif %}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  {% if change_form %}
+  <div class="card"><h2>{% icon "refresh" %} Proponi un cambio o una sostituzione</h2>
+    <p class="muted"><strong>Cambio</strong>: tu e il collega vi scambiate i turni dello stesso giorno. <strong>Sostituzione</strong>: il collega (libero quel giorno) fa il tuo turno. Il collega deve accettare, poi decide il coordinatore.</p>
+    <form method="post" novalidate>{% csrf_token %}{% include "partials/form_fields.html" with form=change_form compact=True %}
+      <div class="form-actions"><button class="btn btn-primary">Invia la proposta</button></div></form>
+    <ul class="list-plain">{% for c in outgoing %}<li><span class="pill {% if c.status == 'approved' %}pill-ok{% elif c.status == 'rejected' %}pill-danger{% else %}pill-warn{% endif %}">{{ c.get_status_display }}</span> {{ c.get_kind_display }} {{ c.date|date:"d/m" }} con {{ c.colleague }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

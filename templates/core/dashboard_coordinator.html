@@ -85,6 +85,11 @@
     </ul>
   </div>
 
+  <div class="card">
+    <div class="card-head"><h2>Personale previsto</h2><div class="actions">{% if rota_coverage.pending %}<a class="btn btn-sm btn-primary" href="{% url 'staffing:requests' %}">{{ rota_coverage.pending }} richieste</a>{% endif %}<a class="btn btn-sm" href="{% url 'staffing:rota' %}">Calendario</a></div></div>
+    <ul class="list-plain">{% for r in rota_coverage.rows %}<li><span class="pill {% if r.ok %}pill-ok{% else %}pill-danger{% endif %}">{{ r.day|date:"D" }} {{ r.label|lower }} {{ r.names|length }}/{{ r.min }}</span> {{ r.names|join:", "|default:"nessuno pianificato" }}</li>{% endfor %}</ul>
+  </div>
+
   {% if therapy_alerts or documents_expiring %}
   <div class="card span-2">
     <div class="card-head"><h2>Da verificare</h2></div>

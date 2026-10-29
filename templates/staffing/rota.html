@@ -1,0 +1,83 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Turni del personale{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Turni del personale – {{ label }}</h1>
+    <span class="subtitle">{% if month.is_published %}Pubblicato il {{ month.published_at|date:"d/m/Y H:i" }} da {{ month.published_by }}{% else %}In preparazione: il personale lo vede dopo la pubblicazione{% endif %}</span>
+  </div>
+  <div class="actions">
+    <a class="btn" href="?mese={{ prev|date:'Y-m' }}">{% icon "chevron-left" %}</a>
+    <a class="btn" href="?mese={{ next|date:'Y-m' }}">{% icon "chevron-right" %}</a>
+    <a class="btn" href="{% url 'staffing:excel' %}?mese={{ first|date:'Y-m' }}">{% icon "download" %}Excel</a>
+    <button class="btn" type="button" onclick="window.print()">{% icon "printer" %}Stampa</button>
+    {% if perms.staffing.change_rotasettings %}<a class="btn" href="{% url 'staffing:settings' %}">{% icon "sliders" %}Regole</a>{% endif %}
+  </div>
+</div>
+
+{% if month.notes %}<div class="alert alert-info">{% icon "info" %}<div class="alert-body">{{ month.notes }}</div></div>{% endif %}
+
+{% if can_edit %}
+<div class="card rota-toolbar" data-rota-toolbar>
+  <strong>Pennello:</strong>
+  {% for code, text in codes %}<button type="button" class="btn btn-sm rota-code code-{{ code|default:'none' }}" data-paint="{{ code }}" title="{{ text }}">{{ code|default:"✕" }}<span class="hide-mobile"> {{ text }}</span></button>{% endfor %}
+  <button type="button" class="btn btn-sm rota-code" data-paint="*lead" title="Segna o togli il responsabile di turno">★<span class="hide-mobile"> Responsabile</span></button>
+  <span class="spacer"></span>
+  <form method="post" action="{% url 'staffing:save' %}" class="inline-form" data-rota-save>{% csrf_token %}
+    <input type="hidden" name="mese" value="{{ first|date:'Y-m' }}"><input type="hidden" name="changes" value="[]">
+    <button class="btn btn-primary" disabled>{% icon "check" %}Salva <span data-count>0</span> modifiche</button>
+  </form>
+</div>
+<p class="muted rota-help">Scegli un codice e clicca (o trascina) sulle caselle; poi salva. Le modifiche ai turni già pubblicati vengono notificate agli interessati.</p>
+{% endif %}
+
+<div class="card table-wrap">
+  <table class="attendance rota" data-rota>
+    <thead><tr><th class="att-name">Operatore</th>{% for d in days %}<th class="att-day{% if d in weekend %} weekend{% endif %}{% if d == today %} today{% endif %}">{{ d.day }}<br><small>{{ d|date:"D"|slice:":1" }}</small></th>{% endfor %}<th class="num">Ore</th><th class="num">Attese</th><th class="num">Ferie</th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+      <tr><td class="att-name"><strong>{{ row.user.last_name }} {{ row.user.first_name }}</strong><br><small class="muted">{{ row.user.get_role_display }} · {{ row.profile.weekly_hours|floatformat:"-1" }} h/sett.{% if row.profile.no_nights %} · no notti{% endif %}</small></td>
+        {% for c in row.cells %}<td class="att rota-cell code-{{ c.code|default:'none' }}{% if c.lead %} lead{% endif %}" data-user="{{ row.user.pk }}" data-day="{{ c.day|date:'Y-m-d' }}">{{ c.code }}</td>{% endfor %}
+        <td class="num"><strong>{{ row.hours|floatformat:"-1" }}</strong></td>
+        <td class="num {% if row.delta < -6 or row.delta > 6 %}rota-off{% endif %}">{{ row.expected|floatformat:"-1" }}</td>
+        <td class="num">{{ row.holidays }}</td></tr>
+    {% empty %}<tr><td colspan="40" class="empty">Nessun operatore nel calendario: controllare i profili in «Regole».</td></tr>{% endfor %}
+    </tbody>
+    <tfoot>
+    {% for code, cells in coverage.items %}
+      <tr><th class="att-name">Copertura {% if code == 'M' %}mattina{% elif code == 'P' %}pomeriggio{% else %}notte{% endif %}</th>
+        {% for c in cells %}<td class="att {% if c.ok %}cover-ok{% else %}cover-ko{% endif %}" title="{{ c.count }} su minimo {{ c.min }}">{{ c.count }}</td>{% endfor %}<td colspan="3"></td></tr>
+    {% endfor %}
+    </tfoot>
+  </table>
+  <p class="att-legend">{% for code, text in codes %}{% if code %}<span class="att code-{{ code }}">{{ code }}</span> {{ text }} · {% endif %}{% endfor %}<span class="att code-M lead">M</span> responsabile di turno · ore attese = ore settimanali × giorni non di assenza ÷ 7 (indicative)</p>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Copertura sotto il minimo</h2><span class="muted">minimi: mattina {{ rules.min_morning }}, pomeriggio {{ rules.min_afternoon }}, notte {{ rules.min_night }}</span></div>
+    <ul class="list-plain">{% for g in gaps %}<li><span class="pill pill-danger">{{ g.day|date:"D d/m" }}</span> {% if g.code == 'M' %}mattina{% elif g.code == 'P' %}pomeriggio{% else %}notte{% endif %}: {{ g.count }} su {{ g.min }}</li>{% empty %}<li class="muted">Tutti i turni sono coperti.</li>{% endfor %}</ul>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Riposi e carichi</h2><span class="muted">riposo minimo {{ rules.min_rest_hours }} ore, massimo {{ rules.max_consecutive_days }} giorni consecutivi</span></div>
+    <ul class="list-plain">{% for w in warnings %}<li><span class="pill {% if w.level == 'danger' %}pill-danger{% else %}pill-warn{% endif %}">{{ w.day|date:"D d/m" }}</span> {{ w.text }}</li>{% empty %}<li class="muted">Nessun problema di riposo.</li>{% endfor %}</ul>
+  </div>
+</div>
+
+{% if can_edit %}
+<div class="grid grid-2">
+  <div class="card"><h2>Ripeti la turnazione</h2>
+    <p class="muted">Riempie i giorni ancora vuoti ripetendo lo schema di 4 settimane prima (ferie e assenze escluse). Utile per le turnazioni cicliche.</p>
+    <form method="post" action="{% url 'staffing:repeat' %}">{% csrf_token %}<input type="hidden" name="mese" value="{{ first|date:'Y-m' }}"><input type="hidden" name="weeks" value="4">
+      <button class="btn">{% icon "refresh" %}Ripeti le ultime 4 settimane</button></form>
+  </div>
+  {% if perms.staffing.publish_rota %}
+  <div class="card"><h2>{% if month.is_published %}Pubblica di nuovo{% else %}Pubblica il calendario{% endif %}</h2>
+    <form method="post" action="{% url 'staffing:publish' %}">{% csrf_token %}<input type="hidden" name="mese" value="{{ first|date:'Y-m' }}">
+      <div class="field full"><label for="rota-notes">Messaggio per il personale (facoltativo)</label><textarea id="rota-notes" name="notes" rows="2">{{ month.notes }}</textarea></div>
+      <div class="form-actions"><button class="btn btn-primary" {% if gaps %}data-confirm="Ci sono {{ gaps|length }} turni sotto il minimo. Pubblicare comunque?"{% endif %}>{% icon "bell" %}Pubblica e avvisa il personale</button></div></form>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

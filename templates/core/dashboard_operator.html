@@ -100,6 +100,11 @@
   </div>
 
   <div class="card">
+    <div class="card-head"><h2>I miei prossimi turni</h2><div class="actions">{% if perms.staffing.add_leaverequest %}<a class="btn btn-sm" href="{% url 'staffing:my' %}">{% icon "calendar-days" %}I miei turni</a>{% endif %}</div></div>
+    <ul class="list-plain">{% for e in my_shifts %}<li><span class="pill mono">{{ e.date|date:"D d/m" }}</span> <span class="att code-{{ e.code }}">{{ e.code }}</span> {{ e.get_code_display }}{% if e.is_lead %} <span class="pill pill-info">responsabile</span>{% endif %}</li>{% empty %}<li class="muted">Nessun turno pubblicato nei prossimi giorni.</li>{% endfor %}</ul>
+  </div>
+
+  <div class="card">
     <h2>In servizio</h2>
     <ul class="list-plain">{% for a in on_shift %}<li>{{ a.user }}{% if a.is_shift_lead %} <span class="pill pill-info">responsabile</span>{% endif %}{% if a.checked_in_at %} <small class="muted">dalle {{ a.checked_in_at|time:"H:i" }}</small>{% endif %}</li>{% empty %}<li class="muted">Nessun operatore registrato nel turno.</li>{% endfor %}</ul>
   </div>

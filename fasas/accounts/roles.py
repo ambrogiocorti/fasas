@@ -41,6 +41,8 @@ OPERATOR = VIEW_CARE + [
     "appointments.view_appointment", "appointments.change_appointment",
     # Continuità senza rete: pacchetto del turno sul dispositivo e foglio di emergenza stampabile
     "offline.use_offline",
+    # Calendario turni: consulta i propri turni, chiede ferie/permessi e cambi turno
+    "staffing.view_rotamonth", "staffing.add_leaverequest", "staffing.add_shiftchange",
 ]
 
 # Coordinatore sanitario (spec. §2): gestisce le cartelle, modifica i protocolli sanitari, valida le
@@ -73,6 +75,11 @@ COORDINATOR = OPERATOR + [
     # Presenze per la rendicontazione: controlla, corregge e chiude il mese
     "billing.view_attendancemonth", "billing.add_attendancecorrection", "billing.change_attendancecorrection",
     "billing.close_attendance",
+    # Pianificazione mensile dei turni del personale: calendario, ferie, cambi turno, regole
+    "staffing.add_rotaentry", "staffing.change_rotaentry", "staffing.delete_rotaentry", "staffing.publish_rota",
+    "staffing.view_leaverequest", "staffing.change_leaverequest", "staffing.view_shiftchange",
+    "staffing.change_shiftchange", "staffing.view_rotasettings", "staffing.change_rotasettings",
+    "staffing.view_staffprofile", "staffing.change_staffprofile",
 ]
 
 # Medico (spec. §2): modifica le terapie, prescrive i farmaci, firma digitalmente i documenti sanitari.
@@ -114,6 +121,8 @@ ADMINISTRATIVE = [
     "billing.view_feepayment", "billing.add_feepayment",
     "billing.view_billingsettings", "billing.change_billingsettings",
     "notifications.view_notification",
+    # Consultazione del calendario turni (ore pianificate per le paghe)
+    "staffing.view_rotamonth",
 ]
 
 ROLE_PERMISSIONS = {

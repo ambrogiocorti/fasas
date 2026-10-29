@@ -68,6 +68,7 @@ class Command(BaseCommand):
                 with audit_context(source="demo"):
                     users = self._users()
                     self._billing(users)
+                    self._rota(users)
             self.stdout.write("Dati presenti: i dati demo non vengono ricaricati.")
             return
         if Guest.objects.exists() and not options["force"]:
@@ -118,6 +119,38 @@ class Command(BaseCommand):
                 user.save()
             users[role] = user
         return users
+
+    def _rota(self, users):
+        """Calendario turni dimostrativo: ciclo di 7 giorni sfalsato tra gli operatori, mese corrente pubblicato."""
+        from fasas.accounts.models import User
+        from fasas.billing.services import month_days, month_start, shift_month
+        from fasas.staffing.models import LeaveRequest, RotaEntry
+        from fasas.staffing.services import publish, staff
+
+        if RotaEntry.objects.exists():
+            return
+        for username, first, last in [("operatore2", "Luca", "Bassi"), ("operatore3", "Sofia", "Galli"),
+                                      ("operatore4", "Marco", "Conti"), ("operatore5", "Irene", "Fabbri")]:
+            user, created = User.objects.get_or_create(username=username, defaults={
+                "first_name": first, "last_name": last, "role": "operator", "qualification": "OSS",
+                "email": f"{username}@example.invalid"})
+            if created:
+                user.set_password(DEMO_PASSWORD)
+                user.save()
+        cycle = ["M", "M", "P", "P", "N", "R", "R"]
+        current = month_start()
+        people = [u for u, _ in staff()]
+        with audit_context(user=users["coordinator"]):
+            for first in (current, shift_month(current, 1)):
+                for day in month_days(first):
+                    for offset, user in enumerate(people):
+                        code = cycle[(day.toordinal() + offset * 2) % len(cycle)]
+                        RotaEntry.objects.create(user=user, date=day, code=code,
+                                                 is_lead=user.role == "coordinator" and code in ("M", "P"))
+            publish(current, users["coordinator"], "Calendario dimostrativo")
+            nxt = shift_month(current, 1)
+            LeaveRequest.objects.create(user=users["operator"], kind="F", start=nxt.replace(day=10),
+                                        end=nxt.replace(day=14), note="Ferie programmate (demo)")
 
     def _billing(self, users):
         """Rette di esempio e qualche movimento nel mese precedente, per provare presenze e prospetti."""
@@ -266,3 +299,4 @@ class Command(BaseCommand):
 
         run_periodic_checks()
         self._billing(users)
+        self._rota(users)

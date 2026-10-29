@@ -47,6 +47,13 @@ MENU = [
         Item("Senza rete", "wifi-off", "offline:records", "offline.use_offline", active=("offline:records",)),
         Item("Registro turni", "user-check", "daily:roster", "daily.view_shiftassignment", active=("daily:roster",)),
     ]),
+    Section("Personale", [
+        Item("Calendario turni", "calendar-days", "staffing:rota", "staffing.view_rotamonth",
+             active=("staffing:rota", "staffing:settings")),
+        Item("I miei turni", "calendar-check", "staffing:my", "staffing.add_leaverequest", active=("staffing:my",)),
+        Item("Ferie e cambi turno", "check-circle", "staffing:requests", "staffing.change_leaverequest",
+             active=("staffing:requests",), count="rota_requests"),
+    ]),
     Section("Clinica", [
         Item("Terapie in corso", "pill", "clinical:therapy_overview", "clinical.add_therapy",
              active=("clinical:therapy_overview",)),
@@ -108,6 +115,10 @@ def counts_for(user, unread):
             is_sos=True, validation_status=TherapyAdministration.Validation.PENDING).count()
     if user.has_perm("protocols.view_protocolactivation"):
         counts["protocols"] = ProtocolActivation.objects.filter(status__in=ProtocolActivation.OPEN_STATES).count()
+    if user.has_perm("staffing.change_leaverequest"):
+        from fasas.staffing.views import pending_requests_count
+
+        counts["rota_requests"] = pending_requests_count()
     return counts
 
 

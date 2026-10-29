@@ -629,3 +629,30 @@ td.att a { color: inherit; text-decoration: none; display: block; }
 .att.corrected { box-shadow: inset 0 0 0 2px var(--primary); }
 .att-legend { font-size: .78rem; color: var(--text-muted); margin: .6rem .4rem 0; }
 .att-legend .att { display: inline-block; min-width: 1.4rem; }
+
+/* Calendario turni del personale */
+.rota-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; position: sticky; top: .5rem; z-index: 5; }
+.rota-toolbar .spacer { flex: 1; }
+.rota-toolbar .rota-code.selected { outline: 2px solid var(--primary); outline-offset: 1px; }
+.rota-help { margin: -.4rem 0 .8rem; font-size: .85rem; }
+table.rota td.rota-cell { cursor: default; min-width: 1.7rem; user-select: none; }
+[data-rota-editable] td.rota-cell { cursor: pointer; }
+td.rota-cell.changed { outline: 2px dashed var(--primary); outline-offset: -2px; }
+.code-M { background: var(--info-soft); color: var(--info-text); }
+.code-P { background: var(--warn-soft); color: var(--warn-text); }
+.code-N { background: #e6e1f8; color: #4b3a9a; }
+.code-R, .code-none { color: var(--text-muted); }
+.code-F, .code-PE { background: var(--ok-soft); color: var(--ok-text); }
+.code-MA { background: var(--danger-soft); color: var(--danger-text); }
+.code-FO { background: var(--surface-3); color: var(--text-2); }
+.att.lead { box-shadow: inset 0 -3px 0 var(--primary); }
+.cover-ok { color: var(--ok-text); }
+.cover-ko { background: var(--danger-soft); color: var(--danger-text); }
+.rota-off { color: var(--warn-text); font-weight: 650; }
+.my-rota { display: grid; grid-template-columns: repeat(7, 1fr); gap: .35rem; }
+.my-day { display: flex; flex-direction: column; align-items: center; gap: .15rem; padding: .3rem 0; border-radius: 8px; }
+.my-day.today { box-shadow: inset 0 0 0 2px var(--primary); }
+.my-day.past { opacity: .5; }
+.my-day small { color: var(--text-muted); font-size: .72rem; }
+.my-day .att { min-width: 2rem; }
+:root[data-theme="dark"] .code-N { background: #2a2346; color: #c9bdf7; }

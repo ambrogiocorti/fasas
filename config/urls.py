@@ -26,6 +26,7 @@ urlpatterns = [
     path("importa/", include("fasas.imports.urls")),
     path("offline/", include("fasas.offline.urls")),
     path("amministrazione/", include("fasas.billing.urls")),
+    path("turni/", include("fasas.staffing.urls")),
     path("sw.js", offline_views.service_worker, name="service_worker"),
     path("manifest.webmanifest", offline_views.manifest, name="manifest"),
     path("api/", include("fasas.api.urls")),

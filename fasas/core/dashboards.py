@@ -41,6 +41,19 @@ def _protocols_with_actions(limit=10):
     return rows
 
 
+def upcoming_shifts(user, days):
+    from fasas.staffing.services import upcoming
+
+    return upcoming(user, days)
+
+
+def rota_coverage():
+    from fasas.staffing.services import today_coverage
+    from fasas.staffing.views import pending_requests_count
+
+    return {"rows": today_coverage(), "pending": pending_requests_count()}
+
+
 def _guest_counts():
     from fasas.guests.models import Guest
 
@@ -93,6 +106,7 @@ def operator(request):
         "relevant_diary": DiaryEntry.objects.filter(is_relevant=True, occurred_at__gte=now - datetime.timedelta(hours=24))
         .select_related("guest", "created_by")[:5],
         "notifications": unread_for(user)[:5],
+        "my_shifts": upcoming_shifts(user, 7),
     })
     return ctx
 
@@ -158,6 +172,7 @@ def coordinator(request):
         ).exclude(guest__status="archived").select_related("guest").order_by("expires_on")[:6],
         "therapy_alerts": Therapy.objects.exclude(conflict_acknowledged="").filter(
             updated_at__gte=now - datetime.timedelta(days=14)).select_related("guest", "drug")[:6],
+        "rota_coverage": rota_coverage(),
     })
     return ctx
 

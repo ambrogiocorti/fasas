@@ -171,6 +171,66 @@
     navigator.serviceWorker.register(swUrl, { scope: "/" }).catch(function () { /* browser senza supporto */ });
   }
 
+  // Calendario turni: pennello per assegnare codici trascinando sulle caselle, poi un unico salvataggio
+  const rotaTable = document.querySelector("[data-rota]");
+  const rotaToolbar = document.querySelector("[data-rota-toolbar]");
+  const rotaForm = document.querySelector("[data-rota-save]");
+  if (rotaTable && rotaToolbar && rotaForm) {
+    rotaTable.setAttribute("data-rota-editable", "");
+    const changes = new Map();
+    let paint = null;
+    let painting = false;
+    let submitting = false;
+    const saveBtn = rotaForm.querySelector("button");
+    const refreshSave = function () {
+      rotaForm.elements.changes.value = JSON.stringify(Array.from(changes.values()));
+      saveBtn.disabled = changes.size === 0;
+      saveBtn.querySelector("[data-count]").textContent = changes.size;
+    };
+    rotaToolbar.querySelectorAll("[data-paint]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        paint = btn.dataset.paint;
+        rotaToolbar.querySelectorAll("[data-paint]").forEach(function (b) { b.classList.toggle("selected", b === btn); });
+      });
+    });
+    const apply = function (cell) {
+      if (paint === null) return;
+      const key = cell.dataset.user + "|" + cell.dataset.day;
+      const change = changes.get(key) || { user: Number(cell.dataset.user), day: cell.dataset.day, code: cell.textContent.trim() };
+      if (paint === "*lead") {
+        if (!change.code) return;
+        cell.classList.toggle("lead");
+        change.lead = cell.classList.contains("lead");
+      } else {
+        change.code = paint;
+        cell.textContent = paint;
+        cell.className = cell.className.replace(/\bcode-\S+/, "code-" + (paint || "none"));
+        if (!paint) { cell.classList.remove("lead"); change.lead = false; }
+      }
+      cell.classList.add("changed");
+      changes.set(key, change);
+      refreshSave();
+    };
+    rotaTable.addEventListener("mousedown", function (e) {
+      const cell = e.target.closest(".rota-cell");
+      if (!cell) return;
+      e.preventDefault();
+      painting = paint !== "*lead";
+      apply(cell);
+    });
+    rotaTable.addEventListener("mouseover", function (e) {
+      if (!painting) return;
+      const cell = e.target.closest(".rota-cell");
+      if (cell) apply(cell);
+    });
+    document.addEventListener("mouseup", function () { painting = false; });
+    rotaForm.addEventListener("submit", function () { submitting = true; });
+    window.addEventListener("beforeunload", function (e) {
+      if (changes.size && !submitting) { e.preventDefault(); e.returnValue = ""; }
+    });
+    refreshSave();
+  }
+
   // Notifiche push sul dispositivo (pagina «Notifiche sul telefono»)
   const pushBox = document.querySelector("[data-push]");
   if (pushBox) {

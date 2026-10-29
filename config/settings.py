@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "fasas.imports",
     "fasas.offline",
     "fasas.billing",
+    "fasas.staffing",
     "fasas.api",
 ]
 

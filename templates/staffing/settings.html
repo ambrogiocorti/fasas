@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Regole dei turni{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Regole dei turni e personale</h1><div class="actions"><a class="btn" href="{% url 'staffing:rota' %}">{% icon "arrow-left" %}Calendario</a></div></div>
+<form method="post" novalidate>{% csrf_token %}
+  <div class="card"><h2>Copertura minima e riposi</h2>
+    <p class="muted">Il riposo minimo tra due turni e il riposo settimanale vanno verificati con il contratto collettivo applicato (in generale 11 ore consecutive ogni 24, D.Lgs. 66/2003).</p>
+    {% include "partials/form_fields.html" with form=form compact=True %}</div>
+  <div class="card table-wrap"><h2>Personale nel calendario</h2>
+    {{ formset.management_form }}
+    <table><thead><tr><th>Operatore</th><th>Nel calendario</th><th>Ore settimanali</th><th>Può essere responsabile</th><th>Esonerato dalle notti</th><th>Ordine</th></tr></thead>
+      <tbody>{% for f in formset %}<tr>{{ f.id }}<td><strong>{{ f.instance.user }}</strong><br><small class="muted">{{ f.instance.user.get_role_display }}</small></td>
+        <td>{{ f.in_rota }}</td><td>{{ f.weekly_hours }}</td><td>{{ f.can_lead }}</td><td>{{ f.no_nights }}</td><td>{{ f.order }}</td></tr>{% endfor %}</tbody></table></div>
+  <div class="form-actions"><button class="btn btn-primary">Salva</button></div>
+</form>
+{% endblock %}

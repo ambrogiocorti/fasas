@@ -1,0 +1,35 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Richieste sui turni{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Ferie, permessi e cambi turno</h1><span class="subtitle">Richieste del personale da approvare, con l'effetto sulla copertura dei turni</span></div>
+  <div class="actions"><a class="btn" href="{% url 'staffing:rota' %}">{% icon "calendar-days" %}Calendario</a></div></div>
+
+<div class="card table-wrap">
+  <div class="card-head"><h2>Ferie e permessi da approvare</h2></div>
+  <table><tbody>{% for row in leaves %}{% with l=row.leave %}
+    <tr><td><strong>{{ l.user }}</strong><br><small class="muted">chiesta il {{ l.created_at|date:"d/m H:i" }}</small></td>
+      <td>{{ l.get_kind_display }} dal {{ l.start|date:"D d/m" }} al {{ l.end|date:"D d/m" }} ({{ l.days }} gg){% if l.note %}<br><small class="muted">{{ l.note }}</small>{% endif %}</td>
+      <td>{% for issue in row.impact %}<span class="pill pill-danger">{{ issue }}</span><br>{% empty %}<span class="pill pill-ok">copertura garantita</span>{% endfor %}</td>
+      <td class="num nowrap"><form method="post" action="{% url 'staffing:decide_leave' l.pk %}" class="inline-form">{% csrf_token %}<input name="note" placeholder="Nota" maxlength="255" style="width:9rem">
+        <button class="btn btn-sm btn-primary" name="approve" value="1" {% if row.impact %}data-confirm="Approvando, alcuni turni scendono sotto il minimo: andranno coperti. Confermi?"{% endif %}>Approva</button>
+        <button class="btn btn-sm" name="approve" value="0">Respingi</button></form></td></tr>
+  {% endwith %}{% empty %}<tr><td class="empty">Nessuna richiesta in attesa.</td></tr>{% endfor %}</tbody></table>
+</div>
+
+<div class="card table-wrap">
+  <div class="card-head"><h2>Cambi turno e sostituzioni</h2></div>
+  <table><tbody>{% for c in changes %}
+    <tr><td><strong>{{ c.get_kind_display }}</strong> {{ c.date|date:"D d/m" }}</td>
+      <td>{{ c.requester }} ({{ c.get_requester_code_display|lower }}) {% if c.kind == 'swap' %}↔ {{ c.colleague }} ({{ c.get_colleague_code_display|lower }}){% else %}→ coperto da {{ c.colleague }}{% endif %}{% if c.note %}<br><small class="muted">{{ c.note }}</small>{% endif %}</td>
+      <td><span class="pill {% if c.status == 'accepted' %}pill-info{% else %}pill-warn{% endif %}">{% if c.status == 'accepted' %}accettato dal collega{% else %}in attesa del collega{% endif %}</span></td>
+      <td class="num nowrap"><form method="post" action="{% url 'staffing:decide_change' c.pk %}" class="inline-form">{% csrf_token %}
+        {% if c.status == 'accepted' %}<button class="btn btn-sm btn-primary" name="approve" value="1">Approva</button>{% endif %}
+        <button class="btn btn-sm" name="approve" value="0">Respingi</button></form></td></tr>
+  {% empty %}<tr><td class="empty">Nessun cambio turno in corso.</td></tr>{% endfor %}</tbody></table>
+</div>
+
+<div class="grid grid-2">
+  <div class="card"><h2>Ultime decisioni – ferie e permessi</h2><ul class="list-plain">{% for l in history %}<li><span class="pill {% if l.status == 'approved' %}pill-ok{% elif l.status == 'rejected' %}pill-danger{% endif %}">{{ l.get_status_display }}</span> {{ l.user }} · {{ l.get_kind_display|lower }} {{ l.start|date:"d/m" }}–{{ l.end|date:"d/m" }}{% if l.decided_by %} <small class="muted">da {{ l.decided_by }}</small>{% endif %}</li>{% empty %}<li class="muted">Nessuna.</li>{% endfor %}</ul></div>
+  <div class="card"><h2>Ultime decisioni – cambi turno</h2><ul class="list-plain">{% for c in changes_history %}<li><span class="pill {% if c.status == 'approved' %}pill-ok{% elif c.status == 'rejected' %}pill-danger{% endif %}">{{ c.get_status_display }}</span> {{ c.get_kind_display|lower }} {{ c.date|date:"d/m" }} {{ c.requester }} / {{ c.colleague }}</li>{% empty %}<li class="muted">Nessuna.</li>{% endfor %}</ul></div>
+</div>
+{% endblock %}

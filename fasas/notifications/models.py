@@ -20,6 +20,10 @@ class NotificationKind(models.TextChoices):
     AUDIT_BROKEN = "audit_chain_broken", "Integrità audit log"
     REPORT = "report_ready", "Report programmato generato"
     OFFLINE_SYNC = "offline_sync", "Registrazioni senza rete da verificare"
+    ROTA_PUBLISHED = "rota_published", "Calendario turni pubblicato"
+    ROTA_CHANGED = "rota_changed", "Il mio turno è cambiato"
+    ROTA_REQUEST = "rota_request", "Ferie o cambio turno da approvare"
+    ROTA_ANSWER = "rota_answer", "Risposte e proposte sui miei turni"
 
 
 DEFAULT_ROLES = {
@@ -39,13 +43,19 @@ DEFAULT_ROLES = {
     NotificationKind.AUDIT_BROKEN: ["admin"],
     NotificationKind.REPORT: ["coordinator"],
     NotificationKind.OFFLINE_SYNC: ["coordinator"],
+    # Notifiche personali: arrivano solo all'operatore interessato
+    NotificationKind.ROTA_PUBLISHED: [],
+    NotificationKind.ROTA_CHANGED: [],
+    NotificationKind.ROTA_REQUEST: ["coordinator"],
+    NotificationKind.ROTA_ANSWER: [],
 }
 
 # Tipi inviati di default anche come notifica push sui dispositivi iscritti (modificabile dall'amministratore).
 DEFAULT_PUSH = {
     NotificationKind.PROTOCOL, NotificationKind.EMERGENCY, NotificationKind.CRITICAL_EVENT,
     NotificationKind.SOS_VALIDATION, NotificationKind.APPOINTMENT_TODAY, NotificationKind.BACKUP,
-    NotificationKind.AUDIT_BROKEN,
+    NotificationKind.AUDIT_BROKEN, NotificationKind.ROTA_CHANGED, NotificationKind.ROTA_ANSWER,
+    NotificationKind.ROTA_PUBLISHED,
 }
 
 # Una notifica arriva solo a chi può aprire ciò a cui rimanda, qualunque ruolo sia configurato.
@@ -66,6 +76,10 @@ REQUIRED_PERMISSION = {
     NotificationKind.AUDIT_BROKEN: "audit.view_auditlog",
     NotificationKind.REPORT: "reports.view_generatedreport",
     NotificationKind.OFFLINE_SYNC: "offline.view_offlinerecord",
+    NotificationKind.ROTA_PUBLISHED: "staffing.view_rotamonth",
+    NotificationKind.ROTA_CHANGED: "staffing.view_rotamonth",
+    NotificationKind.ROTA_REQUEST: "staffing.change_leaverequest",
+    NotificationKind.ROTA_ANSWER: "staffing.view_rotamonth",
 }
 
 

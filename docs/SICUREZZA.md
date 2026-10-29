@@ -51,6 +51,8 @@ Anche le notifiche arrivano solo a chi ha il permesso di vedere ciò a cui riman
 | Magazzino farmaci, report | ✖ | ✔ | ✖ | ✖ | ✖ |
 | Presenze del mese (correzione e chiusura) | ✖ | ✔ | ✖ | ✖ | ✔ |
 | Rette, prospetti, incassi | ✖ | ✖ | ✖ | ✖ | ✔ |
+| Calendario turni: consultare, chiedere ferie e cambi | ✔ | ✔ | ✖ | ✖ | solo consultazione |
+| Calendario turni: pianificare, pubblicare, approvare | ✖ | ✔ | ✖ | ✖ | ✖ |
 | Protocolli automatici (regole) | ✖ | ✔ | ✖ | ✔ | ✖ |
 | Utenti, configurazione, impostazioni notifiche, audit, log accessi, backup | ✖ | ✖ | ✖ | ✔ | ✖ |
 

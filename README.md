@@ -28,6 +28,7 @@ tracciata in ogni modifica, cifrata a riposo e organizzata attorno al lavoro rea
 | **Passaggio dal cartaceo** | modello Excel per anagrafiche, contatti, diagnosi, allergie, terapie in corso e giacenze con anteprima degli errori; caricamento massivo dei documenti scansionati abbinati all'ospite – guida in [docs/IMPORTAZIONE.md](docs/IMPORTAZIONE.md) |
 | **Telefono e senza rete** | installabile come app; notifiche push sul telefono senza dati sanitari sulla schermata di blocco; modalità senza rete cifrata per giro farmaci, SOS, parametri, diario ed eventi con sincronizzazione automatica; foglio di emergenza stampabile – [docs/NOTIFICHE_E_SENZA_RETE.md](docs/NOTIFICHE_E_SENZA_RETE.md) |
 | **Presenze e rette** | presenze giornaliere ricavate dai movimenti, chiusura mensile per la rendicontazione con export Excel; rette per pagante con percentuali per le assenze; prospetti numerati in PDF ed Excel, incassi e scaduti; ruolo Amministrativo senza accesso alla cartella clinica – [docs/PRESENZE_E_RETTE.md](docs/PRESENZE_E_RETTE.md) |
+| **Turni del personale** | calendario mensile con pennello, ripetizione delle turnazioni cicliche, controllo di copertura minima e riposi, pubblicazione con notifica, ferie/permessi e cambi turno con approvazione, export Excel – [docs/TURNI_DEL_PERSONALE.md](docs/TURNI_DEL_PERSONALE.md) |
 | **Continuità** | backup giornaliero cifrato AES-256-GCM con verifica di integrità e ripristino |
 | **Altro** | ricerca globale con filtri, notifiche configurabili per ruolo, tema scuro (automatico nel turno di notte), interfaccia utilizzabile da tablet e smartphone, API REST per una futura app mobile |
 
@@ -142,6 +143,7 @@ fasas/search       ricerca globale
 fasas/imports      importazione dal FASAS cartaceo (Excel e scansioni)
 fasas/offline      modalità senza rete, service worker, foglio di emergenza
 fasas/billing      presenze per la rendicontazione, rette, prospetti e incassi
+fasas/staffing     pianificazione mensile dei turni del personale
 fasas/api          API REST (DRF) per l'app mobile futura
 templates/, static/ interfaccia (HTML, CSS, JavaScript senza dipendenze esterne)
 ```
