@@ -656,3 +656,32 @@ td.rota-cell.changed { outline: 2px dashed var(--primary); outline-offset: -2px;
 .my-day small { color: var(--text-muted); font-size: .72rem; }
 .my-day .att { min-width: 2rem; }
 :root[data-theme="dark"] .code-N { background: #2a2346; color: #c9bdf7; }
+
+/* Firma con CIE */
+.sign-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); gap: 1rem; align-items: start; }
+.sign-preview { display: flex; flex-direction: column; }
+.pdf-frame { width: 100%; height: 72vh; min-height: 420px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.verify-code { display: flex; flex-direction: column; gap: .15rem; padding: .7rem .9rem; border-radius: 10px;
+  background: var(--surface-2); border: 1px solid var(--border); margin-bottom: 1rem; }
+.verify-code strong { font-size: 1.6rem; letter-spacing: .12em; }
+.sign-steps { list-style: none; margin: 0 0 1rem; padding: 0; display: grid; gap: .45rem; counter-reset: step; }
+.sign-steps li { counter-increment: step; display: flex; align-items: center; gap: .6rem; color: var(--text-muted); }
+.sign-steps li::before { content: counter(step); display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem;
+  border-radius: 50%; border: 2px solid var(--border); font-size: .8rem; font-weight: 650; flex: none; }
+.sign-steps li.done { color: var(--text); }
+.sign-steps li.done::before { content: "✓"; background: var(--ok); border-color: var(--ok); color: #fff; }
+.sign-steps li.current { color: var(--text); font-weight: 650; }
+.sign-steps li.current::before { border-color: var(--primary); color: var(--primary); animation: sign-pulse 1.4s ease-in-out infinite; }
+.is-failed .sign-steps li { opacity: .55; }
+.is-failed .sign-steps li.current::before { border-color: var(--danger); color: var(--danger); animation: none; }
+@keyframes sign-pulse { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--primary) 25%, transparent); } }
+.checklist { list-style: none; padding: 0; margin: 0 0 .8rem; display: grid; gap: .45rem; }
+.checklist li { display: flex; gap: .5rem; align-items: flex-start; }
+.checklist li.ok .icon { color: var(--ok); }
+.checklist li.ko .icon { color: var(--warn-text); }
+.pairing-code { font-size: 1.3rem; letter-spacing: .1em; }
+@media (max-width: 900px) {
+  .sign-layout { grid-template-columns: 1fr; }
+  .pdf-frame { height: 60vh; }
+}
+@media (prefers-reduced-motion: reduce) { .sign-steps li.current::before { animation: none; } }

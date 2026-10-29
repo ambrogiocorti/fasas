@@ -1,0 +1,34 @@
+{% extends "base.html" %}{% load fasas_tags static %}
+{% block title %}Firma con CIE{% endblock %}
+{% block content %}
+{% if guest %}{% include "guests/_header.html" with compact=True %}{% endif %}
+<div class="page-head">
+  <div><h1>{% icon "id-card" %} Firma con CIE{% if document %} – {{ document.title }}{% else %} – prova di funzionamento{% endif %}</h1>
+    <span class="subtitle">{% if test %}Documento di prova senza dati sanitari{% else %}Versione {{ req.version.number }} bloccata durante la firma{% endif %}{% if req.attempt > 1 %} · tentativo {{ req.attempt }}{% endif %}</span></div>
+  <div class="actions">{% if document %}<a class="btn" href="{{ document.get_absolute_url }}">{% icon "arrow-left" %}Torna al documento</a>{% else %}<a class="btn" href="{% url 'signatures:credential' %}#cie">{% icon "arrow-left" %}Impostazioni firma</a>{% endif %}</div>
+</div>
+<div class="sign-layout">
+  <div class="card sign-preview">
+    <div class="card-head"><h2>Documento da firmare</h2><a class="btn btn-sm" href="{{ preview_url }}" target="_blank" rel="noopener">Apri a schermo intero</a></div>
+    <iframe src="{{ preview_url }}" title="Anteprima del documento da firmare" class="pdf-frame"></iframe>
+  </div>
+  <div class="card" id="cie-panel" data-status-url="{{ status_url }}" data-status="{{ req.status }}">
+    <div class="verify-code"><span class="muted">Codice di controllo</span><strong class="mono">{{ req.verify_code }}</strong>
+      <small class="muted">Deve coincidere con quello mostrato da FASAS Signer.</small></div>
+    <ol class="sign-steps" aria-live="polite">
+      {% for code, label in steps %}<li data-step="{{ code }}">{{ label }}</li>{% endfor %}
+    </ol>
+    <div class="alert alert-info" data-role="hint" hidden>{% icon "info" %}<div class="alert-body"></div></div>
+    <div class="alert alert-danger" data-role="error" hidden>{% icon "alert-circle" %}<div class="alert-body"></div></div>
+    <div class="alert alert-success" data-role="done" hidden>{% icon "check-circle" %}<div class="alert-body"></div></div>
+    <p class="muted" data-role="expiry"></p>
+    <div class="form-actions">
+      <form method="post" action="{% url 'signatures:cie_cancel' req.pk %}" data-role="cancel">{% csrf_token %}<button class="btn">{% icon "x" %}Annulla la firma</button></form>
+      <form method="post" action="{% url 'signatures:cie_retry' req.pk %}" data-role="retry" hidden>{% csrf_token %}<button class="btn btn-primary">{% icon "refresh" %}Riprova</button></form>
+      <a class="btn btn-primary" data-role="result" href="#" hidden>Vai al documento firmato</a>
+    </div>
+    <noscript><p>Ricarica la pagina per aggiornare lo stato: <strong>{{ req.get_status_display }}</strong>.</p></noscript>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/cie-sign.js' %}"></script>{% endblock %}

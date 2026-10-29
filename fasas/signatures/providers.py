@@ -2,10 +2,13 @@
 Provider di firma digitale.
 
 La firma prodotta è PAdES (PDF firmato, verificabile con Adobe Reader, DiKe, Firma OK!, ecc.).
-Il valore legale dipende dal certificato:
-- con un certificato qualificato di un QTSP (smart card esportata o firma remota) si ottiene
-  una Firma Elettronica Qualificata (FEQ) ai sensi del Reg. eIDAS e del CAD;
-- con un certificato non qualificato si ottiene una firma elettronica avanzata/semplice.
+Il valore legale dipende dal certificato e da dove si trova la chiave:
+- firma remota presso un prestatore qualificato (QTSP): è una Firma Elettronica Qualificata (FEQ, Reg. eIDAS
+  e CAD) solo se il certificato dichiara di essere qualificato con chiave in un dispositivo qualificato
+  (QcCompliance e QcSSCD) e la catena risulta verificata con le CA del prestatore configurate;
+- certificato personale in un file PKCS#12: la chiave non è in un dispositivo qualificato, quindi la firma
+  non è mai qualificata;
+- CIE (vedi fasas.signatures.cie): Firma Elettronica Avanzata, mai qualificata.
 """
 from dataclasses import dataclass
 from io import BytesIO
@@ -14,7 +17,11 @@ from django.conf import settings
 
 
 class SignatureError(Exception):
-    pass
+    """Errore di firma con un messaggio per l'utente e un codice stabile (usato dalle API e dall'audit)."""
+
+    def __init__(self, message, code="error"):
+        super().__init__(message)
+        self.code = code
 
 
 @dataclass
@@ -107,6 +114,45 @@ def signature_metadata(field_name, reason, location, chain=()):
     )
 
 
+QC_COMPLIANCE = "0.4.0.1862.1.1"  # certificato qualificato (ETSI EN 319 412-5)
+QC_SSCD = "0.4.0.1862.1.4"        # chiave in un dispositivo qualificato per la creazione di firme
+
+
+def qc_statements(cert):
+    """Identificativi delle QCStatements del certificato (asn1crypto)."""
+    from asn1crypto import core
+
+    class QcStatement(core.Sequence):
+        _fields = [("statement_id", core.ObjectIdentifier), ("statement_info", core.Any, {"optional": True})]
+
+    class QcStatements(core.SequenceOf):
+        _child_spec = QcStatement
+
+    for ext in cert["tbs_certificate"]["extensions"] or []:
+        if ext["extn_id"].dotted == "1.3.6.1.5.5.7.1.3":
+            try:
+                return {item["statement_id"].dotted for item in QcStatements.load(ext["extn_value"].contents)}
+            except ValueError:
+                return set()
+    return set()
+
+
+def legal_level(signed_pdf, kind):
+    """Valore giuridico dell'ultima firma apposta: «qualificata» solo con tutti i requisiti verificabili."""
+    from pyhanko.pdf_utils.reader import PdfFileReader
+
+    from .models import LegalLevel
+
+    if kind != "remote":
+        return LegalLevel.FE
+    signatures = PdfFileReader(BytesIO(signed_pdf), strict=False).embedded_signatures
+    if not signatures:
+        return LegalLevel.FE
+    statements = qc_statements(signatures[-1].signer_cert)
+    trusted = verify_pdf(signed_pdf)[-1].get("trusted")
+    return LegalLevel.FEQ if {QC_COMPLIANCE, QC_SSCD} <= statements and trusted else LegalLevel.FE
+
+
 def next_field_name(pdf_bytes):
     return f"FirmaFASAS{len(_signature_fields(pdf_bytes)) + 1}"
 
@@ -184,12 +230,18 @@ def verify_pdf(pdf_bytes: bytes):
     from pyhanko.sign.validation import validate_pdf_signature
     from pyhanko_certvalidator import ValidationContext
 
+    from .external import intermediate_certs, key_usage_settings
+    from .external import trust_roots as cie_roots
+
     reader = PdfFileReader(BytesIO(pdf_bytes), strict=False)
-    roots = trust_roots()
+    roots = trust_roots() + cie_roots()
     results = []
     for sig in reader.embedded_signatures:
         try:
-            status = validate_pdf_signature(sig, ValidationContext(trust_roots=roots or None, allow_fetching=False))
+            # digitalSignature o nonRepudiation: il valore giuridico si legge da «legal_level», non da qui
+            status = validate_pdf_signature(
+                sig, ValidationContext(trust_roots=roots or None, other_certs=intermediate_certs(), allow_fetching=False),
+                key_usage_settings=key_usage_settings())
             cert = status.signing_cert
             results.append({
                 "field": sig.field_name,
@@ -202,6 +254,7 @@ def verify_pdf(pdf_bytes: bytes):
                 "covers_whole_document": status.coverage.name == "ENTIRE_FILE" if status.coverage else False,
                 "summary": status.summary(),
                 "timestamped": status.timestamp_validity is not None,
+                "qualified_statements": {QC_COMPLIANCE, QC_SSCD} <= qc_statements(cert) if cert else False,
             })
         except Exception as exc:  # una firma malformata non deve impedire di vedere le altre
             results.append({"field": sig.field_name, "error": str(exc), "intact": False, "valid": False, "trusted": False})

@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from fasas.documents.services import DocumentLockedError
 from fasas.guests.models import Guest
 
 from . import services
@@ -132,6 +133,8 @@ def pai_activate(request, pk):
         services.archive_pdf(pai, request.user)
     except services.PAIError as exc:
         messages.error(request, str(exc))
+    except DocumentLockedError as exc:
+        messages.warning(request, f"PAI in vigore, ma il PDF non è stato rigenerato: {exc.message}")
     else:
         messages.success(request, "PAI in vigore. Il PDF è stato archiviato nei documenti e può essere firmato.")
     return redirect(pai.get_absolute_url())
@@ -143,6 +146,10 @@ def pai_pdf(request, pk):
     pai = get_object_or_404(PAI, pk=pk)
     if pai.guest.is_archived and pai.document_id:
         return redirect(pai.document.get_absolute_url())
-    document = services.archive_pdf(pai, request.user)
+    try:
+        document = services.archive_pdf(pai, request.user)
+    except DocumentLockedError as exc:
+        messages.error(request, exc.message)
+        return redirect(pai.document.get_absolute_url())
     messages.success(request, "PDF del PAI generato e archiviato.")
     return redirect(document.get_absolute_url())

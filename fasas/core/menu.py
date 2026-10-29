@@ -20,7 +20,7 @@ class Item:
     label: str
     icon: str
     url_name: str
-    perm: str | None = None
+    perm: str | tuple | None = None  # con una tupla basta uno dei permessi
     active: tuple = ()          # nomi di URL (namespace:nome) che rendono attiva la voce
     namespace: str | None = None  # oppure un intero namespace
     count: str | None = None    # chiave del contatore da mostrare
@@ -59,7 +59,8 @@ MENU = [
              active=("clinical:therapy_overview",)),
         Item("SOS da validare", "shield-check", "clinical:sos_pending", "clinical.validate_sos",
              active=("clinical:sos_pending",), count="sos"),
-        Item("Documenti da firmare", "pen", "documents:to_sign", "signatures.sign_document", active=("documents:to_sign",)),
+        Item("Documenti da firmare", "pen", "documents:to_sign", ("signatures.sign_document", "signatures.sign_with_cie"),
+             active=("documents:to_sign", "documents:sign", "documents:sign_cie", "signatures:cie_request")),
         Item("Protocolli attivi", "flag", "protocols:activations", "protocols.view_protocolactivation",
              active=("protocols:activations", "protocols:activation_detail"), count="protocols"),
     ]),
@@ -92,6 +93,8 @@ MENU = [
         Item("Audit log", "shield", "audit:list", "audit.view_auditlog", namespace="audit"),
         Item("Log accessi", "key", "accounts:access_log", "accounts.view_accesslog", active=("accounts:access_log",)),
         Item("Backup", "database", "backups:list", "backups.manage_backup", namespace="backups"),
+        Item("Dispositivi di firma", "id-card", "signatures:devices", "signatures.manage_signer_devices",
+             active=("signatures:devices",)),
     ]),
     Section(None, [
         Item("Notifiche", "bell", "notifications:list", active=("notifications:list",), count="notifications"),
@@ -132,7 +135,8 @@ def build_menu(request, unread=0):
     for section in MENU:
         items = []
         for item in section.items:
-            if item.perm and not user.has_perm(item.perm):
+            perms = (item.perm,) if isinstance(item.perm, str) else (item.perm or ())
+            if perms and not any(user.has_perm(p) for p in perms):
                 continue
             label = DASHBOARD_LABELS.get(role_of(user), item.label) if item.url_name == "core:dashboard" else item.label
             items.append({

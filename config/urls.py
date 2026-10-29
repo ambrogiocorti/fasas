@@ -29,6 +29,7 @@ urlpatterns = [
     path("turni/", include("fasas.staffing.urls")),
     path("sw.js", offline_views.service_worker, name="service_worker"),
     path("manifest.webmanifest", offline_views.manifest, name="manifest"),
+    path("api/firma/v1/", include("fasas.signatures.api_urls")),
     path("api/", include("fasas.api.urls")),
     path("gestione-tecnica/", admin.site.urls),
 ]

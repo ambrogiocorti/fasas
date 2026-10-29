@@ -5,6 +5,7 @@ from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import content_disposition_header
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from fasas.audit.models import AuditLog
 from fasas.audit.services import log_event
@@ -12,7 +13,7 @@ from fasas.guests.models import Guest
 
 from .forms import DocumentEditForm, DocumentForm, VersionForm
 from .models import Document, DocumentVersion
-from .services import add_uploaded_version, create_document, read_version
+from .services import DocumentLockedError, add_uploaded_version, create_document, read_version
 
 INLINE_TYPES = {"application/pdf", "image/png", "image/jpeg", "image/gif", "text/plain"}
 
@@ -61,9 +62,16 @@ def document_detail(request, pk):
         access_log = AuditLog.objects.filter(
             content_type=ct, object_id__in=[str(v.pk) for v in versions]
         ).order_by("-timestamp")[:50]
+    from fasas.signatures.cie import expire_if_needed
+    from fasas.signatures.models import SignatureRequest
+
+    signing = (SignatureRequest.objects.select_related("user", "version")
+               .filter(version__document=document, status__in=SignatureRequest.ACTIVE).first())
+    if signing is not None and not expire_if_needed(signing).is_active:
+        signing = None
     return render(request, "documents/document_detail.html", {
         "document": document, "guest": document.guest, "versions": versions, "access_log": access_log,
-        "version_form": VersionForm(), "active_tab": "documents",
+        "version_form": VersionForm(), "active_tab": "documents", "signing": signing,
     })
 
 
@@ -88,9 +96,13 @@ def version_upload(request, pk):
     document = get_object_or_404(Document, pk=pk)
     form = VersionForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
-        version = add_uploaded_version(document, form.cleaned_data["file"], request.user, form.cleaned_data["note"])
-        messages.success(request, f"Caricata la versione {version.number}.")
-        return redirect(document.get_absolute_url())
+        try:
+            version = add_uploaded_version(document, form.cleaned_data["file"], request.user, form.cleaned_data["note"])
+        except DocumentLockedError as exc:
+            form.add_error(None, exc.message)
+        else:
+            messages.success(request, f"Caricata la versione {version.number}.")
+            return redirect(document.get_absolute_url())
     return render(request, "generic/form.html", {
         "form": form, "guest": document.guest, "page_title": f"Nuova versione di {document}", "multipart": True,
         "cancel_url": document.get_absolute_url(),
@@ -115,6 +127,7 @@ def version_download(request, pk):
     return _file_response(request, get_object_or_404(DocumentVersion, pk=pk), inline=False)
 
 
+@xframe_options_sameorigin  # anteprima del PDF nella pagina di firma (stessa origine)
 def version_view(request, pk):
     return _file_response(request, get_object_or_404(DocumentVersion, pk=pk), inline=True)
 
@@ -140,10 +153,11 @@ def documents_to_sign(limit=None):
     return pending
 
 
-@permission_required("signatures.sign_document", raise_exception=True)
 def to_sign(request):
     from fasas.signatures.models import SigningCredential
 
+    if not (request.user.has_perm("signatures.sign_document") or request.user.has_perm("signatures.sign_with_cie")):
+        raise PermissionDenied
     return render(request, "documents/to_sign.html", {
         "pending": documents_to_sign(),
         "credential": SigningCredential.objects.filter(user=request.user).first(),

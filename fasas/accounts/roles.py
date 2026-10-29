@@ -49,6 +49,8 @@ OPERATOR = VIEW_CARE + [
 # informazioni sanitarie, autorizza le modifiche oltre la finestra. Lavora anche in turno come l'operatore.
 COORDINATOR = OPERATOR + [
     "core.edit_after_window",
+    # Firma elettronica avanzata con la propria CIE (es. PAI, consensi, verbali)
+    "signatures.sign_with_cie",
     "guests.add_guest", "guests.change_guest", "guests.archive_guest", "guests.export_guest",
     "guests.add_clinicaltag", "guests.change_clinicaltag",
     "guests.add_guestcontact", "guests.change_guestcontact", "guests.add_diagnosis", "guests.change_diagnosis",
@@ -95,6 +97,7 @@ DOCTOR = VIEW_CARE + [
     "clinical.add_clinicalevent", "clinical.change_restraint",
     "signatures.sign_document", "signatures.view_signingcredential",
     "signatures.add_signingcredential", "signatures.change_signingcredential",
+    "signatures.sign_with_cie",
 ]
 
 # Amministratore (spec. §2): utenti, configurazione, protocolli, notifiche, audit log, backup.
@@ -109,6 +112,8 @@ ADMIN = [
     "notifications.view_notification", "notifications.view_notificationsetting", "notifications.change_notificationsetting",
     "backups.view_backuprecord", "backups.manage_backup",
     "reports.view_reportschedule", "reports.add_reportschedule", "reports.change_reportschedule",
+    # Revoca dei dispositivi di firma (es. computer smarrito); non firma e non vede i documenti
+    "signatures.manage_signer_devices",
 ]
 
 # Amministrativo (ufficio amministrativo, oltre la spec. §2): presenze per la rendicontazione, rette, prospetti

@@ -2,6 +2,9 @@
 {% block title %}{{ document }}{% endblock %}
 {% block content %}
 {% include "guests/_header.html" %}
+{% if signing %}
+  <div class="alert alert-warning">{% icon "lock" %}<div class="alert-body">Documento in firma con CIE da parte di <strong>{{ signing.user }}</strong> ({{ signing.get_status_display|lower }}): la versione {{ signing.version.number }} è bloccata fino alla conclusione.{% if signing.user_id == request.user.pk %} <a href="{% url 'signatures:cie_request' signing.pk %}">Segui la firma</a>{% endif %}</div></div>
+{% endif %}
 <div class="grid grid-2">
   <div class="card">
     <div class="card-head"><h2>{{ document.title }}</h2>
@@ -14,7 +17,7 @@
       <tr><th>Creato</th><td>{{ document.created_at|date:"d/m/Y H:i" }} da {{ document.created_by }}</td></tr>
     </tbody></table>
   </div>
-  {% if perms.documents.add_document and not guest.is_archived %}
+  {% if perms.documents.add_document and not guest.is_archived and not signing %}
   <div class="card">
     <h2>Carica nuova versione</h2>
     <form method="post" action="{% url 'documents:version_upload' document.pk %}" enctype="multipart/form-data">{% csrf_token %}
@@ -33,12 +36,13 @@
         <td>{{ v.original_name }}<br><small class="muted">{{ v.size|filesizeformat }} · {{ v.content_type }}</small></td>
         <td>{{ v.uploaded_at|date:"d/m/Y H:i" }}<br><small>{{ v.uploaded_by }}</small></td>
         <td class="mono" title="{{ v.sha256 }}">{{ v.sha256|truncatechars:20 }}</td>
-        <td>{% if v.is_signed %}<span class="pill pill-ok">firmato</span>{% if v.signature %}<br><small>{{ v.signature.certificate_subject|truncatechars:50 }}</small>{% endif %}{% endif %}</td>
+        <td>{% if v.is_signed %}<span class="pill pill-ok">firmato</span>{% if v.signature %}<br><small>{{ v.signature.get_legal_level_display|default:v.signature.signature_format }}{% if v.signature.provider == 'cie' %} con CIE{% endif %}</small><br><small class="muted">{{ v.signature.certificate_subject|truncatechars:50 }}</small>{% endif %}{% elif signing and signing.version_id == v.pk %}<span class="pill pill-warn">{{ signing.get_status_display }}</span>{% endif %}</td>
         <td class="num nowrap">
           <a class="btn btn-sm" href="{% url 'documents:view' v.pk %}" target="_blank" rel="noopener">Apri</a>
           <a class="btn btn-sm" href="{% url 'documents:download' v.pk %}">{% icon "download" %}Scarica</a>
           {% if v.is_pdf %}<a class="btn btn-sm" href="{% url 'documents:verify' v.pk %}">Verifica firme</a>{% endif %}
-          {% if v.is_pdf and perms.signatures.sign_document and not guest.is_archived %}<a class="btn btn-sm btn-primary" href="{% url 'documents:sign' v.pk %}">Firma</a>{% endif %}
+          {% if v.is_pdf and perms.signatures.sign_document and not guest.is_archived and not signing %}<a class="btn btn-sm btn-primary" href="{% url 'documents:sign' v.pk %}">Firma</a>{% endif %}
+          {% if forloop.first and v.is_pdf and perms.signatures.sign_with_cie and not guest.is_archived and not signing %}<a class="btn btn-sm btn-primary" href="{% url 'documents:sign_cie' v.pk %}">{% icon "id-card" %}Firma con CIE</a>{% endif %}
         </td></tr>
     {% endfor %}
     </tbody>

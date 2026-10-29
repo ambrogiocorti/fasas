@@ -60,6 +60,7 @@ class AuditLog(models.Model):
         CONFIG = "config", "Configurazione"
         PERMISSION = "permission", "Permessi"
         SYSTEM = "system", "Sistema"
+        DENIED = "denied", "Tentativo non autorizzato"
 
     timestamp = models.DateTimeField("data e ora", db_index=True)
     user = models.ForeignKey(

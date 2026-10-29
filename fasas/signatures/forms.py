@@ -59,3 +59,9 @@ class SignForm(forms.Form):
 
 class SendOTPForm(forms.Form):
     password = forms.CharField(label="Password del servizio di firma", widget=forms.PasswordInput, required=False)
+
+
+class CIESignForm(forms.Form):
+    reason = forms.CharField(label="Motivo della firma", max_length=200, required=False,
+                             help_text="Facoltativo, es. «Approvazione PAI». Resta scritto nella firma.")
+    confirm = forms.BooleanField(label="Ho letto il documento e intendo firmarlo con la mia CIE")

@@ -6,7 +6,7 @@ from fasas.core.encryption import delete_stored, store_encrypted
 from fasas.documents.services import add_version, read_version
 
 from .models import Signature, SigningCredential
-from .providers import SignatureError, inspect_pkcs12, provider_for, signature_level
+from .providers import SignatureError, inspect_pkcs12, legal_level, provider_for, signature_level
 
 
 def register_pkcs12(user, p12_bytes, passphrase):
@@ -107,6 +107,7 @@ def sign_version(version, user, secrets, reason="", location=""):
         reason=reason,
         signature_format=f"PAdES-{level}",
         timestamped=level != "B-B",
+        legal_level=legal_level(signed, credential.kind),
     )
     log_event(AuditLog.Action.SIGN, signed_version, user=user, guest=version.document.guest,
               changes={"certificato": [None, signature.certificate_subject]}, reason=reason)

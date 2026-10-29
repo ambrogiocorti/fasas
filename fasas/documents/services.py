@@ -17,6 +17,22 @@ class IntegrityError(Exception):
     pass
 
 
+class DocumentLockedError(ValidationError):
+    """Il documento è in firma con la CIE: la versione è bloccata finché la richiesta non si conclude."""
+
+
+def ensure_not_in_signature(document, signature_request=None):
+    from fasas.signatures.models import SignatureRequest
+
+    active = SignatureRequest.objects.filter(version__document=document, status__in=SignatureRequest.ACTIVE)
+    if signature_request is not None:
+        active = active.exclude(pk=signature_request.pk)
+    request = active.select_related("user").first()
+    if request is not None:
+        raise DocumentLockedError(f"Il documento è in firma con la CIE da parte di {request.user}: attendere la "
+                                  "conclusione o annullare la richiesta.")
+
+
 def validate_upload(uploaded, config=None):
     config = config or SystemConfig.get()
     limit = config.max_upload_mb * 1024 * 1024
@@ -32,10 +48,12 @@ def _guess_type(name, fallback="application/octet-stream"):
 
 
 @transaction.atomic
-def add_version(document, data: bytes, original_name, user, note="", content_type=None, is_signed=False):
+def add_version(document, data: bytes, original_name, user, note="", content_type=None, is_signed=False,
+                signature_request=None):
     ensure_not_archived(document.guest)
     lock_audit_chain()
     last = document.versions.select_for_update().order_by("-number").first()
+    ensure_not_in_signature(document, signature_request)
     version = DocumentVersion.objects.create(
         document=document,
         number=(last.number + 1) if last else 1,

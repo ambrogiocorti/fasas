@@ -40,10 +40,11 @@ class RoleAccessTests(FasasTestCase):
         self.assert_status(self.coordinator, [
             ("guests:create", []), ("clinical:sos_pending", []), ("pharmacy:stock", []),
             ("protocols:list", []), ("reports:list", []), ("daily:closures", []),
+            ("documents:to_sign", []),  # firma con la propria CIE (firma elettronica avanzata)
         ], 200)
         self.assert_status(self.coordinator, [
             ("accounts:user_list", []), ("audit:list", []), ("backups:list", []), ("core:config", []),
-            ("documents:to_sign", []),
+            ("signatures:devices", []),
         ], 403)
 
     def test_doctor_clinical_scope_only(self):

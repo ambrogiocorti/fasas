@@ -219,6 +219,16 @@ FASAS_CSC_TOKEN = os.environ.get("FASAS_CSC_TOKEN", "")
 FASAS_CSC_TIMEOUT = int(os.environ.get("FASAS_CSC_TIMEOUT", "30"))
 FASAS_CSC_PROVIDER_NAME = os.environ.get("FASAS_CSC_PROVIDER_NAME", "")  # nome mostrato ai medici, es. «InfoCert»
 
+# Firma con CIE (firma elettronica avanzata, FASAS Signer). Vedi docs/FIRMA_CIE.md.
+FASAS_CIE_ENABLED = env_bool("FASAS_CIE_ENABLED", True)
+FASAS_CIE_TRUST_ROOTS = os.environ.get("FASAS_CIE_TRUST_ROOTS", "")  # PEM con le CA della CIE (Ministero dell'Interno)
+FASAS_CIE_INTERMEDIATES = os.environ.get("FASAS_CIE_INTERMEDIATES", "")  # PEM con eventuali CA intermedie
+FASAS_CIE_REVOCATION = os.environ.get("FASAS_CIE_REVOCATION", "soft-fail")  # soft-fail | hard-fail | off
+FASAS_CIE_TIMESTAMP = env_bool("FASAS_CIE_TIMESTAMP", True)  # marca temporale se è configurata una TSA reale
+FASAS_CIE_REQUEST_MINUTES = int(os.environ.get("FASAS_CIE_REQUEST_MINUTES", "5"))
+FASAS_CIE_PAIRING_MINUTES = int(os.environ.get("FASAS_CIE_PAIRING_MINUTES", "10"))
+FASAS_CIE_ALLOW_HTTP = env_bool("FASAS_CIE_ALLOW_HTTP", DEBUG)  # solo sviluppo: in produzione il Signer usa HTTPS
+
 # Notifiche push (Web Push). Chiave generata con «manage.py fasas_vapid_keys»; in sviluppo se ne deriva una da SECRET_KEY.
 FASAS_VAPID_PRIVATE_KEY = os.environ.get("FASAS_VAPID_PRIVATE_KEY", "")
 FASAS_VAPID_SUBJECT = os.environ.get("FASAS_VAPID_SUBJECT", "mailto:amministrazione@fasas.invalid")

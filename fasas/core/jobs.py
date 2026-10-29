@@ -20,6 +20,7 @@ JOBS = {
     "backup": ("fasas.backups.services.scheduled_backup", "Backup cifrato giornaliero e verifica"),
     "audit_verify": ("fasas.audit.services.scheduled_chain_verification", "Verifica integrità audit log"),
     "imports_cleanup": ("fasas.imports.documents.cleanup_stale", "Cancellazione dei file di importazioni non confermate"),
+    "cie_cleanup": ("fasas.signatures.cie.cleanup_stale", "Chiusura delle richieste di firma con CIE scadute"),
 }
 
 
