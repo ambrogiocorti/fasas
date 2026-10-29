@@ -23,7 +23,7 @@ class NotificationKind(models.TextChoices):
 
 DEFAULT_ROLES = {
     NotificationKind.PROTOCOL: ["coordinator", "operator", "doctor"],
-    NotificationKind.EMERGENCY: ["coordinator", "admin", "doctor", "operator"],
+    NotificationKind.EMERGENCY: ["coordinator", "doctor", "operator"],
     NotificationKind.CRITICAL_EVENT: ["coordinator", "doctor"],
     NotificationKind.STOCK_LOW: ["coordinator"],
     NotificationKind.STOCK_EXPIRING: ["coordinator"],
@@ -36,7 +36,26 @@ DEFAULT_ROLES = {
     NotificationKind.DOCUMENT_EXPIRING: ["coordinator"],
     NotificationKind.BACKUP: ["admin"],
     NotificationKind.AUDIT_BROKEN: ["admin"],
-    NotificationKind.REPORT: ["coordinator", "admin"],
+    NotificationKind.REPORT: ["coordinator"],
+}
+
+# Una notifica arriva solo a chi può aprire ciò a cui rimanda, qualunque ruolo sia configurato.
+REQUIRED_PERMISSION = {
+    NotificationKind.PROTOCOL: "protocols.view_protocolactivation",
+    NotificationKind.EMERGENCY: "clinical.view_clinicalevent",
+    NotificationKind.CRITICAL_EVENT: "clinical.view_clinicalevent",
+    NotificationKind.STOCK_LOW: "pharmacy.view_stocklot",
+    NotificationKind.STOCK_EXPIRING: "pharmacy.view_stocklot",
+    NotificationKind.APPOINTMENT_TOMORROW: "appointments.view_appointment",
+    NotificationKind.APPOINTMENT_TODAY: "appointments.view_appointment",
+    NotificationKind.THERAPY_CONFLICT: "clinical.view_therapy",
+    NotificationKind.SOS_VALIDATION: "clinical.validate_sos",
+    NotificationKind.PAI_REVIEW: "pai.view_pai",
+    NotificationKind.CHECKLIST_MISSING: "daily.view_shiftclosure",
+    NotificationKind.DOCUMENT_EXPIRING: "documents.view_document",
+    NotificationKind.BACKUP: "backups.manage_backup",
+    NotificationKind.AUDIT_BROKEN: "audit.view_auditlog",
+    NotificationKind.REPORT: "reports.view_generatedreport",
 }
 
 

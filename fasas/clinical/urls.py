@@ -10,6 +10,7 @@ app_name = "clinical"
 
 urlpatterns = [
     path("giro-farmaci/", views.administration_board, name="board"),
+    path("terapie/", views.therapy_overview, name="therapy_overview"),
     path("terapia/<int:therapy_pk>/somministra/", views.administer, name="administer"),
     path("sos/da-validare/", views.sos_pending, name="sos_pending"),
     path("sos/<int:pk>/valida/", views.sos_validate, name="sos_validate"),

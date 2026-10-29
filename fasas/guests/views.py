@@ -13,7 +13,7 @@ from fasas.core.models import Community
 from fasas.core.views_mixins import FormPageMixin, PermRequiredMixin
 
 from . import services
-from .dashboard import TIMELINE_KINDS, clinical_dashboard, timeline
+from .dashboard import clinical_dashboard, timeline, timeline_kinds_for
 from .forms import AllergyForm, DiagnosisForm, DischargeForm, GuestContactForm, GuestForm, MovementForm
 from .models import Allergy, ClinicalTag, Diagnosis, Guest, GuestContact
 
@@ -97,10 +97,12 @@ def guest_health(request, pk):
 @permission_required("guests.view_guest", raise_exception=True)
 def guest_timeline(request, pk):
     guest = get_object_or_404(Guest, pk=pk)
-    kinds = request.GET.getlist("kind") or None
+    allowed = timeline_kinds_for(request.user)
+    allowed_codes = [code for code, _ in allowed]
+    kinds = [k for k in request.GET.getlist("kind") if k in allowed_codes]
     return render(request, "guests/timeline.html", {
-        "guest": guest, "active_tab": "timeline", "items": timeline(guest, kinds),
-        "kinds": TIMELINE_KINDS, "selected": kinds or [],
+        "guest": guest, "active_tab": "timeline", "items": timeline(guest, kinds or allowed_codes),
+        "kinds": allowed, "selected": kinds,
     })
 
 

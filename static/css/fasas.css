@@ -582,3 +582,6 @@ form h3:first-of-type { margin-top: .5rem; }
   .card, .guest-header { box-shadow: none; break-inside: avoid; border-color: #ccc; }
   a { color: inherit; }
 }
+
+/* separatore senza titolo nel menu */
+.nav-section.nav-gap { margin: .9rem .6rem .5rem; height: 1px; background: var(--border); }

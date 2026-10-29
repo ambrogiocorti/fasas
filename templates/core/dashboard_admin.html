@@ -1,0 +1,91 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Pannello di sistema{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Pannello di sistema</h1>
+    <span class="subtitle">Utenti, accessi, backup, audit e configurazione. Per tutela della riservatezza questo ruolo non consulta le cartelle cliniche.</span>
+  </div>
+  <div class="actions">
+    {% if perms.accounts.add_user %}<a class="btn" href="{% url 'accounts:user_create' %}">{% icon "plus" %}Nuovo utente</a>{% endif %}
+    {% if perms.backups.manage_backup %}<form method="post" action="{% url 'backups:run' %}" class="inline-form">{% csrf_token %}<button class="btn btn-primary" data-confirm="Avviare ora un backup completo cifrato?">{% icon "database" %}Backup ora</button></form>{% endif %}
+  </div>
+</div>
+
+{% for w in warnings %}
+  <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">{{ w }}</div></div>
+{% endfor %}
+
+<div class="grid grid-4">
+  <div class="card stat">
+    <span class="label">Utenti attivi <span class="stat-icon">{% icon "users" %}</span></span>
+    <span class="value"><a href="{% url 'accounts:user_list' %}">{{ users_total }}</a></span>
+    <small>{{ users_custom }} con permessi personalizzati{% if users_inactive %} · {{ users_inactive }} disattivati{% endif %}</small></div>
+  <div class="card stat {% if failed_24h %}tone-warn{% endif %}">
+    <span class="label">Accessi falliti (24 ore) <span class="stat-icon">{% icon "key" %}</span></span>
+    <span class="value"><a href="{% url 'accounts:access_log' %}?event=failed">{{ failed_24h }}</a></span>
+    <small>{{ logins_24h }} accessi riusciti</small></div>
+  <div class="card stat {% if not last_ok_backup %}tone-danger{% endif %}">
+    <span class="label">Ultimo backup riuscito <span class="stat-icon">{% icon "database" %}</span></span>
+    <span class="value" style="font-size:1.25rem">{% if last_ok_backup %}{{ last_ok_backup.created_at|date:"d/m H:i" }}{% else %}nessuno{% endif %}</span>
+    <small>{% if last_ok_backup %}{% if last_ok_backup.verify_ok %}integrità verificata{% elif last_ok_backup.verify_ok is False %}<span style="color:var(--danger)">verifica fallita</span>{% else %}non ancora verificato{% endif %}{% else %}eseguire un backup{% endif %}</small></div>
+  <div class="card stat {% if chain and not chain.0 %}tone-danger{% else %}tone-ok{% endif %}">
+    <span class="label">Audit log <span class="stat-icon">{% icon "shield" %}</span></span>
+    <span class="value"><a href="{% url 'audit:list' %}">{{ audit_count }}</a></span>
+    <small>{% if chain %}{% if chain.0 %}catena di integrità verificata{% else %}catena INTERROTTA{% endif %}{% else %}<a href="{% url 'audit:verify' %}">verifica integrità</a>{% endif %}</small></div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card table-wrap">
+    <div class="card-head"><h2>Utenti per ruolo</h2><div class="actions"><a class="btn btn-sm" href="{% url 'accounts:user_list' %}">Gestisci</a></div></div>
+    <table><tbody>{% for label, n in roles %}<tr><th>{{ label }}</th><td class="num">{{ n }}</td></tr>{% endfor %}</tbody></table>
+  </div>
+
+  <div class="card table-wrap">
+    <div class="card-head"><h2>Configurazione attuale</h2><div class="actions">{% if perms.core.change_systemconfig %}<a class="btn btn-sm" href="{% url 'core:config' %}">Modifica</a>{% endif %}</div></div>
+    <table><tbody>
+      <tr><th>Evacuazioni</th><td>{{ config.get_evacuation_mode_display }}</td></tr>
+      <tr><th>Blocco modifiche</th><td>{{ config.get_edit_lock_policy_display }} ({{ config.edit_window_hours }} h)</td></tr>
+      <tr><th>Turni</th><td>{{ config.morning_start|time:"H:i" }} · {{ config.afternoon_start|time:"H:i" }} · {{ config.night_start|time:"H:i" }}{% if config.auto_close_shifts %} · chiusura automatica dopo {{ config.auto_close_grace_minutes }} min{% endif %}</td></tr>
+      <tr><th>Sessione</th><td>disconnessione dopo {{ config.session_timeout_minutes }} min di inattività</td></tr>
+      <tr><th>File</th><td>max {{ config.max_upload_mb }} MB · report conservati {{ config.report_retention_years }} anni</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="card table-wrap">
+    <div class="card-head"><h2>Backup</h2><div class="actions"><a class="btn btn-sm" href="{% url 'backups:list' %}">Tutti</a></div></div>
+    <table><tbody>
+      {% for b in backups %}<tr><td class="nowrap">{{ b.created_at|date:"d/m/Y H:i" }}</td><td>{{ b.get_kind_display }}</td>
+        <td><span class="pill {% if b.status == 'ok' %}pill-ok{% elif b.status == 'failed' %}pill-danger{% endif %}">{{ b.get_status_display }}</span></td>
+        <td>{% if b.verify_ok %}<span class="pill pill-ok">integro</span>{% elif b.verify_ok is False %}<span class="pill pill-danger">KO</span>{% endif %}</td>
+        <td class="num">{{ b.size|filesizeformat }}</td></tr>
+      {% empty %}<tr><td class="empty">Nessun backup eseguito.</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+
+  <div class="card table-wrap">
+    <div class="card-head"><h2>Accessi falliti recenti</h2><div class="actions"><a class="btn btn-sm" href="{% url 'accounts:access_log' %}">Log accessi</a></div></div>
+    <table><tbody>
+      {% for a in recent_failures %}<tr><td class="nowrap">{{ a.timestamp|date:"d/m H:i" }}</td><td>{{ a.username }}</td><td><span class="pill pill-danger">{{ a.get_event_display }}</span></td><td class="mono">{{ a.ip_address }}</td></tr>
+      {% empty %}<tr><td class="empty">Nessun accesso fallito.</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Protocolli e notifiche</h2></div>
+    <ul class="list-plain">
+      <li><a href="{% url 'protocols:list' %}">{{ protocols_active }} protocolli automatici attivi</a>{% if protocols_unvalidated %} · <span class="pill pill-warn">{{ protocols_unvalidated }} non ancora validati dal medico</span>{% endif %}</li>
+      <li><a href="{% url 'notifications:settings' %}">Impostazioni notifiche</a>{% if notifications_disabled %} · <span class="pill pill-warn">{{ notifications_disabled }} tipi disattivati</span>{% endif %}</li>
+      <li><a href="{% url 'reports:schedule_list' %}">Report programmati</a></li>
+    </ul>
+  </div>
+
+  <div class="card table-wrap">
+    <div class="card-head"><h2>Ultime modifiche a utenti e configurazione</h2></div>
+    <table><tbody>
+      {% for e in config_changes %}<tr><td class="nowrap"><a href="{% url 'audit:detail' e.pk %}">{{ e.timestamp|date:"d/m H:i" }}</a></td><td>{{ e.username }}</td><td><span class="pill">{{ e.get_action_display }}</span></td><td>{{ e.object_repr|truncatechars:50 }}</td></tr>
+      {% empty %}<tr><td class="empty">Nessuna modifica.</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+</div>
+{% endblock %}

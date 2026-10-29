@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Documenti da firmare{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Documenti da firmare</h1><span class="subtitle">PAI, prescrizioni, relazioni, certificati, consensi e autorizzazioni in PDF non ancora firmati.</span></div>
+  <div class="actions"><a class="btn" href="{% url 'signatures:credential' %}">{% icon "key" %}Credenziale di firma</a></div>
+</div>
+{% if not credential %}
+  <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Non hai ancora configurato una credenziale di firma: <a href="{% url 'signatures:credential' %}">configurala</a> per poter firmare.</div></div>
+{% elif not credential.is_valid_now %}
+  <div class="alert alert-danger">{% icon "alert-circle" %}<div class="alert-body">Il tuo certificato di firma è scaduto o non ancora valido.</div></div>
+{% endif %}
+<div class="card table-wrap">
+  <table>
+    <thead><tr><th>Documento</th><th>Ospite</th><th>Categoria</th><th>Versione</th><th></th></tr></thead>
+    <tbody>
+    {% for p in pending %}
+      <tr><td><a href="{{ p.document.get_absolute_url }}"><strong>{{ p.document.title }}</strong></a><br><small class="muted">{{ p.version.original_name }}</small></td>
+        <td><a href="{{ p.document.guest.get_absolute_url }}">{{ p.document.guest }}</a></td>
+        <td>{{ p.document.get_category_display }}</td>
+        <td>v{{ p.version.number }} · {{ p.version.uploaded_at|date:"d/m/Y" }}</td>
+        <td class="num nowrap"><a class="btn btn-sm" href="{% url 'documents:view' p.version.pk %}" target="_blank" rel="noopener">Apri</a>
+          <a class="btn btn-sm btn-primary" href="{% url 'documents:sign' p.version.pk %}">{% icon "pen" %}Firma</a></td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">Nessun documento in attesa di firma.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

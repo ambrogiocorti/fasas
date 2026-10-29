@@ -1,5 +1,6 @@
 from django.utils import timezone
 
+from .menu import build_menu, role_of
 from .shifts import Shift, resolve_shift
 
 
@@ -13,11 +14,14 @@ def fasas(request):
     theme = request.user.theme
     if theme == "auto":
         theme = "dark" if (shift == Shift.NIGHT and config.night_theme_auto) else "light"
+    unread = unread_for(request.user).count()
     return {
         "current_shift": {"day": day, "code": shift, "label": Shift(shift).label},
         "community": config.community,
         "fasas_config": config,
-        "unread_notifications": unread_for(request.user).count(),
+        "unread_notifications": unread,
+        "menu": build_menu(request, unread),
+        "user_role": role_of(request.user),
         "ui_theme": theme,
         "user_theme_pref": request.user.theme,
         "now": timezone.localtime(),

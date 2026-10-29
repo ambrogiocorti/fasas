@@ -1,0 +1,107 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Il mio turno{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Il mio turno · {{ shift_label|lower }}</h1>
+    <span class="subtitle">{{ day|date:"l d F Y" }} · {{ shift_start|time:"H:i" }}–{{ shift_end|time:"H:i" }} · {{ guest_count }} ospiti presenti{% if absent_count %}, {{ absent_count }} assenti o ricoverati{% endif %}</span>
+  </div>
+  <div class="actions">
+    {% if shift_closed %}<span class="pill pill-warn">{% icon "lock" %}Turno chiuso</span>{% endif %}
+    {% if not checked_in %}
+      <form method="post" action="{% url 'daily:check_in' %}" class="inline-form">{% csrf_token %}<button class="btn btn-primary">{% icon "user-check" %}Prendo servizio</button></form>
+    {% else %}<span class="pill pill-ok">{% icon "check" %}In servizio</span>{% endif %}
+  </div>
+</div>
+
+{% for row in protocols %}{% with a=row.activation %}
+  <div class="alert alert-danger">{% icon "flag" %}<div class="alert-body"><strong>{{ a.protocol.name }}</strong> – <a href="{{ a.guest.get_absolute_url }}">{{ a.guest }}</a>: {{ a.trigger_summary }}. {% if row.pending %}{{ row.pending }} azion{{ row.pending|pluralize:"e,i" }} da eseguire · {% endif %}<a href="{{ a.get_absolute_url }}">apri</a></div></div>
+{% endwith %}{% endfor %}
+
+<div class="grid grid-4">
+  <div class="card stat {% if doses_total and doses_done == doses_total %}tone-ok{% endif %}">
+    <span class="label">Farmaci del turno <span class="stat-icon">{% icon "pill" %}</span></span>
+    <span class="value"><a href="{% url 'clinical:board' %}">{{ doses_done }}<span class="muted" style="font-size:1.1rem; font-weight:600">/{{ doses_total }}</span></a></span>
+    <div class="progress"><span style="width: {{ doses_done|percent:doses_total }}%"></span></div></div>
+  <div class="card stat {% if checklist_total and checklist_done == checklist_total %}tone-ok{% endif %}">
+    <span class="label">Checklist <span class="stat-icon">{% icon "clipboard-check" %}</span></span>
+    <span class="value"><a href="{% url 'daily:checklist' %}">{{ checklist_done }}<span class="muted" style="font-size:1.1rem; font-weight:600">/{{ checklist_total }}</span></a></span>
+    <div class="progress"><span style="width: {{ checklist_done|percent:checklist_total }}%"></span></div></div>
+  <div class="card stat {% if evacuation_alerts %}tone-danger{% elif evacuation_missing %}tone-warn{% endif %}">
+    <span class="label">Evacuazioni <span class="stat-icon">{% icon "timer" %}</span></span>
+    <span class="value"><a href="{% url 'daily:evacuations' %}">{% if evacuation_mode == 'A' %}{{ evacuation_missing|length }}{% else %}{{ evacuation_alerts|length }}{% endif %}</a></span>
+    <small>{% if evacuation_mode == 'A' %}ospiti da registrare oggi{% else %}ospiti oltre la soglia{% endif %}</small></div>
+  <div class="card stat {% if protocols %}tone-danger{% endif %}">
+    <span class="label">Protocolli da eseguire <span class="stat-icon">{% icon "flag" %}</span></span>
+    <span class="value"><a href="{% url 'protocols:activations' %}">{{ protocols|length }}</a></span>
+    <small>{% if protocols %}azioni richieste{% else %}nessuna azione richiesta{% endif %}</small></div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Farmaci da somministrare ora</h2><div class="actions"><a class="btn btn-sm btn-primary" href="{% url 'clinical:board' %}">{% icon "pill" %}Giro farmaci</a></div></div>
+    <ul class="list-plain">
+      {% for d in doses_due %}
+        <li><span class="pill {% if d.overdue %}pill-danger{% endif %} mono">{{ d.time|time:"H:i" }}</span> <a href="{{ d.guest.get_absolute_url }}">{{ d.guest }}</a> – {{ d.therapy.drug }} {{ d.therapy.dose_display }}{% if d.overdue %} <span class="pill pill-danger">in ritardo</span>{% endif %}</li>
+      {% empty %}<li class="muted">Nessuna dose da somministrare nella prossima ora.</li>{% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Consegne dal turno precedente</h2></div>
+    {% if handover %}
+      {% if handover.handover_notes %}<p style="white-space:pre-line">{{ handover.handover_notes }}</p>{% else %}<p class="muted">Nessuna consegna scritta.</p>{% endif %}
+      <small>Turno {{ handover.get_shift_display|lower }} del {{ handover.date|date:"d/m" }}, chiuso {% if handover.automatic %}automaticamente{% else %}da {{ handover.closed_by }}{% endif %}{% if handover.summary.missing %} · <span style="color:var(--warn)">{{ handover.summary.missing|length }} attività rimaste in sospeso</span>{% endif %}</small>
+    {% else %}<p class="muted">Il turno precedente non è ancora stato chiuso.</p>{% endif %}
+    {% if relevant_diary %}<hr><h3>Note rilevanti (24 ore)</h3>
+      <ul class="list-plain">{% for d in relevant_diary %}<li><strong>{{ d.guest }}</strong> <small class="muted">{{ d.occurred_at|date:"d/m H:i" }} · {{ d.created_by|default:"—" }}</small><br>{{ d.text|truncatechars:180 }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+
+  {% if evacuation_missing or evacuation_alerts %}
+  <div class="card">
+    <div class="card-head"><h2>Evacuazioni</h2><div class="actions"><a class="btn btn-sm" href="{% url 'daily:evacuations' %}">Registra</a></div></div>
+    <ul class="list-plain">
+      {% for r in evacuation_alerts %}<li><span class="pill pill-danger">{{ r.days }} giorni</span> <a href="{% url 'daily:guest_daily' r.guest.pk %}">{{ r.guest }}</a> – oltre la soglia del protocollo</li>{% endfor %}
+      {% for g in evacuation_missing|slice:":8" %}<li><span class="pill pill-warn">da registrare</span> <a href="{% url 'daily:guest_daily' g.pk %}">{{ g }}</a></li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-head"><h2>Visite di oggi</h2></div>
+    <ul class="list-plain">
+      {% for a in appointments_today %}<li><span class="pill mono">{{ a.scheduled_at|time:"H:i" }}</span> <a href="{{ a.get_absolute_url }}">{{ a.guest }} – {{ a.title }}</a> {% if a.companion == request.user %}<span class="pill pill-info">accompagni tu</span>{% endif %}<br><small class="muted">{{ a.location }}{% if a.preparation %} · {{ a.preparation }}{% endif %}</small></li>
+      {% empty %}<li class="muted">Nessuna visita oggi.</li>{% endfor %}
+    </ul>
+  </div>
+
+  <div class="card span-2 table-wrap">
+    <div class="card-head"><h2>Ospiti presenti</h2></div>
+    <table>
+      <tbody>
+      {% for g in guests %}
+        <tr><td><a href="{{ g.get_absolute_url }}"><strong>{{ g.last_name }} {{ g.first_name }}</strong></a>{% if g.room %} <small class="muted">· camera {{ g.room }}</small>{% endif %}<br>{% for t in g.tags.all %}{% tag_chip t %} {% endfor %}</td>
+          <td class="num nowrap">
+            {% if perms.clinical.add_parameterreading %}<a class="btn btn-sm" href="{% url 'clinical:quick_parameters' g.pk %}">{% icon "activity" %}Parametri</a>{% endif %}
+            {% if perms.daily.add_dailyrecord %}<a class="btn btn-sm" href="{% url 'daily:record_create' g.pk %}">{% icon "book" %}Registro</a>{% endif %}
+            {% if perms.daily.add_diaryentry %}<a class="btn btn-sm" href="{% url 'daily:diary_create' g.pk %}">{% icon "pen" %}Diario</a>{% endif %}
+          </td></tr>
+      {% empty %}<tr><td class="empty">Nessun ospite presente.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Notifiche</h2><div class="actions"><a class="btn btn-sm" href="{% url 'notifications:list' %}">Tutte</a></div></div>
+    <ul class="list-plain">
+      {% for n in notifications %}<li><span class="pill pill-{{ n.level|level_class }}">{{ n.get_level_display }}</span> {% if n.link %}<a href="{{ n.link }}">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %} <small class="muted">{{ n.created_at|date:"d/m H:i" }}</small></li>
+      {% empty %}<li class="muted">Nessuna notifica da leggere.</li>{% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>In servizio</h2>
+    <ul class="list-plain">{% for a in on_shift %}<li>{{ a.user }}{% if a.is_shift_lead %} <span class="pill pill-info">responsabile</span>{% endif %}{% if a.checked_in_at %} <small class="muted">dalle {{ a.checked_in_at|time:"H:i" }}</small>{% endif %}</li>{% empty %}<li class="muted">Nessun operatore registrato nel turno.</li>{% endfor %}</ul>
+  </div>
+</div>
+{% endblock %}

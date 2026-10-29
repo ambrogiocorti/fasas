@@ -34,6 +34,9 @@ La corrispondenza puntuale tra i 30 punti della specifica e il codice è in [doc
 
 Tre modi, dal più semplice. In tutti si entra con `admin`, `coordinatore`, `operatore` o `medico`,
 password `Demo-Fasas-2026!`, su dati di fantasia. **Non inserire dati reali di ospiti in queste prove.**
+Ogni ruolo ha un cruscotto e un menu diversi: l'operatore vede *Il mio turno*, il coordinatore *Coordinamento*,
+il medico *Area medica*, l'amministratore il *Pannello di sistema* (senza accesso alle cartelle cliniche).
+Dettagli in [docs/SICUREZZA.md](docs/SICUREZZA.md#ruoli-e-permessi).
 
 ### 1. Nel browser, senza installare nulla (GitHub Codespaces)
 

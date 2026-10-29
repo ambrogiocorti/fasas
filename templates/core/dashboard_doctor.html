@@ -1,0 +1,106 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Area medica{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Area medica</h1>
+    <span class="subtitle">{{ now|date:"l d F Y" }} · {{ guest_count }} ospiti presenti{% if absent_count %}, {{ absent_count }} assenti o ricoverati{% endif %}</span>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{% url 'clinical:therapy_overview' %}">{% icon "pill" %}Terapie in corso</a>
+    <a class="btn btn-primary" href="{% url 'documents:to_sign' %}">{% icon "pen" %}Documenti da firmare</a>
+  </div>
+</div>
+
+{% if not credential %}
+  <div class="alert alert-info">{% icon "key" %}<div class="alert-body">Per firmare digitalmente PAI, prescrizioni e relazioni configura la tua <a href="{% url 'signatures:credential' %}">credenziale di firma</a>.</div></div>
+{% elif not credential.is_valid_now %}
+  <div class="alert alert-danger">{% icon "alert-circle" %}<div class="alert-body">Il tuo certificato di firma è scaduto: <a href="{% url 'signatures:credential' %}">aggiornalo</a>.</div></div>
+{% endif %}
+
+<div class="grid grid-4">
+  <div class="card stat {% if sos_pending %}tone-warn{% endif %}">
+    <span class="label">SOS da validare <span class="stat-icon">{% icon "shield-check" %}</span></span>
+    <span class="value"><a href="{% url 'clinical:sos_pending' %}">{{ sos_pending|length }}</a></span>
+    <small>somministrazioni al bisogno</small></div>
+  <div class="card stat {% if out_of_range %}tone-danger{% endif %}">
+    <span class="label">Parametri fuori norma <span class="stat-icon">{% icon "activity" %}</span></span>
+    <span class="value">{{ out_of_range|length }}</span>
+    <small>ultime 48 ore</small></div>
+  <div class="card stat {% if to_sign %}tone-warn{% endif %}">
+    <span class="label">Documenti da firmare <span class="stat-icon">{% icon "pen" %}</span></span>
+    <span class="value"><a href="{% url 'documents:to_sign' %}">{{ to_sign|length }}{% if to_sign|length >= 8 %}+{% endif %}</a></span>
+    <small>PDF non ancora firmati</small></div>
+  <div class="card stat {% if therapies_ending %}tone-warn{% endif %}">
+    <span class="label">Terapie in scadenza <span class="stat-icon">{% icon "clock" %}</span></span>
+    <span class="value"><a href="{% url 'clinical:therapy_overview' %}">{{ therapies_ending|length }}</a></span>
+    <small>entro 7 giorni</small></div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>SOS in attesa di validazione</h2><div class="actions"><a class="btn btn-sm" href="{% url 'clinical:sos_pending' %}">Valida</a></div></div>
+    <ul class="list-plain">
+      {% for a in sos_pending %}<li><a href="{{ a.guest.get_absolute_url }}"><strong>{{ a.guest }}</strong></a> – {{ a.therapy.drug }} {{ a.dose_given }} <small class="muted">{{ a.occurred_at|date:"d/m H:i" }} · {{ a.created_by }}</small><br><small>Motivo: {{ a.sos_reason|truncatechars:140 }}</small></li>
+      {% empty %}<li class="muted">Nessuna somministrazione da validare.</li>{% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Parametri fuori norma (48 ore)</h2></div>
+    <ul class="list-plain">
+      {% for r in out_of_range %}<li><a href="{% url 'clinical:guest_parameters' r.guest_id %}"><strong>{{ r.guest }}</strong></a> – {{ r.parameter_type.name }} <span class="pill pill-danger">{{ r.display_value }}</span> <small class="muted">{{ r.occurred_at|date:"d/m H:i" }}</small></li>
+      {% empty %}<li class="muted">Tutti i parametri rilevati sono nella norma.</li>{% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Eventi clinici (7 giorni)</h2></div>
+    <ul class="list-plain">
+      {% for e in events %}<li><a href="{% url 'clinical:event_detail' e.pk %}"><strong>{{ e.get_event_type_display }}</strong> – {{ e.guest }}</a> <span class="pill {% if e.severity == 'high' or e.severity == 'critical' %}pill-danger{% else %}pill-warn{% endif %}">{{ e.get_severity_display }}</span><br><small class="muted">{{ e.occurred_at|date:"d/m H:i" }}{% if e.duration_minutes %} · {{ e.duration_minutes }} min{% endif %} · {{ e.description|truncatechars:100 }}</small></li>
+      {% empty %}<li class="muted">Nessun evento rilevante.</li>{% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Contenzioni in corso</h2></div>
+    <ul class="list-plain">
+      {% for r in restraints %}<li><a href="{% url 'clinical:restraint_update' r.pk %}"><strong>{{ r.guest }}</strong> – {{ r.get_restraint_type_display }}</a> <small class="muted">da {{ r.duration_display }}</small><br><small>Autorizzata da {{ r.authorizing_doctor_display|default:"—" }} il {{ r.authorization_date|date:"d/m/Y" }}</small></li>
+      {% empty %}<li class="muted">Nessuna contenzione in corso.</li>{% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Terapie da rivedere</h2></div>
+    <ul class="list-plain">
+      {% for t in therapies_ending %}<li><span class="pill pill-warn">fine {{ t.end_date|date:"d/m" }}</span> <a href="{{ t.get_absolute_url }}">{{ t.guest }} – {{ t.drug }} {{ t.dose_display }}</a></li>{% endfor %}
+      {% for t in therapy_alerts %}<li><span class="pill pill-danger">avvisi</span> <a href="{{ t.get_absolute_url }}">{{ t.guest }} – {{ t.drug }}</a><br><small class="muted">{{ t.conflict_acknowledged|truncatechars:140 }}</small></li>{% endfor %}
+      {% if not therapies_ending and not therapy_alerts %}<li class="muted">Nessuna terapia da rivedere.</li>{% endif %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Documenti da firmare</h2><div class="actions"><a class="btn btn-sm" href="{% url 'documents:to_sign' %}">Tutti</a></div></div>
+    <ul class="list-plain">
+      {% for p in to_sign %}<li><a href="{{ p.document.get_absolute_url }}"><strong>{{ p.document.title }}</strong></a> – {{ p.document.guest }} <small class="muted">{{ p.document.get_category_display }}</small></li>
+      {% empty %}<li class="muted">Nessun documento in attesa di firma.</li>{% endfor %}
+    </ul>
+  </div>
+
+  <div class="card span-2 table-wrap">
+    <div class="card-head"><h2>Ospiti in carico</h2></div>
+    <table>
+      <thead><tr><th>Ospite</th><th class="num">Terapie</th><th class="num">SOS</th><th>Allergie</th><th></th></tr></thead>
+      <tbody>
+      {% for g in guests %}
+        <tr><td><a href="{{ g.get_absolute_url }}"><strong>{{ g.last_name }} {{ g.first_name }}</strong></a> <small class="muted">{{ g.age }} anni</small><br>{% for t in g.tags.all %}{% tag_chip t %} {% endfor %}</td>
+          <td class="num">{{ g.therapy_count }}</td><td class="num">{{ g.sos_count }}</td>
+          <td>{% if g.allergy_count %}<span class="pill pill-danger">{{ g.allergy_count }}</span>{% else %}—{% endif %}</td>
+          <td class="num nowrap"><a class="btn btn-sm" href="{% url 'clinical:guest_therapies' g.pk %}">Terapie</a>
+            <a class="btn btn-sm btn-primary" href="{% url 'clinical:therapy_create' g.pk %}">{% icon "plus" %}Prescrivi</a></td></tr>
+      {% empty %}<tr><td colspan="5" class="empty">Nessun ospite in carico.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

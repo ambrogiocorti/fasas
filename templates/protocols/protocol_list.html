@@ -2,7 +2,7 @@
 {% block title %}Protocolli{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Protocolli automatici</h1>
-  <div class="actions"><a class="btn" href="{% url 'protocols:activations' %}">Attivazioni</a>{% if perms.protocols.add_protocol %}<a class="btn btn-primary" href="{% url 'protocols:create' %}">{% icon "plus" %}Nuovo protocollo</a>{% endif %}</div></div>
+  <div class="actions">{% if perms.protocols.view_protocolactivation %}<a class="btn" href="{% url 'protocols:activations' %}">Attivazioni</a>{% endif %}{% if perms.protocols.add_protocol %}<a class="btn btn-primary" href="{% url 'protocols:create' %}">{% icon "plus" %}Nuovo protocollo</a>{% endif %}</div></div>
 <div class="alert alert-warning">I protocolli predefiniti sono esempi: le soglie e le azioni devono essere validate dal medico o dal direttore sanitario della struttura prima dell'uso.</div>
 <div class="grid grid-2">
 {% for p in object_list %}

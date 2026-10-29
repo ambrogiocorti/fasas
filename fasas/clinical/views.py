@@ -172,9 +172,30 @@ def therapy_status(request, pk):
     return redirect(therapy.get_absolute_url())
 
 
+@permission_required("clinical.add_therapy", raise_exception=True)
+def therapy_overview(request):
+    """Terapie in corso di tutti gli ospiti: il quadro del prescrittore (medico o coordinatore)."""
+    today = timezone.localdate()
+    soon = today + datetime.timedelta(days=7)
+    guests = guests_in_care().prefetch_related("allergies")
+    q = request.GET.get("q", "").strip()
+    if q:
+        guests = guests.filter(last_name__icontains=q) | guests.filter(first_name__icontains=q)
+    therapies = Therapy.objects.filter(guest__in=guests).exclude(status=Therapy.Status.ENDED).select_related(
+        "drug", "prescriber").order_by("is_sos", "drug__name")
+    by_guest = {}
+    for therapy in therapies:
+        by_guest.setdefault(therapy.guest_id, []).append(therapy)
+    rows = [{
+        "guest": guest, "therapies": by_guest.get(guest.pk, []),
+        "ending": [t for t in by_guest.get(guest.pk, []) if t.end_date and today <= t.end_date <= soon],
+    } for guest in guests.order_by("last_name", "first_name")]
+    return render(request, "clinical/therapy_overview.html", {"rows": rows, "q": q, "today": today})
+
+
 # --- Giro farmaci e somministrazioni ----------------------------------------------------------
 
-@permission_required("clinical.view_therapyadministration", raise_exception=True)
+@permission_required("clinical.add_therapyadministration", raise_exception=True)
 def administration_board(request):
     day, shift = _parse_shift(request)
     guests = guests_in_care()

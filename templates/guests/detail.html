@@ -100,14 +100,16 @@
   </div>
 
   <div class="card">
+    {% if perms.appointments.view_appointment %}
     <div class="card-head"><h2>Prossime visite</h2><div class="actions">{% if perms.appointments.add_appointment and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'appointments:create' %}?guest={{ guest.pk }}">{% icon "plus" %}Visita</a>{% endif %}</div></div>
     <ul class="list-plain">
       {% for a in appointments %}<li><a href="{{ a.get_absolute_url }}">{{ a.title }}</a> <small class="muted">{{ a.scheduled_at|date:"D d/m H:i" }} · {{ a.location }}</small></li>
       {% empty %}<li class="muted">Nessuna visita programmata.</li>{% endfor %}
     </ul>
-    {% if emergency_contacts %}<hr><strong>Contatti in emergenza</strong>
-      <ul class="list-plain">{% for c in emergency_contacts %}<li>{{ c.name }} <small>({{ c.get_kind_display }}{% if c.relationship %}, {{ c.relationship }}{% endif %})</small><br><a href="tel:{{ c.phone }}">{% icon "phone" %} {{ c.phone }}</a></li>{% endfor %}</ul>
+    <hr>
     {% endif %}
+    <h2>Contatti in emergenza</h2>
+    <ul class="list-plain">{% for c in emergency_contacts %}<li>{{ c.name }} <small>({{ c.get_kind_display }}{% if c.relationship %}, {{ c.relationship }}{% endif %})</small><br><a href="tel:{{ c.phone }}">{% icon "phone" %} {{ c.phone }}</a></li>{% empty %}<li class="muted">Nessun contatto di emergenza indicato.</li>{% endfor %}</ul>
   </div>
 </div>
 {% endblock %}

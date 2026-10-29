@@ -7,6 +7,7 @@ from . import views
 app_name = "documents"
 
 urlpatterns = [
+    path("da-firmare/", views.to_sign, name="to_sign"),
     path("ospite/<int:guest_pk>/", views.guest_documents, name="guest_list"),
     path("ospite/<int:guest_pk>/nuovo/", views.document_create, name="create"),
     path("<int:pk>/", views.document_detail, name="detail"),

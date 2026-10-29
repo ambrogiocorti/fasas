@@ -1,6 +1,7 @@
 """Ricerca globale (sezione 23): ospiti, farmaci/terapie, eventi, documenti, protocolli, diario, appuntamenti."""
 import datetime
 
+from django.contrib.auth.decorators import permission_required
 from django.db.models import Q
 from django.shortcuts import render
 from django.urls import reverse
@@ -26,6 +27,7 @@ def _date(value):
         return None
 
 
+@permission_required("guests.view_guest", raise_exception=True)
 def search(request):
     from fasas.appointments.models import Appointment
     from fasas.clinical.models import ClinicalEvent, Therapy

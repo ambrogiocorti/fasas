@@ -81,6 +81,23 @@ def _therapy_changes(guest):
         }
 
 
+TIMELINE_PERMISSIONS = {
+    "movement": "guests.view_admissionevent",
+    "therapy": "clinical.view_therapy",
+    "event": "clinical.view_clinicalevent",
+    "restraint": "clinical.view_restraint",
+    "protocol": "protocols.view_protocolactivation",
+    "document": "documents.view_document",
+    "pai": "pai.view_pai",
+    "appointment": "appointments.view_appointment",
+    "report": "reports.view_generatedreport",
+}
+
+
+def timeline_kinds_for(user):
+    return [(code, label) for code, label in TIMELINE_KINDS if user.has_perm(TIMELINE_PERMISSIONS[code])]
+
+
 def timeline(guest, kinds=None, limit=400):
     from fasas.clinical.models import ClinicalEvent, Restraint
     from fasas.documents.models import DocumentVersion

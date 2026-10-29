@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction
 
-from .models import DEFAULT_ROLES, Notification, NotificationKind, NotificationSetting
+from .models import DEFAULT_ROLES, REQUIRED_PERMISSION, Notification, NotificationKind, NotificationSetting
 
 logger = logging.getLogger("fasas.notifications")
 
@@ -40,6 +40,9 @@ def notify(kind, title, message="", *, link="", guest=None, level=None, dedup_ke
     targets = {u.pk: u for u in recipients_for(setting, roles)}
     for user in users or []:
         targets[user.pk] = user
+    required = REQUIRED_PERMISSION.get(kind)
+    if required:
+        targets = {pk: u for pk, u in targets.items() if u.has_perm(required)}
     level = level or LEVEL_FOR_KIND.get(kind, Notification.Level.INFO)
     created = []
     for user in targets.values():

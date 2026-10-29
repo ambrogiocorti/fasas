@@ -1,0 +1,98 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Coordinamento{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Coordinamento</h1>
+    <span class="subtitle">{{ day|date:"l d F Y" }} · turno {{ shift_label|lower }} in corso · {{ guest_count }} ospiti presenti{% if absent_count %}, {{ absent_count }} assenti o ricoverati{% endif %}</span>
+  </div>
+  <div class="actions">
+    {% if perms.guests.add_guest %}<a class="btn" href="{% url 'guests:create' %}">{% icon "plus" %}Nuovo ospite</a>{% endif %}
+    {% if not checked_in %}
+      <form method="post" action="{% url 'daily:check_in' %}" class="inline-form">{% csrf_token %}<button class="btn btn-primary">{% icon "user-check" %}Prendo servizio</button></form>
+    {% else %}<span class="pill pill-ok">{% icon "check" %}In servizio</span>{% endif %}
+  </div>
+</div>
+
+<div class="grid grid-4">
+  <div class="card stat {% if protocols %}tone-danger{% endif %}">
+    <span class="label">Protocolli attivi <span class="stat-icon">{% icon "flag" %}</span></span>
+    <span class="value"><a href="{% url 'protocols:activations' %}">{{ protocols|length }}</a></span>
+    <small>{% if protocols %}da seguire{% else %}nessuno{% endif %}</small></div>
+  <div class="card stat {% if sos_pending %}tone-warn{% endif %}">
+    <span class="label">SOS da validare <span class="stat-icon">{% icon "shield-check" %}</span></span>
+    <span class="value"><a href="{% url 'clinical:sos_pending' %}">{{ sos_pending|length }}</a></span>
+    <small>validazione delle informazioni sanitarie</small></div>
+  <div class="card stat {% if serious_events %}tone-danger{% endif %}">
+    <span class="label">Eventi gravi (48 ore) <span class="stat-icon">{% icon "alert" %}</span></span>
+    <span class="value">{{ serious_events|length }}</span>
+    <small>gravi, critici o emergenze</small></div>
+  <div class="card stat {% if doses_total and doses_done == doses_total %}tone-ok{% endif %}">
+    <span class="label">Turno in corso <span class="stat-icon">{% icon "pill" %}</span></span>
+    <span class="value"><a href="{% url 'clinical:board' %}">{{ doses_done }}<span class="muted" style="font-size:1.1rem; font-weight:600">/{{ doses_total }}</span></a></span>
+    <small>farmaci · checklist {{ checklist_done }}/{{ checklist_total }}</small></div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Da validare e seguire</h2></div>
+    <ul class="list-plain">
+      {% for a in sos_pending %}<li><span class="pill pill-warn">SOS</span> <a href="{% url 'clinical:sos_pending' %}">{{ a.guest }} – {{ a.therapy.drug }}</a> <small class="muted">{{ a.occurred_at|date:"d/m H:i" }}</small><br><small>{{ a.sos_reason|truncatechars:120 }}</small></li>{% endfor %}
+      {% for row in protocols %}<li><span class="pill pill-danger">{% icon "flag" %}{{ row.pending }}/{{ row.total }}</span> <a href="{{ row.activation.get_absolute_url }}">{{ row.activation.protocol.name }} – {{ row.activation.guest }}</a><br><small class="muted">{{ row.activation.trigger_summary }}</small></li>{% endfor %}
+      {% for r in restraints %}<li><span class="pill pill-warn">{% icon "clock" %}contenzione</span> <a href="{% url 'clinical:restraint_update' r.pk %}">{{ r.guest }} – {{ r.get_restraint_type_display }}</a> <small class="muted">da {{ r.duration_display }}</small></li>{% endfor %}
+      {% if not sos_pending and not protocols and not restraints %}<li class="muted">Niente in sospeso.</li>{% endif %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Eventi gravi (48 ore)</h2></div>
+    <ul class="list-plain">
+      {% for e in serious_events %}<li><a href="{% url 'clinical:event_detail' e.pk %}"><strong>{{ e.get_event_type_display }}</strong> – {{ e.guest }}</a> <span class="pill pill-danger">{{ e.get_severity_display }}</span>{% if e.is_emergency %} <span class="pill pill-danger">emergenza</span>{% endif %}<br><small class="muted">{{ e.occurred_at|date:"d/m H:i" }} · {{ e.description|truncatechars:110 }}</small></li>
+      {% empty %}<li class="muted">Nessun evento grave.</li>{% endfor %}
+    </ul>
+  </div>
+
+  <div class="card table-wrap">
+    <div class="card-head"><h2>Stato dei turni</h2><div class="actions"><a class="btn btn-sm" href="{% url 'daily:closures' %}">Chiusure</a></div></div>
+    <table><tbody>
+      {% for r in shift_rows %}
+        <tr><td class="nowrap">{{ r.day|date:"D d/m" }}</td><td>{{ r.label }}</td>
+          <td>{% if r.current %}<span class="pill pill-info">in corso</span>{% elif r.closure and r.closure.is_closed %}{% if r.missing %}<a href="{% url 'daily:closure_detail' r.closure.pk %}"><span class="pill pill-warn">{{ r.missing }} mancanti</span></a>{% else %}<span class="pill pill-ok">{% icon "check" %}completo</span>{% endif %}{% else %}<span class="pill pill-danger">non chiuso</span>{% endif %}</td></tr>
+      {% endfor %}
+    </tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>PAI</h2></div>
+    <ul class="list-plain">
+      {% for p in pai_due %}<li><span class="pill {% if p.review_due < day %}pill-danger{% else %}pill-warn{% endif %}">{{ p.review_due|date:"d/m/Y" }}</span> <a href="{{ p.get_absolute_url }}">{{ p.guest }} – revisione PAI v{{ p.version }}</a></li>{% endfor %}
+      {% for g in without_pai %}<li><span class="pill pill-danger">senza PAI</span> <a href="{% url 'pai:guest' g.pk %}">{{ g }}</a></li>{% endfor %}
+      {% if not pai_due and not without_pai %}<li class="muted">Tutti i PAI sono in regola.</li>{% endif %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Magazzino</h2><div class="actions"><a class="btn btn-sm" href="{% url 'pharmacy:stock' %}">Apri</a></div></div>
+    {% if stock_expiring %}<div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">{{ stock_expiring }} lotti scaduti o in scadenza.</div></div>{% endif %}
+    <ul class="list-plain">{% for r in stock_low %}<li><strong>{{ r.drug }}</strong> – giacenza {{ r.total|floatformat:"-2" }} {{ r.drug.stock_unit }} <small class="muted">(soglia {{ r.drug.min_stock|floatformat:"-2" }})</small></li>{% empty %}<li class="muted">Nessun farmaco sotto soglia.</li>{% endfor %}</ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Visite oggi e domani</h2><div class="actions">{% if perms.appointments.add_appointment %}<a class="btn btn-sm" href="{% url 'appointments:create' %}">{% icon "plus" %}Visita</a>{% endif %}</div></div>
+    <ul class="list-plain">
+      {% for a in appointments %}<li><span class="pill mono">{{ a.scheduled_at|date:"D H:i" }}</span> <a href="{{ a.get_absolute_url }}">{{ a.guest }} – {{ a.title }}</a><br><small class="muted">{{ a.location }}{% if a.companion_display %} · accompagna {{ a.companion_display }}{% else %} · <span style="color:var(--warn)">accompagnatore da assegnare</span>{% endif %}</small></li>
+      {% empty %}<li class="muted">Nessuna visita.</li>{% endfor %}
+    </ul>
+  </div>
+
+  {% if therapy_alerts or documents_expiring %}
+  <div class="card span-2">
+    <div class="card-head"><h2>Da verificare</h2></div>
+    <ul class="list-plain">
+      {% for t in therapy_alerts %}<li><span class="pill pill-warn">terapia</span> <a href="{{ t.get_absolute_url }}">{{ t.guest }} – {{ t.drug }}</a> <small class="muted">inserita con avvisi di duplicato/interazione/allergia confermati</small></li>{% endfor %}
+      {% for d in documents_expiring %}<li><span class="pill {% if d.expires_on < day %}pill-danger{% else %}pill-warn{% endif %}">scade {{ d.expires_on|date:"d/m/Y" }}</span> <a href="{{ d.get_absolute_url }}">{{ d.guest }} – {{ d.title }}</a></li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

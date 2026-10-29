@@ -9,22 +9,25 @@ MANAGED_APPS = [
     "protocols", "appointments", "pai", "notifications", "reports", "backups",
 ]
 
-VIEW_CLINICAL = [
+# Consultazione della cartella: serve a chi assiste l'ospite (operatore, coordinatore, medico).
+# L'amministratore di sistema non vede i dati clinici (minimizzazione, GDPR art. 5).
+VIEW_CARE = [
     "guests.view_guest", "guests.view_clinicaltag", "guests.view_guestcontact", "guests.view_diagnosis",
     "guests.view_allergy", "guests.view_admissionevent",
     "documents.view_document", "signatures.view_signature",
-    "pharmacy.view_drug", "pharmacy.view_druginteraction", "pharmacy.view_stocklot", "pharmacy.view_stockmovement",
     "clinical.view_therapy", "clinical.view_therapyadministration", "clinical.view_parametertype",
     "clinical.view_parameterreading", "clinical.view_clinicalevent", "clinical.view_restraint",
-    "daily.view_dailyrecord", "daily.view_evacuationrecord", "daily.view_diaryentry", "daily.view_checklistcheck",
-    "daily.view_checklisttemplate", "daily.view_checklistitem", "daily.view_shiftassignment", "daily.view_shiftclosure",
-    "protocols.view_protocol", "protocols.view_protocolactivation", "protocols.view_protocolactionlog",
-    "appointments.view_appointment", "pai.view_pai", "pai.view_paigoal",
+    "daily.view_diaryentry",
+    "protocols.view_protocolactivation", "protocols.view_protocolactionlog",
+    "pai.view_pai", "pai.view_paigoal",
     "notifications.view_notification",
 ]
 
-OPERATOR = VIEW_CLINICAL + [
-    "documents.add_document",
+# Operatore (spec. §2): registrazioni giornaliere, farmaci somministrati, eventi, parametri, diario.
+# In più ciò che serve al turno: checklist, chiusura turno, azioni dei protocolli, visite da accompagnare.
+OPERATOR = VIEW_CARE + [
+    "daily.view_dailyrecord", "daily.view_evacuationrecord", "daily.view_checklistcheck",
+    "daily.view_checklisttemplate", "daily.view_checklistitem", "daily.view_shiftassignment", "daily.view_shiftclosure",
     "clinical.add_therapyadministration", "clinical.change_therapyadministration",
     "clinical.add_parameterreading", "clinical.change_parameterreading",
     "clinical.add_clinicalevent", "clinical.change_clinicalevent",
@@ -35,58 +38,69 @@ OPERATOR = VIEW_CLINICAL + [
     "daily.add_checklistcheck", "daily.change_checklistcheck", "daily.delete_checklistcheck",
     "daily.close_shift",
     "protocols.change_protocolactivation", "protocols.add_protocolactionlog",
-    "appointments.change_appointment",
+    "appointments.view_appointment", "appointments.change_appointment",
 ]
 
+# Coordinatore sanitario (spec. §2): gestisce le cartelle, modifica i protocolli sanitari, valida le
+# informazioni sanitarie, autorizza le modifiche oltre la finestra. Lavora anche in turno come l'operatore.
 COORDINATOR = OPERATOR + [
     "core.edit_after_window",
     "guests.add_guest", "guests.change_guest", "guests.archive_guest", "guests.export_guest",
     "guests.add_clinicaltag", "guests.change_clinicaltag",
     "guests.add_guestcontact", "guests.change_guestcontact", "guests.add_diagnosis", "guests.change_diagnosis",
     "guests.add_allergy", "guests.change_allergy", "guests.add_admissionevent",
-    "documents.change_document",
-    "pharmacy.add_drug", "pharmacy.change_drug", "pharmacy.add_druginteraction", "pharmacy.change_druginteraction",
-    "pharmacy.add_stocklot", "pharmacy.change_stocklot",
-    # trascrizione delle prescrizioni del medico curante (nelle comunità senza medico interno)
+    "documents.add_document", "documents.change_document",
+    "pharmacy.view_drug", "pharmacy.add_drug", "pharmacy.change_drug",
+    "pharmacy.view_druginteraction", "pharmacy.add_druginteraction", "pharmacy.change_druginteraction",
+    "pharmacy.view_stocklot", "pharmacy.add_stocklot", "pharmacy.change_stocklot", "pharmacy.view_stockmovement",
+    # trascrizione delle prescrizioni del medico curante (il medico di struttura è opzionale)
     "clinical.add_therapy", "clinical.change_therapy", "clinical.validate_sos",
     "clinical.delete_therapyadministration", "clinical.delete_parameterreading", "clinical.delete_clinicalevent",
     "clinical.delete_restraint", "clinical.add_parametertype", "clinical.change_parametertype",
     "daily.delete_dailyrecord", "daily.delete_evacuationrecord", "daily.delete_diaryentry",
     "daily.add_shiftassignment", "daily.change_shiftassignment",
     "daily.add_checklisttemplate", "daily.change_checklisttemplate", "daily.add_checklistitem", "daily.change_checklistitem",
-    "protocols.add_protocol", "protocols.change_protocol",
+    "protocols.view_protocol", "protocols.add_protocol", "protocols.change_protocol",
     "appointments.add_appointment",
     "pai.add_pai", "pai.change_pai", "pai.approve_pai", "pai.add_paigoal", "pai.change_paigoal", "pai.delete_paigoal",
     "reports.view_generatedreport", "reports.add_generatedreport",
     "reports.view_reportschedule", "reports.add_reportschedule", "reports.change_reportschedule",
 ]
 
-DOCTOR = VIEW_CLINICAL + [
+# Medico (spec. §2): modifica le terapie, prescrive i farmaci, firma digitalmente i documenti sanitari.
+# Consulta la cartella clinica, valida i farmaci SOS e autorizza le contenzioni (spec. §4);
+# registra gli interventi sanitari. Non gestisce turni, magazzino, registro giornaliero o report.
+DOCTOR = VIEW_CARE + [
     "core.edit_after_window",
     "guests.add_diagnosis", "guests.change_diagnosis", "guests.add_allergy", "guests.change_allergy",
     "documents.add_document",
-    "pharmacy.add_drug", "pharmacy.change_drug", "pharmacy.add_druginteraction", "pharmacy.change_druginteraction",
+    "pharmacy.view_drug", "pharmacy.add_drug", "pharmacy.change_drug",
+    "pharmacy.view_druginteraction", "pharmacy.add_druginteraction", "pharmacy.change_druginteraction",
     "clinical.add_therapy", "clinical.change_therapy", "clinical.validate_sos",
-    "clinical.add_parameterreading", "clinical.add_clinicalevent", "clinical.change_clinicalevent",
-    "clinical.add_restraint", "clinical.change_restraint",
-    "daily.add_diaryentry",
-    "signatures.sign_document", "signatures.add_signingcredential", "signatures.change_signingcredential",
-    "pai.approve_pai", "pai.change_paigoal",
-    "protocols.change_protocolactivation", "protocols.add_protocolactionlog",
-    "reports.view_generatedreport", "reports.add_generatedreport",
+    "clinical.add_clinicalevent", "clinical.change_restraint",
+    "signatures.sign_document", "signatures.view_signingcredential",
+    "signatures.add_signingcredential", "signatures.change_signingcredential",
 ]
 
-# L'amministratore gestisce il sistema: utenti, configurazione, protocolli, notifiche, audit, backup.
-# Non prescrive, non firma e non valida atti clinici.
-ADMIN_EXCLUDED = {
-    "clinical.add_therapy", "clinical.change_therapy", "clinical.validate_sos", "signatures.sign_document",
-    "pai.approve_pai",
-}
+# Amministratore (spec. §2): utenti, configurazione, protocolli, notifiche, audit log, backup.
+# Non consulta le cartelle cliniche e non compie atti clinici.
+ADMIN = [
+    "accounts.view_user", "accounts.add_user", "accounts.change_user", "accounts.view_accesslog",
+    "accounts.view_userpermissionoverride", "accounts.add_userpermissionoverride",
+    "accounts.change_userpermissionoverride", "accounts.delete_userpermissionoverride",
+    "audit.view_auditlog",
+    "core.view_community", "core.change_community", "core.view_systemconfig", "core.change_systemconfig",
+    "protocols.view_protocol", "protocols.add_protocol", "protocols.change_protocol",
+    "notifications.view_notification", "notifications.view_notificationsetting", "notifications.change_notificationsetting",
+    "backups.view_backuprecord", "backups.manage_backup",
+    "reports.view_reportschedule", "reports.add_reportschedule", "reports.change_reportschedule",
+]
 
 ROLE_PERMISSIONS = {
     Role.OPERATOR: OPERATOR,
     Role.COORDINATOR: COORDINATOR,
     Role.DOCTOR: DOCTOR,
+    Role.ADMIN: ADMIN,
 }
 
 
@@ -108,11 +122,6 @@ def setup_role_groups(stdout=None):
     for role, names in ROLE_PERMISSIONS.items():
         group, _ = Group.objects.get_or_create(name=Role(role).label)
         group.permissions.set(perm_objects(sorted(set(names))))
-    admin_group, _ = Group.objects.get_or_create(name=Role.ADMIN.label)
-    admin_perms = Permission.objects.filter(content_type__app_label__in=MANAGED_APPS + ["authtoken"])
-    admin_group.permissions.set([
-        p for p in admin_perms if f"{p.content_type.app_label}.{p.codename}" not in ADMIN_EXCLUDED
-    ])
 
     from .models import User
 

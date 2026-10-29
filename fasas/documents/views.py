@@ -117,3 +117,34 @@ def version_download(request, pk):
 
 def version_view(request, pk):
     return _file_response(request, get_object_or_404(DocumentVersion, pk=pk), inline=True)
+
+
+SIGNABLE_CATEGORIES = [
+    Document.Category.PAI, Document.Category.PRESCRIPTION, Document.Category.MEDICAL_REPORT,
+    Document.Category.CERTIFICATE, Document.Category.RESTRAINT, Document.Category.CONSENT,
+]
+
+
+def documents_to_sign(limit=None):
+    """Documenti sanitari in PDF la cui versione corrente non è ancora firmata."""
+    pending = []
+    documents = (Document.objects.filter(category__in=SIGNABLE_CATEGORIES).exclude(guest__status="archived")
+                 .select_related("guest").prefetch_related("versions").order_by("-updated_at"))
+    for document in documents:
+        versions = list(document.versions.all())
+        current = versions[0] if versions else None
+        if current and current.is_pdf and not current.is_signed:
+            pending.append({"document": document, "version": current})
+            if limit and len(pending) >= limit:
+                break
+    return pending
+
+
+@permission_required("signatures.sign_document", raise_exception=True)
+def to_sign(request):
+    from fasas.signatures.models import SigningCredential
+
+    return render(request, "documents/to_sign.html", {
+        "pending": documents_to_sign(),
+        "credential": SigningCredential.objects.filter(user=request.user).first(),
+    })
