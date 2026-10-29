@@ -8,6 +8,7 @@ Stato al [29/10/2026]. ✅ fatto · 🟡 da decidere o da completare fuori dal s
 |---|---|---|
 | ✅ | Importazione dal FASAS cartaceo | modello Excel con anteprima degli errori, scansioni abbinate all'ospite – [IMPORTAZIONE.md](IMPORTAZIONE.md) |
 | ✅ | Firma digitale remota qualificata | API CSC, PIN + OTP, PAdES con marca temporale – [FIRMA_DIGITALE.md](FIRMA_DIGITALE.md). Serve il contratto con un prestatore e una prova nella sua sandbox |
+| 🟡 | Firma elettronica avanzata con CIE (FASAS Sign) | server, interfaccia e FASAS Signer per computer pronti e provati con PKCS#11 reale (SoftHSM) – [FIRMA_CIE.md](FIRMA_CIE.md). **Da collaudare con una CIE reale** su Windows, macOS e Linux; CA della CIE da configurare; uso della FEA da validare con il consulente legale/DPO |
 | ✅ | Lavoro senza rete e foglio di emergenza | [NOTIFICHE_E_SENZA_RETE.md](NOTIFICHE_E_SENZA_RETE.md) |
 | 🟡 | Backup fuori sede | da scegliere tra le opzioni proposte (consigliata: object storage UE con blocco delle modifiche); poi integrazione e prova di ripristino |
 | ⬜ | Autenticazione a due fattori | obbligatoria per amministratore, coordinatore, medico e accessi da fuori rete |
@@ -31,6 +32,9 @@ Stato al [29/10/2026]. ✅ fatto · 🟡 da decidere o da completare fuori dal s
 | ⬜ | Pacchetto «pronto per l'ispezione» | report unico per la vigilanza ATS |
 | ⬜ | Conservazione a norma | invio dei fascicoli chiusi a un conservatore accreditato |
 | ⬜ | Firma di più documenti con un'unica autorizzazione | firma massiva per i medici |
+| ⬜ | FASAS Signer per Android | prototipo: protocollo collaudato contro il server, NFC con libreria IAS di PagoPA/IPZS; da compilare con Android Studio e collaudare con una CIE reale |
+| ⬜ | FASAS Signer per iPhone | studio e prototipo Core NFC (CieSDK di PagoPA + patch per la firma); serve un Mac, l'Apple Developer Program e il collaudo con una CIE reale |
+| ⬜ | Pacchetti installabili del FASAS Signer | eseguibili firmati per Windows (Authenticode) e macOS (notarizzazione Apple) |
 
 ## Fase 3 – Futuro
 

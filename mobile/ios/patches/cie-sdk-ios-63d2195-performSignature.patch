@@ -1,0 +1,61 @@
+diff --git a/Sources/CieDigitalId.swift b/Sources/CieDigitalId.swift
+index 2976adf..e55b7d5 100644
+--- a/Sources/CieDigitalId.swift
++++ b/Sources/CieDigitalId.swift
+@@ -147,6 +147,25 @@ public class CieDigitalId : @unchecked Sendable {
+     
+     
+     
++    /**
++     * FASAS Sign: firma con la CIE del DigestInfo SHA-256 preparato dal server.
++     *
++     * - Parameters:
++     *   - pin: PIN completo della CIE (8 cifre)
++     *   - prepare: riceve il certificato (DER) letto dalla carta e restituisce il DigestInfo da firmare
++     *   - onEvent: avanzamento (facoltativo)
++     *
++     * - Returns: valore di firma RSA PKCS#1 v1.5
++     */
++    public func performSignature(withPin pin: String, prepare: @escaping @Sendable ([UInt8]) async throws -> [UInt8],
++                                 _ onEvent: CieDigitalIdOnEvent? = nil) async throws -> [UInt8] {
++        return try await NfcDigitalIdPerformer(cieDigitalId: self, onEvent: onEvent, performer: {
++            nfcDigitalId in
++            return try await nfcDigitalId.performSignature(withPin: pin, prepare: prepare)
++        }).perform(pollingOptions: [.iso14443])
++    }
++
++
+     /**
+      * Perform ATR reading
+      * This method is used to perform ATR reading of the CIE
+diff --git a/Sources/NfcDigitalId/NfcDigitalId.swift b/Sources/NfcDigitalId/NfcDigitalId.swift
+index 86d185d..df17e9a 100644
+--- a/Sources/NfcDigitalId/NfcDigitalId.swift
++++ b/Sources/NfcDigitalId/NfcDigitalId.swift
+@@ -129,6 +129,26 @@ class NfcDigitalId {
+       
+     }
+     
++    /**
++     * FASAS Sign: in un'unica sessione NFC apre il canale sicuro, verifica il PIN, legge il certificato,
++     * lo passa a `prepare` (che lo invia al server e restituisce il DigestInfo da firmare) e firma il DigestInfo
++     * con la chiave della carta (MSE SET + INTERNAL AUTHENTICATE, la carta applica il padding PKCS#1 v1.5).
++     */
++    func performSignature(withPin pin: String, prepare: ([UInt8]) async throws -> [UInt8]) async throws -> [UInt8] {
++        eventsNumber = 0
++        totalEvents = 28
++
++        try await performNfcAuthentication(withPin: pin)
++
++        let certificate = Array(try await readCertificate().removeTrailingZeros())
++
++        let digestInfo = try await prepare(certificate)
++
++        return try await requireSecureMessaging {
++            return try await selectKeyAndSign(algorithm: .clientServerRSAPKCS1, keyId: .sign, data: digestInfo)
++        }
++    }
++
+     private func performNfcAuthentication(withPin pin: String) async throws {
+         
+         logger.logDelimiter("performNfcAuthentication", prominent: true)

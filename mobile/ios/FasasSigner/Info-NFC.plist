@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Voci da aggiungere all'Info.plist dell'app. L'ordine degli identificativi è quello indicato da PagoPA. -->
+<plist version="1.0">
+<dict>
+    <key>NFCReaderUsageDescription</key>
+    <string>Serve per firmare i documenti del FASAS con la tua Carta d'Identità Elettronica.</string>
+    <key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
+    <array>
+        <string>A0000002471001</string>
+        <string>A0000000308000000009816001</string>
+        <string>A00000000039</string>
+        <string>A0000002472001</string>
+        <string>00000000000000</string>
+    </array>
+</dict>
+</plist>

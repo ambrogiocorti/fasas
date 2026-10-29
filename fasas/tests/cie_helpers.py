@@ -67,8 +67,8 @@ class TestPKI:
 
     def card(self, fiscal_code, given="Marta", surname="Medico", *, days=(-1, 365), key=None, key_usage=None):
         key = key or _key()
-        subject = _name(c="IT", given=given, surname=surname, serial=f"TINIT-{fiscal_code}",
-                        cn=f"{fiscal_code}/1234567890123456.abcdefghijk")
+        # Come la CIE secondo gli SDK di PagoPA: codice fiscale nel CN, numero del documento nel serialNumber
+        subject = _name(c="IT", given=given, surname=surname, serial="CA00000AA", cn=fiscal_code)
         cert = _build(subject, self.inter_name, key.public_key(), self.inter_key, days=days, key_usage=key_usage)
         return TestCard(key, cert)
 

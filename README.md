@@ -22,6 +22,7 @@ tracciata in ogni modifica, cifrata a riposo e organizzata attorno al lavoro rea
 | **Visite** | appuntamenti con accompagnatore, esito e referto; promemoria «visita domani» e «visita oggi» |
 | **Documenti** | carta d'identità, tessera sanitaria, certificati, consensi, relazioni, PAI: cifrati, versionati, con limite di dimensione e registro degli accessi |
 | **Firma digitale** | firma remota qualificata del medico tramite API CSC del prestatore (PIN + OTP da app o SMS) o certificato PKCS#12; PAdES B-B/B-T/B-LT/B-LTA con marca temporale; verifica delle firme – guida in [docs/FIRMA_DIGITALE.md](docs/FIRMA_DIGITALE.md) |
+| **Firma con CIE** | firma elettronica avanzata con la Carta d'Identità Elettronica (FASAS Signer per computer con lettore NFC e Software CIE), anteprima del PDF, stati della firma, verifica e archiviazione – guida in [docs/FIRMA_CIE.md](docs/FIRMA_CIE.md) |
 | **Report** | registro giornaliero, farmaci, eventi, parametri, protocolli in PDF ed Excel, su richiesta o programmati (giornalieri, settimanali, mensili), conservati 1–5 anni |
 | **Esportazione cartella** | PDF unico con tutta la cartella e gli allegati, per il trasferimento dell'ospite |
 | **Sicurezza e tracciabilità** | ruoli e permessi granulari per utente, audit log non cancellabile con catena di hash, blocco delle modifiche (24 h / motivazione / solo coordinatore), chiusura del turno, cartelle archiviate in sola lettura, log accessi con IP e dispositivo, blocco dopo tentativi falliti, disconnessione per inattività, restrizione per rete |
@@ -135,7 +136,9 @@ fasas/protocols    regole e motore dei protocolli automatici
 fasas/appointments visite e promemoria
 fasas/pai          Piano Assistenziale Individuale versionato
 fasas/documents    documenti cifrati e versionati
-fasas/signatures   firma digitale PAdES e verifica
+fasas/signatures   firma digitale PAdES, firma con CIE (FASAS Sign) e verifica
+signer/            FASAS Signer Desktop (firma con CIE via PKCS#11)
+mobile/            prototipi FASAS Signer per Android e iOS (non collaudati con una CIE)
 fasas/notifications notifiche e impostazioni per ruolo
 fasas/reports      report PDF/Excel, programmazione, esportazione cartella
 fasas/backups      backup cifrati, verifica, ripristino

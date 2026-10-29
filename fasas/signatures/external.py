@@ -50,11 +50,32 @@ def unb64(text, what="dato") -> bytes:
 
 # --- Certificati -------------------------------------------------------------------------------------------
 
+def strip_der_padding(der: bytes) -> bytes:
+    """
+    Il file del certificato sul chip della CIE è più lungo del certificato e termina con zeri di riempimento
+    (gli SDK di PagoPA li tolgono con removeTrailingZeros): si tolgono solo zeri dopo la struttura DER.
+    """
+    if len(der) < 4 or der[0] != 0x30:
+        return der
+    first = der[1]
+    if first < 0x80:
+        end = 2 + first
+    else:
+        count = first & 0x7F
+        if count == 0 or count > 4 or len(der) < 2 + count:
+            return der
+        end = 2 + count + int.from_bytes(der[2:2 + count], "big")
+    if end < len(der) and not any(der[end:]):
+        return der[:end]
+    return der
+
+
 def load_certificate(der: bytes):
     """Certificato X.509 in DER (asn1crypto, come richiesto da pyHanko)."""
     from asn1crypto import x509
     from cryptography import x509 as cx509
 
+    der = strip_der_padding(der)
     try:
         cx509.load_der_x509_certificate(der)  # parsing completo e rigoroso: un DER troncato o alterato fallisce qui
         return x509.Certificate.load(der)
@@ -62,13 +83,19 @@ def load_certificate(der: bytes):
         raise SignatureError("Certificato non leggibile.", "cert_invalid") from exc
 
 
+CF_ATTRIBUTES = ("common_name", "serial_number")
+
+
 def fiscal_codes_in(cert) -> set:
-    """Codici fiscali presenti nel soggetto del certificato (es. serialNumber «TINIT-…» o CN «CF/…»)."""
+    """
+    Codici fiscali nel soggetto del certificato. Nella CIE il codice fiscale è nel CN (così lo leggono gli SDK
+    di PagoPA); nei certificati di firma dei prestatori è nel serialNumber («TINIT-…»). Si guardano solo questi due.
+    """
     found = set()
     for rdn in cert.subject.chosen:
         for attr in rdn:
             value = attr["value"].native
-            if isinstance(value, str):
+            if attr["type"].native in CF_ATTRIBUTES and isinstance(value, str):
                 found.update(CF_RE.findall(value.upper()))
     return found
 

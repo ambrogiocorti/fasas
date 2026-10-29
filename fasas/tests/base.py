@@ -48,7 +48,9 @@ class FasasTestCase(TestCase):
                 "admission_date": timezone.localdate() - datetime.timedelta(days=10)}
         data.update(extra)
         guest = Guest.objects.create(community=Community.default(), fiscal_code=fiscal_code, **data)
-        guest.created_at = timezone.now() - datetime.timedelta(days=10)
+        # Mezzogiorno del giorno d'ingresso: «adesso meno 10 giorni» può cadere in un altro giorno locale
+        # quando nel frattempo è cambiata l'ora legale
+        guest.created_at = timezone.make_aware(datetime.datetime.combine(data["admission_date"], datetime.time(12)))
         guest.save()
         return guest
 

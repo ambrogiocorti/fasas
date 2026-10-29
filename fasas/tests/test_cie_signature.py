@@ -347,6 +347,26 @@ class CIESignatureTests(FasasTestCase):
         self.assertContains(self.client.get(reverse("signatures:credential")), "ACS ACR1252")
 
 
+class CertificateParsingTests(FasasTestCase):
+    def test_fiscal_code_sources_and_chip_padding(self):
+        from asn1crypto import x509 as ax509
+        from cryptography.hazmat.primitives.serialization import Encoding
+
+        from fasas.signatures import external
+        from fasas.tests.cie_helpers import _build, _key, _name
+
+        der = PKI.card(DOCTOR_CF).cert.public_bytes(Encoding.DER)
+        self.assertEqual(external.fiscal_codes_in(external.load_certificate(der + bytes(300))), {DOCTOR_CF})
+        with self.assertRaises(SignatureError):
+            external.load_certificate(der + b"\x01")  # dati estranei (non zeri) dopo il certificato
+        key = _key()
+        qualified = _build(_name(cn="Laura Bianchi", serial=f"TINIT-{DOCTOR_CF}"), _name(cn="CA"), key.public_key(), key)
+        self.assertEqual(external.fiscal_codes_in(ax509.Certificate.load(qualified.public_bytes(Encoding.DER))),
+                         {DOCTOR_CF})
+        elsewhere = _build(_name(cn="Laura Bianchi", o=DOCTOR_CF), _name(cn="CA"), key.public_key(), key)
+        self.assertEqual(external.fiscal_codes_in(ax509.Certificate.load(elsewhere.public_bytes(Encoding.DER))), set())
+
+
 class LegalLevelTests(FasasTestCase):
     def test_personal_certificate_is_never_qualified(self):
         from fasas.signatures.services import register_pkcs12, sign_version

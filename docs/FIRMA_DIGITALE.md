@@ -10,10 +10,14 @@ l'originale resta archiviato, e la firma è registrata nell'audit log.
 | Strumento | Valore legale | Quando usarlo |
 |---|---|---|
 | **Firma remota qualificata** (consigliata) | Firma elettronica qualificata (FEQ): equivale alla firma autografa (art. 25 Reg. UE 910/2014 eIDAS, art. 24 CAD) | Il medico ha un contratto di firma remota con un prestatore qualificato (QTSP) e firma con PIN + OTP dall'app o via SMS |
-| Certificato qualificato esportato (.p12) | FEQ, se il certificato è qualificato e il prestatore ne consente l'esportazione | Caso raro: i certificati qualificati di solito non sono esportabili |
-| Certificato non qualificato (.p12) | Firma elettronica avanzata o semplice | Prove, uso interno |
+| **Firma con CIE** | Firma elettronica avanzata (FEA), mai qualificata | Il medico o il coordinatore firma con la propria CIE su un computer con lettore NFC e FASAS Signer – guida in [FIRMA_CIE.md](FIRMA_CIE.md) |
+| Certificato personale in file (.p12) | Firma elettronica **non qualificata**: una chiave in un file non è in un dispositivo qualificato, anche se il certificato è di un prestatore | Prove, uso interno |
+| Approvazioni interne (SOS, chiusura turno, PAI) | Non sono firme elettroniche avanzate né qualificate: tracciabilità nell'audit | Sempre attive |
 
-Per i documenti sanitari che richiedono la firma del medico serve in pratica la **firma remota qualificata**.
+Il FASAS registra per ogni firma il **valore giuridico** (`legal_level`): «qualificata» solo per la firma remota
+con certificato che dichiara QcCompliance e QcSSCD e catena verificata con le CA configurate dall'amministratore;
+altrimenti «non qualificata». Per i documenti sanitari che richiedono la firma del medico serve in pratica la
+**firma remota qualificata**; dove basta una firma elettronica avanzata si può usare la **CIE**.
 
 ## Come funziona la firma remota
 
