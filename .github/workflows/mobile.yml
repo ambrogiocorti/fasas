@@ -35,3 +35,21 @@ jobs:
           name: fasas-signer-android-prova
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+
+  ios:
+    # Verifica che l'app per iPhone compili (senza firma: per installarla serve un account Apple Developer)
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: mobile/ios
+    steps:
+      - uses: actions/checkout@v4
+      - name: XcodeGen
+        run: brew install xcodegen
+      - name: CieSDK (PagoPA, licenza MIT) con la patch per la firma e progetto Xcode
+        run: ./scripts/prepare.sh
+      - name: Compilazione per iPhone (senza firma)
+        run: >
+          xcodebuild -project FasasSigner.xcodeproj -scheme FasasSigner -configuration Debug
+          -sdk iphoneos -destination "generic/platform=iOS"
+          CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -quiet build

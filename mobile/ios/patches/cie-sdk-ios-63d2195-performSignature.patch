@@ -29,10 +29,10 @@ index 2976adf..e55b7d5 100644
       * Perform ATR reading
       * This method is used to perform ATR reading of the CIE
 diff --git a/Sources/NfcDigitalId/NfcDigitalId.swift b/Sources/NfcDigitalId/NfcDigitalId.swift
-index 86d185d..df17e9a 100644
+index 86d185d..77ef2b1 100644
 --- a/Sources/NfcDigitalId/NfcDigitalId.swift
 +++ b/Sources/NfcDigitalId/NfcDigitalId.swift
-@@ -129,6 +129,26 @@ class NfcDigitalId {
+@@ -129,6 +129,28 @@ class NfcDigitalId {
        
      }
      
@@ -47,7 +47,9 @@ index 86d185d..df17e9a 100644
 +
 +        try await performNfcAuthentication(withPin: pin)
 +
-+        let certificate = Array(try await readCertificate().removeTrailingZeros())
++        // Il file sul chip termina con zeri di riempimento: li toglie il FASAS leggendo la lunghezza DER
++        // (removeTrailingZeros toglierebbe anche un eventuale ultimo byte 0x00 del certificato)
++        let certificate = try await readCertificate()
 +
 +        let digestInfo = try await prepare(certificate)
 +
