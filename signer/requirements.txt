@@ -1,4 +1,4 @@
 # FASAS Signer Desktop (Windows, macOS, Linux). Richiede anche il Software CIE del Ministero dell'Interno.
 python-pkcs11>=0.7,<0.11
-certifi>=2024.2.2
+certifi>=2026.10.23
 cryptography>=42  # diagnostica del certificato e carta di prova
