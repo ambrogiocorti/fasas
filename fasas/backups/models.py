@@ -28,6 +28,10 @@ class BackupRecord(models.Model):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
                                    related_name="+")
     deleted_at = models.DateTimeField("eliminato per conservazione il", null=True, blank=True)
+    offsite_key = models.CharField("copia fuori sede", max_length=500, blank=True)
+    offsite_at = models.DateTimeField("copiato fuori sede il", null=True, blank=True)
+    offsite_locked_until = models.DateTimeField("bloccato fino al", null=True, blank=True)
+    offsite_error = models.TextField("errore copia fuori sede", blank=True)
 
     class Meta:
         verbose_name = "backup"
@@ -41,3 +45,32 @@ class BackupRecord(models.Model):
     @property
     def path(self):
         return settings.FASAS_BACKUP_DIR / self.filename if self.filename else None
+
+
+class RestoreTest(models.Model):
+    """Verbale di una prova di ripristino (consigliata ogni tre mesi): il backup si riapre davvero?"""
+
+    class Result(models.TextChoices):
+        OK = "ok", "Riuscita"
+        PARTIAL = "partial", "Parziale"
+        FAILED = "failed", "Fallita"
+
+    created_at = models.DateTimeField("eseguita il", default=timezone.now, db_index=True)
+    backup_name = models.CharField("backup provato", max_length=255, blank=True)
+    backup_created_at = models.CharField("data del backup", max_length=40, blank=True)
+    source = models.CharField("origine", max_length=20, blank=True, help_text="fuori sede o locale")
+    result = models.CharField("esito", max_length=10, choices=Result.choices)
+    steps = models.JSONField("passaggi", default=list)
+    counts = models.JSONField("record ripristinati", default=dict, blank=True)
+    duration_seconds = models.PositiveIntegerField("durata (s)", default=0)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                                   related_name="+")
+
+    class Meta:
+        verbose_name = "prova di ripristino"
+        verbose_name_plural = "prove di ripristino"
+        ordering = ["-created_at"]
+        default_permissions = ("view",)
+
+    def __str__(self):
+        return f"Prova di ripristino {self.created_at:%d/%m/%Y} – {self.get_result_display()}"

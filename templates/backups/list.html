@@ -2,19 +2,35 @@
 {% block title %}Backup{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Backup</h1>
-  <div class="actions"><form method="post" action="{% url 'backups:run' %}" class="inline-form">{% csrf_token %}<button class="btn btn-primary" data-confirm="Avviare ora un backup completo cifrato?">Esegui backup ora</button></form></div></div>
+  <div class="actions"><form method="post" action="{% url 'backups:restore_test_run' %}" class="inline-form">{% csrf_token %}<button class="btn" data-confirm="Provare il ripristino dell'ultimo backup in un database separato? Il database in uso non viene toccato.">Prova di ripristino</button></form> <form method="post" action="{% url 'backups:run' %}" class="inline-form">{% csrf_token %}<button class="btn btn-primary" data-confirm="Avviare ora un backup completo cifrato?">Esegui backup ora</button></form></div></div>
 <p class="muted">Backup automatico giornaliero cifrato (AES-256-GCM) di database e file, con verifica di integrità. I file scaricati restano cifrati: per aprirli serve la chiave di backup custodita fuori dal server. Il ripristino si esegue da riga di comando (<span class="mono">manage.py backup_restore</span>).</p>
+{% if offsite %}<div class="alert alert-info">{% icon "shield-check" %}<div class="alert-body">Copia fuori sede attiva: ogni backup verificato viene caricato sull'object storage con blocco delle modifiche per {{ lock_days }} giorni (nemmeno chi ha le credenziali può cancellarlo prima).</div></div>
+{% else %}<div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Nessuna copia fuori sede: i backup restano su questo server. Configurare un object storage in UE con blocco delle modifiche (<span class="mono">FASAS_OFFSITE_*</span>, vedi docs/BACKUP.md).</div></div>{% endif %}
 <div class="card table-wrap"><table>
-  <thead><tr><th>Data</th><th>Tipo</th><th>Stato</th><th>File</th><th class="num">Dimensione</th><th>Verifica</th><th></th></tr></thead>
+  <thead><tr><th>Data</th><th>Tipo</th><th>Stato</th><th>File</th><th class="num">Dimensione</th><th>Verifica</th><th>Fuori sede</th><th></th></tr></thead>
   <tbody>{% for b in backups %}
     <tr><td class="nowrap">{{ b.created_at|date:"d/m/Y H:i" }}</td><td>{{ b.get_kind_display }}{% if b.created_by %}<br><small>{{ b.created_by }}</small>{% endif %}</td>
       <td><span class="pill {% if b.status == 'ok' %}pill-ok{% elif b.status == 'failed' %}pill-danger{% endif %}">{{ b.get_status_display }}</span>{% if b.deleted_at %}<br><small class="muted">eliminato il {{ b.deleted_at|date:"d/m/Y" }}</small>{% endif %}{% if b.error %}<br><small style="color:var(--danger)">{{ b.error|truncatechars:160 }}</small>{% endif %}</td>
       <td class="mono">{{ b.filename }}<br><small class="muted" title="{{ b.sha256 }}">{{ b.sha256|truncatechars:20 }}</small></td>
       <td class="num">{{ b.size|filesizeformat }}</td>
       <td>{% if b.verify_ok %}<span class="pill pill-ok">integro</span>{% elif b.verify_ok is False %}<span class="pill pill-danger">KO</span>{% else %}—{% endif %}<br><small>{{ b.verified_at|date:"d/m H:i" }}</small></td>
+      <td>{% if b.offsite_at %}<span class="pill pill-ok">copiato</span><br><small class="muted">bloccato fino al {{ b.offsite_locked_until|date:"d/m/Y"|default:"—" }}</small>{% elif b.offsite_error %}<span class="pill pill-danger">non riuscito</span><br><small style="color:var(--danger)">{{ b.offsite_error|truncatechars:80 }}</small>{% else %}—{% endif %}</td>
       <td class="num nowrap">{% if b.status == 'ok' and not b.deleted_at %}
         <form method="post" action="{% url 'backups:verify' b.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm">Verifica</button></form>
         <a class="btn btn-sm" href="{% url 'backups:download' b.pk %}">{% icon "download" %}Scarica</a>{% endif %}</td></tr>
-  {% empty %}<tr><td colspan="7" class="empty">Nessun backup eseguito.</td></tr>{% endfor %}</tbody>
+  {% empty %}<tr><td colspan="8" class="empty">Nessun backup eseguito.</td></tr>{% endfor %}</tbody>
 </table></div>
+
+<div class="card table-wrap">
+  <div class="card-head"><h2>Prove di ripristino</h2></div>
+  <p class="muted">Da fare almeno ogni tre mesi (il job «restore_test» la esegue il primo giorno di gennaio, aprile, luglio e ottobre): l'ultimo backup viene riaperto in un database separato e l'audit log ripristinato viene verificato. Ogni prova lascia un verbale.</p>
+  <table>
+    <thead><tr><th>Data</th><th>Backup provato</th><th>Origine</th><th>Esito</th><th class="num">Durata</th><th></th></tr></thead>
+    <tbody>{% for t in restore_tests %}
+      <tr><td>{{ t.created_at|date:"d/m/Y H:i" }}{% if t.created_by %}<br><small>{{ t.created_by }}</small>{% endif %}</td><td class="mono">{{ t.backup_name|default:"—" }}</td><td>{{ t.source|default:"—" }}</td>
+        <td><span class="pill {% if t.result == 'ok' %}pill-ok{% elif t.result == 'partial' %}pill-warn{% else %}pill-danger{% endif %}">{{ t.get_result_display }}</span></td>
+        <td class="num">{{ t.duration_seconds }} s</td><td class="num"><a class="btn btn-sm" href="{% url 'backups:restore_test' t.pk %}">Verbale</a></td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">Nessuna prova di ripristino eseguita.</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
 {% endblock %}

@@ -21,6 +21,9 @@ class ImmutableRecordError(Exception):
 
 
 AUDIT_CHAIN_LOCK = 727274
+# Versione del calcolo dell'impronta. 2: il tipo di oggetto entra come «app.modello» invece che come numero
+# interno del database, che può cambiare ripristinando un backup in un database nuovo.
+HASH_VERSION = 2
 
 
 def lock_audit_chain():
@@ -78,6 +81,7 @@ class AuditLog(models.Model):
     source = models.CharField("origine", max_length=20, blank=True)
     prev_hash = models.CharField(max_length=64, blank=True)
     hash = models.CharField(max_length=64, unique=True)
+    hash_version = models.PositiveSmallIntegerField(default=HASH_VERSION)
 
     objects = AppendOnlyQuerySet.as_manager()
 
@@ -104,7 +108,13 @@ class AuditLog(models.Model):
             "changes": self.changes,
             "reason": self.reason,
             "ip": self.ip_address,
-        }
+        } | ({"v": self.hash_version, "ct": self._content_type_label()} if self.hash_version >= 2 else {})
+
+    def _content_type_label(self):
+        if not self.content_type_id:
+            return None
+        content_type = ContentType.objects.get_for_id(self.content_type_id)
+        return f"{content_type.app_label}.{content_type.model}"
 
     def compute_hash(self):
         data = json.dumps(self.payload(), sort_keys=True, ensure_ascii=False, default=str)
@@ -117,6 +127,7 @@ class AuditLog(models.Model):
             lock_audit_chain()
             last = AuditLog.objects.order_by("-id").values_list("hash", flat=True).first()
             self.prev_hash = last or ""
+            self.hash_version = HASH_VERSION
             if self.timestamp is None:
                 self.timestamp = timezone.now()
             self.hash = self.compute_hash()

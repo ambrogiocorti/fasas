@@ -1,0 +1,4 @@
+# Strumenti per sviluppo e test (non servono in produzione)
+-r requirements.txt
+moto[s3]>=5.0  # object storage S3 simulato nei test del backup fuori sede
+ruff>=0.6

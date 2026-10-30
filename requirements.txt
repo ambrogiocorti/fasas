@@ -12,6 +12,7 @@ pyHanko>=0.25
 aiohttp>=3.9  # firma remota (API CSC)
 pywebpush>=2.0  # notifiche push (Web Push con chiavi VAPID)
 segno>=1.6  # QR code per attivare la verifica in due passaggi
+boto3>=1.34  # copia dei backup fuori sede su object storage compatibile S3 (con Object Lock)
 celery[redis]>=5.4
 gunicorn>=22
 # Opzionale: storage S3 per i file cifrati

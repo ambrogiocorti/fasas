@@ -95,6 +95,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "config.urls"
+SERIALIZATION_MODULES = {"fasasjson": "fasas.core.exactjson"}  # backup JSON con orari esatti (microsecondi)
 
 TEMPLATES = [
     {
@@ -195,6 +196,19 @@ FASAS_ENCRYPTION_KEYS = env_list("FASAS_ENCRYPTION_KEYS")
 # Chiave AES-256 dei backup (base64 url-safe, 32 byte). Va conservata fuori dal server.
 FASAS_BACKUP_KEY = os.environ.get("FASAS_BACKUP_KEY", "")
 FASAS_BACKUP_DIR = Path(os.environ.get("FASAS_BACKUP_DIR", BASE_DIR / "backups"))
+# Copia fuori sede su object storage compatibile S3 in UE, con blocco delle modifiche (docs/BACKUP.md)
+FASAS_OFFSITE_ENDPOINT = os.environ.get("FASAS_OFFSITE_ENDPOINT", "")  # es. https://s3.<regione>.<fornitore>
+FASAS_OFFSITE_REGION = os.environ.get("FASAS_OFFSITE_REGION", "")
+FASAS_OFFSITE_BUCKET = os.environ.get("FASAS_OFFSITE_BUCKET", "")
+FASAS_OFFSITE_ACCESS_KEY = os.environ.get("FASAS_OFFSITE_ACCESS_KEY", "")
+FASAS_OFFSITE_SECRET_KEY = os.environ.get("FASAS_OFFSITE_SECRET_KEY", "")
+FASAS_OFFSITE_PREFIX = os.environ.get("FASAS_OFFSITE_PREFIX", "fasas")
+FASAS_OFFSITE_LOCK_DAYS = int(os.environ.get("FASAS_OFFSITE_LOCK_DAYS", "30"))
+FASAS_OFFSITE_LOCK_MODE = os.environ.get("FASAS_OFFSITE_LOCK_MODE", "COMPLIANCE")  # COMPLIANCE | GOVERNANCE
+FASAS_OFFSITE_KEEP_DAILY = int(os.environ.get("FASAS_OFFSITE_KEEP_DAILY", "30"))
+FASAS_OFFSITE_KEEP_MONTHLY = int(os.environ.get("FASAS_OFFSITE_KEEP_MONTHLY", "12"))
+# Database vuoto su cui provare il ripristino dei backup PostgreSQL (prova trimestrale). Vuoto = prova parziale.
+FASAS_RESTORE_TEST_DATABASE_URL = os.environ.get("FASAS_RESTORE_TEST_DATABASE_URL", "")
 # Reti autorizzate (CIDR). Vuoto = nessuna restrizione di rete applicativa.
 FASAS_ALLOWED_NETWORKS = env_list("FASAS_ALLOWED_NETWORKS")
 FASAS_TRUSTED_PROXY_COUNT = int(os.environ.get("FASAS_TRUSTED_PROXY_COUNT", "0"))

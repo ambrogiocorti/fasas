@@ -4,7 +4,10 @@ Backup automatici cifrati (sezione 19).
 Contenuto dell'archivio (tar.gz, poi cifrato AES-256-GCM):
 - manifest.json con versione, data e SHA-256 di ogni componente;
 - database.dump (pg_dump formato custom) su PostgreSQL, oppure database.json (dumpdata) negli altri casi;
-- media.tar con i file caricati (già cifrati singolarmente).
+- media.tar con i file caricati (già cifrati singolarmente);
+- audit-punti-di-controllo.csv con i punti di controllo dell'audit (impronte e marche temporali).
+
+Dopo la verifica il backup viene copiato fuori sede (fasas.backups.offsite) se è configurato un object storage.
 """
 import datetime
 import hashlib
@@ -23,6 +26,8 @@ from django.core.management import call_command
 from django.db import connection
 from django.utils import timezone
 
+from fasas import __version__
+from fasas.audit.anchoring import export_lines
 from fasas.audit.models import AuditLog
 from fasas.audit.services import log_event
 from fasas.core.models import SystemConfig
@@ -73,10 +78,10 @@ def _dump_database(workdir):
         if result.returncode != 0:
             raise BackupError(f"pg_dump fallito: {result.stderr.strip()[:500]}")
         return target, "pg_dump"
-    target = workdir / "database.json"
+    target = workdir / "database.fasasjson"  # JSON con orari esatti: l'audit ripristinato resta verificabile
     with open(target, "w", encoding="utf-8") as handle:
-        call_command("dumpdata", natural_foreign=True, natural_primary=False, exclude=DUMPDATA_EXCLUDE,
-                     indent=None, stdout=handle)
+        call_command("dumpdata", format="fasasjson", natural_foreign=True, natural_primary=False,
+                     exclude=DUMPDATA_EXCLUDE, indent=None, stdout=handle)
     return target, "json"
 
 
@@ -99,15 +104,21 @@ def create_backup(kind=BackupRecord.Kind.AUTO, user=None, include_media=True):
     try:
         with tempfile.TemporaryDirectory(prefix="fasas-backup-") as tmp:
             workdir = Path(tmp)
+            audit_entries = AuditLog.objects.count()
             db_file, db_format = _dump_database(workdir)
             parts = [db_file]
             if include_media:
                 parts.append(_media_tar(workdir))
+            checkpoints = workdir / "audit-punti-di-controllo.csv"
+            checkpoints.write_text(export_lines(), encoding="utf-8")
+            parts.append(checkpoints)
             manifest = {
                 "application": "FASAS Digitale",
+                "version": __version__,
                 "created_at": record.created_at.isoformat(),
                 "db_format": db_format,
                 "db_vendor": connection.vendor,
+                "audit_entries_before_dump": audit_entries,
                 "files": {p.name: {"sha256": _sha256_file(p), "size": p.stat().st_size} for p in parts},
             }
             archive = workdir / "backup.tar.gz"
@@ -211,7 +222,8 @@ def restore_backup(path, restore_media=True):
             if result.returncode != 0:
                 raise BackupError(f"pg_restore fallito: {result.stderr.strip()[:500]}")
         else:
-            call_command("loaddata", str(workdir / "database.json"))
+            dump = next(name for name in ("database.fasasjson", "database.json") if (workdir / name).exists())
+            call_command("loaddata", str(workdir / dump))
         if restore_media and (workdir / "media.tar").exists():
             with tarfile.open(workdir / "media.tar") as media:
                 media.extractall(workdir / "restored", filter="data")
@@ -237,9 +249,37 @@ def purge_old_backups(today=None):
     return removed
 
 
+def copy_offsite(record):
+    """Copia fuori sede di un backup verificato; un errore avvisa l'amministratore ma non tocca il backup locale."""
+    from . import offsite
+
+    if not offsite.is_configured() or record.status != BackupRecord.Status.OK or not record.verify_ok:
+        return None
+    try:
+        key, until = offsite.upload_backup(record)
+    except Exception as exc:
+        logger.exception("Copia fuori sede fallita")
+        record.offsite_error = f"{type(exc).__name__}: {exc}"[:2000]
+        record.save(update_fields=["offsite_error"])
+        from fasas.notifications.services import notify
+
+        notify("backup", "Copia fuori sede del backup NON riuscita", record.offsite_error[:300], level="critical",
+               dedup_key=f"backup-offsite-{record.pk}")
+        return False
+    record.offsite_key, record.offsite_at, record.offsite_locked_until, record.offsite_error = key, timezone.now(), until, ""
+    record.save(update_fields=["offsite_key", "offsite_at", "offsite_locked_until", "offsite_error"])
+    log_event(AuditLog.Action.BACKUP, record, changes={"copia_fuori_sede": [None, key]})
+    return True
+
+
 def scheduled_backup():
+    from . import offsite
+
     record = create_backup(BackupRecord.Kind.AUTO)
     if record.status == BackupRecord.Status.OK:
         verify_backup(record)
+    copied = copy_offsite(record)
+    pruned = offsite.prune() if copied else None
     removed = purge_old_backups()
-    return {"backup": record.pk, "status": record.status, "verified": record.verify_ok, "purged": removed}
+    return {"backup": record.pk, "status": record.status, "verified": record.verify_ok, "purged": removed,
+            "offsite": copied, "offsite_pruned": pruned}

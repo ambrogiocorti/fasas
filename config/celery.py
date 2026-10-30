@@ -26,7 +26,10 @@ app.conf.beat_schedule = {
     "report-programmati": {"task": "fasas.run_job", "schedule": crontab(hour=1, minute=15), "args": ("reports",)},
     "pulizia-report-scaduti": {"task": "fasas.run_job", "schedule": crontab(hour=1, minute=45), "args": ("report_retention",)},
     "backup-giornaliero": {"task": "fasas.run_job", "schedule": crontab(hour=2, minute=30), "args": ("backup",)},
-    "verifica-catena-audit": {"task": "fasas.run_job", "schedule": crontab(hour=3, minute=30), "args": ("audit_verify",)},
+    # prima del backup, così il backup e la sua copia fuori sede contengono il punto di controllo della notte
+    "verifica-catena-audit": {"task": "fasas.run_job", "schedule": crontab(hour=2, minute=0), "args": ("audit_verify",)},
+    "prova-ripristino-trimestrale": {"task": "fasas.run_job", "args": ("restore_test",),
+                                     "schedule": crontab(hour=4, minute=15, day_of_month=1, month_of_year="1,4,7,10")},
     "pulizia-importazioni": {"task": "fasas.run_job", "schedule": crontab(hour=3, minute=50), "args": ("imports_cleanup",)},
     "pulizia-firme-cie": {"task": "fasas.run_job", "schedule": crontab(minute="*/10"), "args": ("cie_cleanup",)},
 }
