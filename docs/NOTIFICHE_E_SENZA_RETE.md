@@ -31,6 +31,32 @@ completo con `FASAS_PUSH_SHOW_DETAILS=1`.
 
 Sui tablet condivisi del reparto le notifiche arrivano all'ultimo utente che le ha attivate su quel tablet.
 
+### Se la notifica non arriva
+
+La pagina *Notifiche sul telefono* fa i controlli da sola e indica quello che manca: indirizzo sicuro, browser
+compatibile, permesso concesso, service worker attivo, browser collegato al proprio utente. Poi si separano le cause
+con due prove:
+
+| Prova | Se compare | Se non compare |
+|---|---|---|
+| **Mostra una notifica di prova qui** (non passa dal server) | browser e sistema operativo sono a posto | notifiche del browser spente nel sistema operativo, «Non disturbare», finestra in incognito |
+| **Invia una notifica di prova dal server** | tutto funziona | la pagina riporta l'esito per ogni dispositivo: accettata dal servizio push (Google, Microsoft, Mozilla, Apple), rifiutata con il motivo, iscrizione scaduta, servizio push non raggiungibile dal server |
+
+Cause più frequenti:
+
+- **Indirizzo non sicuro**: con `http://192.168.…` (FASAS avviato con `avvia-telefono.bat`) i browser bloccano le
+  notifiche. Sul computer che esegue il FASAS aprire `http://127.0.0.1:8000/`; sui telefoni serve il FASAS
+  pubblicato in HTTPS. Solo per una prova su Android: in Chrome `chrome://flags` › «Insecure origins treated as
+  secure» › aggiungere l'indirizzo del PC › *Relaunch*. Su iPhone non c'è un'alternativa all'HTTPS.
+- **Windows**: Impostazioni › Sistema › Notifiche: notifiche attive e attive per Google Chrome / Microsoft Edge;
+  «Non disturbare» (Windows 11) o «Assistente notifiche» (Windows 10) spento.
+- **Browser chiuso**: sul computer le notifiche arrivano solo con il browser aperto, anche ridotto a icona.
+- **Avviso non inviato come push**: arrivano sul telefono solo gli avvisi elencati in fondo alla pagina
+  («Avvisi che ricevi come notifica push»), secondo ruolo e *Impostazioni → Notifiche*. Gli altri restano nella
+  campanella di FASAS.
+- **Chiave del server cambiata** (`FASAS_VAPID_PRIVATE_KEY`, o in prova `DJANGO_SECRET_KEY`): il servizio push rifiuta
+  l'invio; disattivare e riattivare le notifiche sul dispositivo.
+
 ## Lavorare senza rete
 
 ### Prima: niente da fare

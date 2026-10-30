@@ -1,4 +1,4 @@
-{% extends "base.html" %}{% load fasas_tags %}
+{% extends "base.html" %}{% load fasas_tags static %}
 {% block title %}Notifiche sul telefono{% endblock %}
 {% block content %}
 <div class="page-head">
@@ -9,28 +9,58 @@
 {% if not push_enabled %}
   <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Le notifiche push non sono ancora attive sul server: chiedere all'amministratore di configurarle.</div></div>
 {% else %}
-<div class="card" data-push data-public-key="{{ public_key }}" data-subscribe-url="{% url 'notifications:push_subscribe' %}" data-unsubscribe-url="{% url 'notifications:push_unsubscribe' %}">
+<div class="card" data-push data-public-key="{{ public_key }}" data-subscribe-url="{% url 'notifications:push_subscribe' %}" data-unsubscribe-url="{% url 'notifications:push_unsubscribe' %}" data-icon="{% static 'img/icon-192.png' %}" data-badge="{% static 'img/badge-96.png' %}">
   <div class="card-head"><h2>{% icon "smartphone" %} Questo dispositivo</h2></div>
   <p data-push-status class="muted">Controllo in corso…</p>
+  <ul class="checklist" data-push-checks>
+    {% for name, label in push_checks %}<li data-check="{{ name }}">{% icon "clock" %}<div><strong>{{ label }}</strong><br><small class="muted" hidden></small></div></li>{% endfor %}
+  </ul>
   <div class="form-actions">
     <button class="btn btn-primary" type="button" data-push-enable hidden>{% icon "bell" %}Attiva le notifiche su questo dispositivo</button>
+    <button class="btn" type="button" data-push-local hidden>{% icon "check-circle" %}Mostra una notifica di prova qui</button>
     <button class="btn" type="button" data-push-disable hidden>Disattiva su questo dispositivo</button>
   </div>
+  <p data-push-local-result hidden></p>
   <div class="alert alert-info" data-push-ios hidden>{% icon "info" %}<div class="alert-body">Su iPhone e iPad le notifiche funzionano solo dopo aver aggiunto FASAS alla schermata Home: tocca <strong>Condividi</strong> → <strong>Aggiungi alla schermata Home</strong>, poi apri FASAS dall'icona e torna su questa pagina.</div></div>
+  <p><small class="muted">«Mostra una notifica di prova qui» non passa dal server: se quella compare e la prova inviata dal server no, il problema è tra il server e il servizio push; se non compare nemmeno quella, è nelle impostazioni del browser o del sistema operativo.</small></p>
   <p><small class="muted">Per riservatezza la notifica mostra solo il tipo di avviso (es. «Protocollo attivato»), mai il nome dell'ospite: i dettagli si vedono dopo aver aperto FASAS e fatto l'accesso. Sui tablet condivisi del reparto le notifiche arrivano all'ultimo utente che le ha attivate.</small></p>
+  <details>
+    <summary><strong>Non compare nulla?</strong></summary>
+    <ul>
+      <li><strong>Windows 10 e 11</strong>: Start › Impostazioni › Sistema › Notifiche: «Notifiche» attivo e, nell'elenco delle app, <em>Google Chrome</em> (o <em>Microsoft Edge</em>) attivo. Disattiva «Non disturbare» (Windows 11) o «Assistente notifiche» (Windows 10).</li>
+      <li><strong>Mac</strong>: Impostazioni di Sistema › Notifiche › Google Chrome (o Safari, Firefox): «Consenti notifiche» attivo; «Full immersion» spenta.</li>
+      <li><strong>Nel browser</strong>: icona a sinistra dell'indirizzo › Notifiche › Consenti. Non funziona nelle finestre in incognito o InPrivate. In Brave serve attivare «Usa i servizi Google per la messaggistica push».</li>
+      <li><strong>Browser chiuso</strong>: sul computer le notifiche arrivano solo con il browser aperto, anche ridotto a icona (in Chrome: Impostazioni › Sistema › «Continua a eseguire le app in background»).</li>
+      <li><strong>Android</strong>: Impostazioni › App › Chrome › Notifiche attive; modalità «Non disturbare» spenta.</li>
+      <li><strong>Indirizzo</strong>: le notifiche funzionano solo in HTTPS o, sul computer che esegue il FASAS, con <span class="mono">http://127.0.0.1:8000/</span>. Con l'indirizzo di rete locale (<span class="mono">http://192.168…</span>) i browser le bloccano.</li>
+    </ul>
+  </details>
 </div>
+{{ endpoint_hashes|json_script:"push-endpoints" }}
 {% endif %}
 
 <div class="card table-wrap">
   <div class="card-head"><h2>I miei dispositivi</h2>
-    <div class="actions">{% if subscriptions and push_enabled %}<form method="post" action="{% url 'notifications:push_test' %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm">Invia una notifica di prova</button></form>{% endif %}</div></div>
+    <div class="actions">{% if subscriptions and push_enabled %}<form method="post" action="{% url 'notifications:push_test' %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm">Invia una notifica di prova dal server</button></form>{% endif %}</div></div>
   <table>
-    <thead><tr><th>Dispositivo</th><th>Attivato</th><th>Ultimo invio riuscito</th><th></th></tr></thead>
+    <thead><tr><th>Dispositivo</th><th>Servizio push</th><th>Attivato</th><th>Ultimo invio riuscito</th><th></th></tr></thead>
     <tbody>{% for s in subscriptions %}
       <tr><td>{{ s.label|default:"Dispositivo" }}{% if s.failure_count %} <span class="pill pill-warn">{{ s.failure_count }} invii falliti</span>{% endif %}</td>
+        <td>{{ s.service }}</td>
         <td>{{ s.created_at|date:"d/m/Y H:i" }}</td><td>{{ s.last_success_at|date:"d/m/Y H:i"|default:"—" }}</td>
         <td class="num"><form method="post" action="{% url 'notifications:push_unsubscribe' %}" class="inline-form">{% csrf_token %}<input type="hidden" name="pk" value="{{ s.pk }}"><button class="btn btn-sm" data-confirm="Rimuovere questo dispositivo?">Rimuovi</button></form></td></tr>
-    {% empty %}<tr><td colspan="4" class="empty">Nessun dispositivo: attiva le notifiche dal telefono o dal tablet che usi in turno.</td></tr>{% endfor %}</tbody>
+    {% empty %}<tr><td colspan="5" class="empty">Nessun dispositivo: attiva le notifiche dal telefono, dal tablet o dal computer che usi in turno.</td></tr>{% endfor %}</tbody>
   </table>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>{% icon "bell" %} Avvisi che ricevi come notifica push</h2>
+    {% if can_configure %}<div class="actions"><a class="btn btn-sm" href="{% url 'notifications:settings' %}">{% icon "sliders" %}Impostazioni notifiche</a></div>{% endif %}</div>
+  {% if push_kinds %}
+    <ul>{% for k in push_kinds %}<li>{{ k.label }}{% if k.personal %} <small class="muted">(quando riguarda te)</small>{% endif %}</li>{% endfor %}</ul>
+  {% else %}
+    <p>Con le impostazioni attuali nessun avviso per il tuo ruolo è inviato come notifica push.</p>
+  {% endif %}
+  <p><small class="muted">Gli altri avvisi restano solo nell'elenco delle notifiche di FASAS (campanella). Per provare il collegamento usa i pulsanti di prova: un avviso vero arriva solo se è tra quelli qui sopra.</small></p>
 </div>
 {% endblock %}

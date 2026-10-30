@@ -231,59 +231,155 @@
     refreshSave();
   }
 
-  // Notifiche push sul dispositivo (pagina «Notifiche sul telefono»)
+  // Notifiche push sul dispositivo (pagina «Notifiche sul telefono»): controlli, attivazione, prova locale
   const pushBox = document.querySelector("[data-push]");
   if (pushBox) {
     const status = pushBox.querySelector("[data-push-status]");
     const enableBtn = pushBox.querySelector("[data-push-enable]");
     const disableBtn = pushBox.querySelector("[data-push-disable]");
+    const localBtn = pushBox.querySelector("[data-push-local]");
+    const localResult = pushBox.querySelector("[data-push-local-result]");
     const csrf = (document.querySelector("meta[name=csrf-token]") || {}).content || "";
     const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isAndroid = /android/i.test(navigator.userAgent);
     const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+    const knownNode = document.getElementById("push-endpoints");
+    const known = knownNode ? JSON.parse(knownNode.textContent) : [];
     const keyBytes = function (b64) {
       const pad = "=".repeat((4 - (b64.length % 4)) % 4);
       const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
       return Uint8Array.from(raw, function (c) { return c.charCodeAt(0); });
     };
+    const sameKey = function (sub) {
+      const key = sub.options && sub.options.applicationServerKey;
+      if (!key) return true; // browser che non la espongono
+      const a = new Uint8Array(key);
+      const b = keyBytes(pushBox.dataset.publicKey);
+      return a.length === b.length && a.every(function (v, i) { return v === b[i]; });
+    };
+    const sha256 = function (text) {
+      return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then(function (buf) {
+        return Array.from(new Uint8Array(buf), function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+      });
+    };
     const post = function (url, body) {
       return fetch(url, { method: "POST", credentials: "same-origin", body: JSON.stringify(body),
         headers: { "Content-Type": "application/json", "X-CSRFToken": csrf } });
     };
-    const show = function (text, enabled) {
-      status.textContent = text;
-      enableBtn.hidden = enabled !== false;
-      disableBtn.hidden = enabled !== true;
+    const check = function (name, ok, help) {
+      const item = pushBox.querySelector('[data-check="' + name + '"]');
+      item.className = ok ? "ok" : "ko";
+      item.querySelector("use").setAttribute("href", ok ? "#i-check-circle" : "#i-alert-circle");
+      const note = item.querySelector("small");
+      note.textContent = ok ? "" : help;
+      note.hidden = ok;
+      return ok;
     };
+    const buttons = function (enable, local, disable) {
+      enableBtn.hidden = !enable;
+      localBtn.hidden = !local;
+      disableBtn.hidden = !disable;
+    };
+    let failure = ""; // esito dell'ultima attivazione non riuscita, mostrato al posto dello stato
+    const say = function (text) { status.textContent = failure || text; };
     const refresh = function () {
-      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+      buttons(false, false, false);
+      if (!check("secure", window.isSecureContext, "La pagina è aperta da " + location.origin + ": i browser permettono " +
+          "le notifiche solo in HTTPS oppure su http://127.0.0.1 e http://localhost. Sul computer che esegue il FASAS apri " +
+          "http://127.0.0.1:" + (location.port || "80") + "/; sugli altri dispositivi serve il FASAS pubblicato in HTTPS" +
+          (isAndroid ? " (per la sola prova, in Chrome: chrome://flags › «Insecure origins treated as secure» › aggiungi " +
+            location.origin + " › Relaunch)." : "."))) {
+        say("Con questo indirizzo il browser non permette le notifiche.");
+        return;
+      }
+      const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+      if (!check("support", supported, isIos && !standalone
+          ? "Su iPhone e iPad: aggiungi FASAS alla schermata Home e aprilo dall'icona (serve iOS 16.4 o successivo)."
+          : "Questo browser non supporta le notifiche push, oppure è una finestra in incognito/InPrivate.")) {
         if (isIos && !standalone) pushBox.querySelector("[data-push-ios]").hidden = false;
-        show("Questo browser non supporta le notifiche push.", null);
+        say("Questo browser non supporta le notifiche push.");
         return;
       }
-      if (Notification.permission === "denied") {
-        show("Le notifiche sono bloccate nelle impostazioni del browser per questo sito: sbloccarle e ricaricare la pagina.", null);
+      const permission = Notification.permission;
+      check("permission", permission === "granted", permission === "denied"
+        ? "Bloccato: clicca l'icona a sinistra dell'indirizzo › Notifiche › Consenti, poi ricarica la pagina."
+        : "Non ancora concesso: premi «Attiva le notifiche su questo dispositivo» e scegli «Consenti».");
+      if (permission === "denied") {
+        say("Le notifiche sono bloccate nelle impostazioni del browser per questo sito.");
         return;
       }
-      navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
-        if (sub) show("Notifiche attive su questo dispositivo.", true);
-        else show("Notifiche non attive su questo dispositivo.", false);
+      const slow = setTimeout(function () {
+        check("worker", false, "Non si è attivato: ricarica la pagina; se resta così chiudi e riapri il browser.");
+        say("Il service worker del FASAS non è attivo.");
+      }, 6000);
+      navigator.serviceWorker.ready.then(function (reg) {
+        clearTimeout(slow);
+        check("worker", true);
+        return reg.pushManager.getSubscription();
+      }).then(function (sub) {
+        const local = permission === "granted";
+        if (!sub) {
+          check("subscription", false, "Questo browser non è iscritto: premi «Attiva le notifiche su questo dispositivo».");
+          buttons(true, local, false);
+          say("Notifiche non attive su questo dispositivo.");
+          return null;
+        }
+        if (!sameKey(sub)) {
+          check("subscription", false, "Iscrizione creata con una chiave del server diversa da quella attuale: " +
+            "premi «Attiva le notifiche su questo dispositivo» per rinnovarla.");
+          buttons(true, local, true);
+          say("Notifiche da riattivare su questo dispositivo.");
+          return null;
+        }
+        return sha256(sub.endpoint).then(function (hash) {
+          const linked = known.indexOf(hash) !== -1;
+          check("subscription", linked, "Il browser è iscritto ma il FASAS non lo ha tra i tuoi dispositivi (rimosso, " +
+            "scaduto o attivato da un altro utente): premi «Attiva le notifiche su questo dispositivo».");
+          buttons(!linked, local, true);
+          say(linked ? "Notifiche attive su questo dispositivo." : "Notifiche da ricollegare al tuo utente.");
+        });
       });
     };
     enableBtn.addEventListener("click", function () {
       enableBtn.disabled = true;
       Notification.requestPermission().then(function (permission) {
-        if (permission !== "granted") throw new Error("permesso");
+        if (permission !== "granted") {
+          throw new Error(permission === "denied"
+            ? "permesso negato: sbloccalo dall'icona a sinistra dell'indirizzo e ricarica la pagina"
+            : "il permesso non è stato concesso (se il browser non ha mostrato la richiesta, clicca la campanella " +
+              "barrata o l'icona a sinistra dell'indirizzo)");
+        }
         return navigator.serviceWorker.ready;
       }).then(function (reg) {
-        return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(pushBox.dataset.publicKey) });
+        return reg.pushManager.getSubscription().then(function (old) {
+          return old && !sameKey(old) ? old.unsubscribe() : null;
+        }).then(function () {
+          return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(pushBox.dataset.publicKey) });
+        });
       }).then(function (sub) {
         return post(pushBox.dataset.subscribeUrl, sub.toJSON());
       }).then(function (r) {
-        if (!r.ok) throw new Error("server");
+        if (!r.ok) throw new Error("il FASAS ha rifiutato l'iscrizione (" + r.status + ")");
         window.location.reload();
-      }).catch(function () {
+      }).catch(function (err) {
         enableBtn.disabled = false;
-        show("Attivazione non riuscita: concedere il permesso alle notifiche e riprovare.", false);
+        failure = "Attivazione non riuscita: " + (err && err.message || err) + ".";
+        refresh();
+      });
+    });
+    localBtn.addEventListener("click", function () {
+      localResult.hidden = false;
+      navigator.serviceWorker.ready.then(function (reg) {
+        return reg.showNotification("FASAS · Prova locale", {
+          body: "Se leggi questo avviso, browser e sistema operativo mostrano le notifiche del FASAS.",
+          tag: "fasas-local-test", icon: pushBox.dataset.icon, badge: pushBox.dataset.badge,
+          data: { url: location.pathname },
+        });
+      }).then(function () {
+        localResult.textContent = "Il browser ha mostrato la notifica «FASAS · Prova locale». Se non l'hai vista comparire, " +
+          "il blocco è nel sistema operativo (notifiche del browser disattivate o «Non disturbare»): vedi «Non compare nulla?».";
+      }).catch(function (err) {
+        localResult.textContent = "Il browser non ha potuto mostrare la notifica: " + (err && err.message || err) + ".";
       });
     });
     disableBtn.addEventListener("click", function () {

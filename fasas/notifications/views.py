@@ -12,8 +12,15 @@ from django.views.decorators.http import require_POST
 from fasas.accounts.models import Role
 
 from . import push
-from .models import Notification, NotificationSetting, PushSubscription
-from .services import ensure_default_settings, unread_for
+from .models import (
+    DEFAULT_ROLES,
+    REQUIRED_PERMISSION,
+    Notification,
+    NotificationKind,
+    NotificationSetting,
+    PushSubscription,
+)
+from .services import ensure_default_settings, setting_for, unread_for
 
 
 def notification_list(request):
@@ -84,10 +91,38 @@ def open_notification(request, pk):
     return redirect(target)
 
 
+PUSH_CHECKS = [
+    ("secure", "Pagina aperta in modo sicuro (HTTPS o 127.0.0.1)"),
+    ("support", "Browser compatibile con le notifiche push"),
+    ("permission", "Permesso alle notifiche concesso al FASAS"),
+    ("worker", "Service worker del FASAS attivo"),
+    ("subscription", "Questo browser è collegato al tuo utente"),
+]
+
+
+def push_kinds_for(user):
+    """Avvisi che arrivano a questo utente anche come notifica push, secondo le impostazioni attuali."""
+    kinds = []
+    for kind in NotificationKind:
+        setting = setting_for(kind)
+        personal = not DEFAULT_ROLES.get(kind, ["admin"])  # es. turni: inviati alla persona interessata
+        if not (setting.enabled and setting.send_push) or not (personal or user.role in setting.roles):
+            continue
+        if REQUIRED_PERMISSION.get(kind) and not user.has_perm(REQUIRED_PERMISSION[kind]):
+            continue
+        kinds.append({"label": kind.label, "personal": personal and user.role not in setting.roles})
+    return kinds
+
+
 def devices(request):
+    subscriptions = list(PushSubscription.objects.filter(user=request.user))
+    for subscription in subscriptions:
+        subscription.service = push.service_name(subscription.endpoint)
     return render(request, "notifications/devices.html", {
-        "subscriptions": PushSubscription.objects.filter(user=request.user),
-        "push_enabled": push.is_enabled(), "public_key": push.public_key(),
+        "subscriptions": subscriptions, "push_enabled": push.is_enabled(), "public_key": push.public_key(),
+        "endpoint_hashes": [push.endpoint_hash(s.endpoint) for s in subscriptions],
+        "push_kinds": push_kinds_for(request.user), "push_checks": PUSH_CHECKS,
+        "can_configure": request.user.has_perm("notifications.change_notificationsetting"),
     })
 
 
@@ -132,11 +167,29 @@ def push_unsubscribe(request):
     return redirect("notifications:devices")
 
 
+def _test_message(subscription, delivery):
+    device, service = subscription.label or "Dispositivo", push.service_name(subscription.endpoint)
+    status = f" ({delivery.status})" if delivery.status else ""
+    detail = f" Risposta: «{delivery.detail}»." if delivery.detail and delivery.outcome == "rejected" else ""
+    return {
+        "sent": f"{device}: prova accettata dal servizio push di {service}. Deve comparire entro pochi secondi; "
+                "se non compare, il blocco è nel browser o nel sistema operativo di quel dispositivo "
+                "(vedi «Non compare nulla?» qui sotto).",
+        "gone": f"{device}: l'iscrizione non è più valida{status} (notifiche disattivate o dati del browser "
+                "cancellati). Il dispositivo è stato rimosso: riattiva le notifiche da quel dispositivo.",
+        "rejected": f"{device}: prova rifiutata dal servizio push di {service}{status}.{detail} Se la chiave del "
+                    "server è cambiata dopo l'attivazione, disattiva e riattiva le notifiche su quel dispositivo.",
+        "unreachable": f"{device}: il server FASAS non riesce a contattare il servizio push di {service}. "
+                       "Controllare la connessione a Internet del computer su cui gira il FASAS (proxy, firewall).",
+        "disabled": "Le notifiche push non sono configurate sul server.",
+    }.get(delivery.outcome, f"{device}: errore interno durante l'invio (dettagli nel registro del server).")
+
+
 @require_POST
 def push_test(request):
-    sent = push.send_test(request.user)
-    if sent:
-        messages.success(request, f"Notifica di prova inviata a {sent} dispositiv{'o' if sent == 1 else 'i'}.")
-    else:
-        messages.error(request, "Nessun dispositivo ha ricevuto la prova: riattivare le notifiche sul dispositivo.")
+    results = push.send_test(request.user)
+    if not results:
+        messages.error(request, "Nessun dispositivo attivo: attiva le notifiche dal dispositivo su cui vuoi riceverle.")
+    for subscription, delivery in results:
+        (messages.success if delivery.ok else messages.error)(request, _test_message(subscription, delivery))
     return redirect("notifications:devices")

@@ -1,9 +1,18 @@
+import base64
 import datetime
+import hashlib
 import json
+import os
+import threading
+import time
 import uuid
 from decimal import Decimal
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from unittest import mock
 
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -13,13 +22,79 @@ from fasas.clinical.models import ClinicalEvent, ParameterReading, ParameterType
 from fasas.core.shifts import resolve_shift
 from fasas.daily.models import DiaryEntry
 from fasas.daily.services import close_shift
-from fasas.notifications.models import Notification, PushSubscription
+from fasas.notifications import push
+from fasas.notifications.models import Notification, NotificationSetting, PushSubscription
 from fasas.notifications.services import notify
 from fasas.offline.models import OfflineRecord
 
 from .base import FasasTestCase
 
 SUBSCRIPTION = {"endpoint": "https://push.example.com/send/abc", "keys": {"p256dh": "BPk3", "auth": "c2Vj"}}
+
+
+def b64url_decode(text):
+    return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
+
+
+class FakePushService:
+    """
+    Servizio push locale che si comporta come quelli dei browser: verifica la firma VAPID (RFC 8292) e decifra
+    il messaggio con le chiavi dell'iscrizione (RFC 8291), come farebbe il browser che lo riceve.
+    """
+
+    def __init__(self, status=201, body=""):
+        self.key = ec.generate_private_key(ec.SECP256R1())
+        self.auth = os.urandom(16)
+        self.received, self.status, self.body = [], status, body
+        service = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                content = self.rfile.read(int(self.headers["Content-Length"]))
+                service.received.append((self.headers, content))  # intestazioni senza distinzione maiuscole
+                self.send_response(service.status)
+                self.end_headers()
+                self.wfile.write(service.body.encode())
+
+            def log_message(self, *args):
+                pass
+
+        self.server = HTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        self.origin = f"http://127.0.0.1:{self.server.server_port}"
+
+    def close(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+    def subscription(self, user, label="Chrome su Windows"):
+        public = self.key.public_key().public_bytes(serialization.Encoding.X962,
+                                                    serialization.PublicFormat.UncompressedPoint)
+        return PushSubscription.objects.create(
+            user=user, endpoint=f"{self.origin}/wpush/{uuid.uuid4().hex}", label=label,
+            p256dh=base64.urlsafe_b64encode(public).rstrip(b"=").decode(),
+            auth=base64.urlsafe_b64encode(self.auth).rstrip(b"=").decode())
+
+    def verify(self, headers, content):
+        """Controlli del servizio push sull'intestazione VAPID; restituisce il messaggio decifrato."""
+        import http_ece
+
+        scheme, _, params = headers["Authorization"].partition(" ")
+        fields = dict(part.strip().split("=", 1) for part in params.split(","))
+        assert scheme == "vapid", scheme
+        assert fields["k"] == push.public_key(), "chiave VAPID diversa da quella usata per l'iscrizione"
+        header, claims, signature = fields["t"].split(".")
+        raw = b64url_decode(signature)
+        sender = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), b64url_decode(fields["k"]))
+        sender.verify(encode_dss_signature(int.from_bytes(raw[:32], "big"), int.from_bytes(raw[32:], "big")),
+                      f"{header}.{claims}".encode(), ec.ECDSA(hashes.SHA256()))
+        claims = json.loads(b64url_decode(claims))
+        assert json.loads(b64url_decode(header))["alg"] == "ES256"
+        assert claims["aud"] == self.origin, claims
+        assert time.time() < claims["exp"] <= time.time() + 24 * 3600, claims
+        assert claims["sub"].startswith(("mailto:", "https://")), claims
+        assert headers["Content-Encoding"] == "aes128gcm"
+        return json.loads(http_ece.decrypt(content, private_key=self.key, auth_secret=self.auth, version="aes128gcm"))
 
 
 @override_settings(FASAS_PUSH_ASYNC=False, FASAS_PUSH_SHOW_DETAILS=False,
@@ -69,6 +144,68 @@ class PushTests(FasasTestCase):
         with mock.patch("fasas.notifications.push.webpush", side_effect=gone), self.captureOnCommitCallbacks(execute=True):
             notify("protocol_activated", "Protocollo")
         self.assertFalse(PushSubscription.objects.filter(pk=sub.pk).exists())
+
+    def test_test_notification_really_reaches_a_push_service(self):
+        service = FakePushService()
+        self.addCleanup(service.close)
+        sub = service.subscription(self.operator)
+        self.login(self.operator)
+        response = self.client.post(reverse("notifications:push_test"), follow=True)
+        self.assertContains(response, "Chrome su Windows: prova accettata dal servizio push")
+        [(headers, content)] = service.received
+        payload = service.verify(headers, content)
+        self.assertEqual((payload["title"], payload["url"]), ("FASAS · Prova", reverse("notifications:devices")))
+        self.assertEqual((headers["Ttl"], headers["Urgency"]), ("3600", "normal"))
+        sub.refresh_from_db()
+        self.assertIsNotNone(sub.last_success_at)
+        # Un avviso vero (protocollo) arriva cifrato allo stesso modo, senza nomi né dati sanitari
+        with self.captureOnCommitCallbacks(execute=True):
+            notify("protocol_activated", f"Protocollo per {self.guest}", "Crisi epilettica", guest=self.guest)
+        payload = service.verify(*service.received[1])
+        self.assertEqual(payload["title"], "FASAS · Protocollo attivato")
+        self.assertNotIn("Rossi", json.dumps(payload))
+
+    def test_test_notification_reports_why_it_failed(self):
+        service = FakePushService(403, "the key in the authorization header does not correspond to the sender ID")
+        self.addCleanup(service.close)
+        sub = service.subscription(self.operator)
+        self.login(self.operator)
+        with self.assertLogs("fasas.push", "WARNING"):
+            response = self.client.post(reverse("notifications:push_test"), follow=True)
+        self.assertContains(response, "prova rifiutata dal servizio push di 127.0.0.1 (403)")
+        self.assertContains(response, "does not correspond to the sender ID")
+        sub.refresh_from_db()
+        self.assertEqual(sub.failure_count, 1)
+        service.status = 410
+        self.assertContains(self.client.post(reverse("notifications:push_test"), follow=True),
+                            "iscrizione non è più valida (410)")
+        self.assertFalse(PushSubscription.objects.exists())
+        service.close()
+        service.subscription(self.operator)  # servizio push non raggiungibile dal server
+        with self.assertLogs("fasas.push", "WARNING"):
+            response = self.client.post(reverse("notifications:push_test"), follow=True)
+        self.assertContains(response, "non riesce a contattare il servizio push")
+        PushSubscription.objects.all().delete()
+        self.assertContains(self.client.post(reverse("notifications:push_test"), follow=True), "Nessun dispositivo attivo")
+
+    def test_device_page_diagnostics(self):
+        sub = self.subscribe(self.operator, "https://fcm.googleapis.com/fcm/send/abc")
+        page = self.client.get(reverse("notifications:devices"))
+        self.assertContains(page, "Google (Chrome)")
+        self.assertContains(page, hashlib.sha256(sub.endpoint.encode()).hexdigest())  # impronta, non l'endpoint
+        self.assertNotContains(page, "fcm/send/abc")
+        for check in ("secure", "support", "permission", "worker", "subscription"):
+            self.assertContains(page, f'data-check="{check}"')
+        self.assertContains(page, "Mostra una notifica di prova qui")
+        self.assertEqual([k["label"] for k in page.context["push_kinds"]][:2],
+                         ["Protocollo attivato", "Evento critico (modalità emergenza)"])
+        self.assertNotIn("Farmaco in esaurimento", [k["label"] for k in page.context["push_kinds"]])
+        self.assertNotContains(page, "Impostazioni notifiche")  # l'operatore non le modifica
+        NotificationSetting.objects.update_or_create(kind="protocol_activated", defaults={
+            "enabled": True, "roles": ["coordinator"], "send_push": True})
+        page = self.client.get(reverse("notifications:devices"))
+        self.assertNotIn("Protocollo attivato", [k["label"] for k in page.context["push_kinds"]])
+        self.assertIn(("Calendario turni pubblicato", True), [(k["label"], k["personal"]) for k in page.context["push_kinds"]])
 
     def test_open_marks_read_and_follows_link(self):
         notify("protocol_activated", "Protocollo", link="/protocolli/")
