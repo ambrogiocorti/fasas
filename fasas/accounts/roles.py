@@ -108,6 +108,7 @@ ADMIN = [
     "accounts.change_userpermissionoverride", "accounts.delete_userpermissionoverride",
     "audit.view_auditlog",
     "core.view_community", "core.change_community", "core.view_systemconfig", "core.change_systemconfig",
+    "core.view_errorevent", "core.change_errorevent", "core.view_jobrun",
     "protocols.view_protocol", "protocols.add_protocol", "protocols.change_protocol",
     "notifications.view_notification", "notifications.view_notificationsetting", "notifications.change_notificationsetting",
     "backups.view_backuprecord", "backups.manage_backup",

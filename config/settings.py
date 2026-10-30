@@ -290,12 +290,22 @@ CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", False)
 
+# Monitoraggio (docs/MONITORAGGIO.md): dettaglio di /salute/ solo con questo token; spazio minimo su disco
+FASAS_HEALTH_TOKEN = os.environ.get("FASAS_HEALTH_TOKEN", "")
+FASAS_HEALTH_MIN_FREE_GB = float(os.environ.get("FASAS_HEALTH_MIN_FREE_GB", "5"))
+FASAS_ERROR_RECORDING = env_bool("FASAS_ERROR_RECORDING", True)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+        # registro degli errori nel database, senza messaggi né dati (fasas.core.monitoring)
+        "record": {"class": "fasas.core.monitoring.ErrorRecordHandler", "level": "ERROR"},
+    },
     "loggers": {
-        "fasas": {"handlers": ["console"], "level": os.environ.get("FASAS_LOG_LEVEL", "INFO")},
+        "fasas": {"handlers": ["console", "record"], "level": os.environ.get("FASAS_LOG_LEVEL", "INFO")},
+        "django.request": {"handlers": ["record"], "level": "ERROR"},
         # un certificato non presente tra le CA fidate del server è un esito normale della verifica, non un errore
         "pyhanko": {"handlers": ["console"], "level": "ERROR", "propagate": False},
         "pyhanko_certvalidator": {"handlers": ["console"], "level": "ERROR", "propagate": False},

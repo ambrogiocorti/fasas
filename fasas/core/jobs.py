@@ -26,13 +26,22 @@ JOBS = {
 
 
 def run_job(name):
+    from .monitoring import job_finished, job_started
+
     path, _ = JOBS[name]
     func = import_string(path)
-    with audit_context(user=None, ip="", reason="", source=f"job:{name}"):
-        if name in ("backup", "restore_test"):  # gestiscono da sé le transazioni: niente transazione lunga
-            result = func()
-        else:
-            with transaction.atomic():
+    job_started(name)
+    try:
+        with audit_context(user=None, ip="", reason="", source=f"job:{name}"):
+            if name in ("backup", "restore_test"):  # gestiscono da sé le transazioni: niente transazione lunga
                 result = func()
+            else:
+                with transaction.atomic():
+                    result = func()
+    except Exception as exc:
+        job_finished(name, exc)
+        logger.exception("Job %s fallito", name)
+        raise
+    job_finished(name)
     logger.info("Job %s completato: %s", name, result)
     return result

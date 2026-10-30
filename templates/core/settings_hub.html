@@ -32,6 +32,7 @@
     {% if perms.backups.manage_backup %}<li><a href="{% url 'backups:list' %}">Backup</a></li>{% endif %}
     {% if perms.audit.view_auditlog %}<li><a href="{% url 'audit:list' %}">Audit log</a></li>{% endif %}
     {% if perms.accounts.view_accesslog %}<li><a href="{% url 'accounts:access_log' %}">Log accessi</a></li>{% endif %}
+    {% if perms.core.view_errorevent %}<li><a href="{% url 'core:errors' %}">Stato del sistema ed errori</a></li>{% endif %}
   </ul></div>
 </div>
 {% endblock %}

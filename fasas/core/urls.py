@@ -9,4 +9,5 @@ urlpatterns = [
     path("configurazione/", views.system_config, name="config"),
     path("impostazioni/", views.settings_hub, name="settings"),
     path("salute/", views.health, name="health"),
+    path("sistema/errori/", views.error_list, name="errors"),
 ]

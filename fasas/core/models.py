@@ -201,3 +201,49 @@ class ShiftRecordModel(TimeStampedModel):
         self.void_reason = reason
         with audit_context(reason=reason):
             self.save(update_fields=["voided_at", "voided_by", "void_reason", "updated_at"])
+
+
+class JobRun(models.Model):
+    """Ultima esecuzione di ogni job periodico: se cron o Celery si fermano, il controllo di salute lo vede."""
+
+    name = models.CharField("job", max_length=40, unique=True)
+    last_started = models.DateTimeField("ultimo avvio", null=True, blank=True)
+    last_finished = models.DateTimeField("ultima conclusione", null=True, blank=True)
+    last_ok = models.BooleanField("ultimo esito positivo", null=True)
+    last_error = models.CharField("ultimo errore (solo tipo e punto del codice)", max_length=255, blank=True)
+    runs = models.PositiveIntegerField("esecuzioni", default=0)
+
+    class Meta:
+        verbose_name = "esecuzione job"
+        verbose_name_plural = "esecuzioni job"
+        ordering = ["name"]
+        default_permissions = ("view",)
+
+    def __str__(self):
+        return self.name
+
+
+class ErrorEvent(models.Model):
+    """
+    Errore del sistema raggruppato per punto del codice. Per non finire a registrare dati sanitari non si
+    salvano messaggi, valori, parametri né indirizzi completi: solo tipo d'errore, rotta e righe del codice.
+    """
+
+    fingerprint = models.CharField(max_length=64, unique=True)
+    where = models.CharField("dove", max_length=255)
+    exception = models.CharField("tipo di errore", max_length=120, blank=True)
+    template = models.CharField("messaggio (modello, senza valori)", max_length=255, blank=True)
+    frames = models.TextField("righe del codice", blank=True)
+    first_seen = models.DateTimeField("prima volta", default=timezone.now)
+    last_seen = models.DateTimeField("ultima volta", default=timezone.now, db_index=True)
+    count = models.PositiveIntegerField("volte", default=1)
+    resolved_at = models.DateTimeField("risolto il", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "errore di sistema"
+        verbose_name_plural = "errori di sistema"
+        ordering = ["-last_seen"]
+        default_permissions = ("view", "change")
+
+    def __str__(self):
+        return f"{self.exception or 'errore'} in {self.where}"

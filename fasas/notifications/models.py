@@ -24,6 +24,7 @@ class NotificationKind(models.TextChoices):
     ROTA_CHANGED = "rota_changed", "Il mio turno è cambiato"
     ROTA_REQUEST = "rota_request", "Ferie o cambio turno da approvare"
     ROTA_ANSWER = "rota_answer", "Risposte e proposte sui miei turni"
+    SYSTEM_ERROR = "system_error", "Errore del sistema"
 
 
 DEFAULT_ROLES = {
@@ -48,6 +49,7 @@ DEFAULT_ROLES = {
     NotificationKind.ROTA_CHANGED: [],
     NotificationKind.ROTA_REQUEST: ["coordinator"],
     NotificationKind.ROTA_ANSWER: [],
+    NotificationKind.SYSTEM_ERROR: ["admin"],
 }
 
 # Tipi inviati di default anche come notifica push sui dispositivi iscritti (modificabile dall'amministratore).
@@ -80,6 +82,7 @@ REQUIRED_PERMISSION = {
     NotificationKind.ROTA_CHANGED: "staffing.view_rotamonth",
     NotificationKind.ROTA_REQUEST: "staffing.change_leaverequest",
     NotificationKind.ROTA_ANSWER: "staffing.view_rotamonth",
+    NotificationKind.SYSTEM_ERROR: "core.view_errorevent",
 }
 
 
