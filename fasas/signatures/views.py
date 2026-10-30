@@ -287,6 +287,7 @@ def status_payload(signature_request):
         "expires_in": max(0, int((signature_request.expires_at - timezone.now()).total_seconds())),
         "device": signature_request.device.name if signature_request.device else None,
         "devices": devices.count(), "device_online": online, "result_url": None,
+        "test_card": signature_request.is_test_card,
     }
     if signature_request.status == SignatureRequest.Status.SIGNED:
         if signature_request.signature_id:

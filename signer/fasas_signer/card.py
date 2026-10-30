@@ -196,3 +196,20 @@ def _attempts_left(token):
     except Exception:
         return None
     return None
+
+
+def make_card(settings):
+    """Carta usata dal Signer: la CIE tramite il Software CIE oppure, solo verso un FASAS locale, la carta di prova."""
+    test_card = settings.get("carta_di_prova")
+    if test_card:
+        from urllib.parse import urlsplit
+
+        from .client import LOCAL_HOSTS
+        from .test_card import TestCard
+
+        server = settings.get("server", "")
+        if server and urlsplit(server).hostname not in LOCAL_HOSTS:
+            raise CardError("device_error", "La carta di prova funziona solo con un FASAS sullo stesso computer "
+                                            "(http://127.0.0.1:8000/).")
+        return TestCard(test_card)
+    return Pkcs11Card(settings.get("library", ""))

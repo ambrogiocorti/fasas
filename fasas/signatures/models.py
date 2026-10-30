@@ -228,6 +228,11 @@ class SignatureRequest(models.Model):
         return self.status in self.ACTIVE
 
     @property
+    def is_test_card(self):
+        """Firmata con una carta di prova (manage.py fasas_carta_di_prova, vedi external.TEST_MARKER), non con una CIE."""
+        return "SOLO PROVA" in (self.certificate_issuer or "").upper()
+
+    @property
     def document_state(self):
         if self.status in ("waiting", "card", "authorizing"):
             return "IN_ATTESA_DI_FIRMA"

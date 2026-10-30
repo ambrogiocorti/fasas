@@ -524,19 +524,26 @@ def _archive(request_id, signed, verification):
             request.result_storage = store_encrypted(signed, "signing/tests")
         else:
             version = request.version
+            # Carta di prova (solo installazioni di prova): firma vera ma senza valore legale, e lo si dichiara
+            test_card = request.is_test_card
             signed_version = add_version(
-                version.document, signed, version.original_name.rsplit(".", 1)[0] + "_firmato_CIE.pdf", request.user,
-                note=f"Firma elettronica avanzata con CIE di {request.user}", content_type="application/pdf",
-                is_signed=True, signature_request=request,
+                version.document, signed,
+                version.original_name.rsplit(".", 1)[0] + ("_firmato_PROVA.pdf" if test_card else "_firmato_CIE.pdf"),
+                request.user, content_type="application/pdf", is_signed=True, signature_request=request,
+                note=(f"Firma con CARTA DI PROVA di {request.user} – nessun valore legale" if test_card
+                      else f"Firma elettronica avanzata con CIE di {request.user}"),
             )
             request.signature = Signature.objects.create(
-                source_version=version, signed_version=signed_version, signer=request.user, provider="cie",
+                source_version=version, signed_version=signed_version, signer=request.user,
+                provider="cie-prova" if test_card else "cie",
                 certificate_subject=request.certificate_subject, certificate_issuer=request.certificate_issuer,
                 certificate_serial=request.certificate_serial, reason=request.reason,
-                signature_format=f"PAdES-{level}", timestamped=level == "B-T", legal_level=LegalLevel.FEA,
+                signature_format=f"PAdES-{level}", timestamped=level == "B-T",
+                legal_level="" if test_card else LegalLevel.FEA,
             )
             log_event(AuditLog.Action.SIGN, signed_version, user=request.user, guest=version.document.guest,
-                      changes={"firma": [None, "FEA con CIE"], "certificato": [None, request.certificate_subject],
+                      changes={"firma": [None, "carta di prova" if test_card else "FEA con CIE"],
+                               "certificato": [None, request.certificate_subject],
                                "richiesta": [None, request.verify_code], "sha256": [None, signed_version.sha256]},
                       reason=request.reason)
         _close(request, Status.SIGNED)

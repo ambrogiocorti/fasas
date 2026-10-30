@@ -30,6 +30,8 @@ CF_RE = re.compile(r"[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[
 # DigestInfo DER di SHA-256 (RFC 8017 §9.2): con il meccanismo CKM_RSA_PKCS il dispositivo firma prefisso + impronta
 SHA256_DIGEST_INFO_PREFIX = bytes.fromhex("3031300d060960864801650304020105000420")
 SIGNATURE_MECHANISM = "sha256_rsa"
+# Le carte di prova (manage.py fasas_carta_di_prova) hanno questo testo nell'organizzazione della CA emittente
+TEST_MARKER = "SOLO PROVA"
 MIN_RSA_BITS = 2048
 
 
@@ -127,8 +129,17 @@ def certificate_info(cert) -> dict:
     }
 
 
+def is_test_certificate(cert) -> bool:
+    """Certificato di una carta di prova del FASAS (mai una CIE): ammesso solo nelle installazioni di prova."""
+    organizations = [a["value"].native for rdn in cert.issuer.chosen for a in rdn
+                     if a["type"].native == "organization_name"]
+    return any(TEST_MARKER in str(value).upper() for value in organizations)
+
+
 def check_certificate_for_user(cert, user, now=None) -> dict:
     """Il certificato deve essere valido ora, RSA ≥ 2048 bit, utilizzabile per firmare e intestato all'utente."""
+    if is_test_certificate(cert) and not settings.DEBUG:
+        raise SignatureError("Certificato di una carta di prova: non ammesso in questa installazione.", "cert_untrusted")
     info = certificate_info(cert)
     now = now or datetime.datetime.now(datetime.UTC)
     if not (info["valid_from"] <= now <= info["valid_to"]):

@@ -36,7 +36,7 @@
         <td>{{ v.original_name }}<br><small class="muted">{{ v.size|filesizeformat }} · {{ v.content_type }}</small></td>
         <td>{{ v.uploaded_at|date:"d/m/Y H:i" }}<br><small>{{ v.uploaded_by }}</small></td>
         <td class="mono" title="{{ v.sha256 }}">{{ v.sha256|truncatechars:20 }}</td>
-        <td>{% if v.is_signed %}<span class="pill pill-ok">firmato</span>{% if v.signature %}<br><small>{{ v.signature.get_legal_level_display|default:v.signature.signature_format }}{% if v.signature.provider == 'cie' %} con CIE{% endif %}</small><br><small class="muted">{{ v.signature.certificate_subject|truncatechars:50 }}</small>{% endif %}{% elif signing and signing.version_id == v.pk %}<span class="pill pill-warn">{{ signing.get_status_display }}</span>{% endif %}</td>
+        <td>{% if v.is_signed %}<span class="pill pill-ok">firmato</span>{% if v.signature %}<br><small>{% if v.signature.provider == 'cie-prova' %}<span class="pill pill-warn">carta di prova – nessun valore legale</span>{% else %}{{ v.signature.get_legal_level_display|default:v.signature.signature_format }}{% if v.signature.provider == 'cie' %} con CIE{% endif %}{% endif %}</small><br><small class="muted">{{ v.signature.certificate_subject|truncatechars:50 }}</small>{% endif %}{% elif signing and signing.version_id == v.pk %}<span class="pill pill-warn">{{ signing.get_status_display }}</span>{% endif %}</td>
         <td class="num nowrap">
           <a class="btn btn-sm" href="{% url 'documents:view' v.pk %}" target="_blank" rel="noopener">Apri</a>
           <a class="btn btn-sm" href="{% url 'documents:download' v.pk %}">{% icon "download" %}Scarica</a>

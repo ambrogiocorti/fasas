@@ -5,19 +5,33 @@ FASAS Signer – uso:
   python -m fasas_signer console             firma da terminale (conferma e PIN digitati nel terminale)
   python -m fasas_signer diagnostica         Software CIE, lettori, carta e certificato (senza PIN)
 Opzioni comuni: --libreria PERCORSO del modulo PKCS#11 (se non è nel percorso standard del Software CIE).
+Senza lettore: --carta-di-prova FILE.p12 (creato da «manage.py fasas_carta_di_prova», NON è una CIE);
+--usa-cie torna alla CIE.
 """
 import argparse
 import sys
 
 from . import __version__, config
-from .card import CardError, Pkcs11Card, current_os
+from .card import CardError, current_os, make_card
 from .client import ServerClient, ServerError
 
 
-def _settings(args):
+def _settings(args, save=False):
+    """Configurazione salvata, con le opzioni della riga di comando (ricordate se save=True)."""
     settings = config.load()
+    changed = False
     if getattr(args, "libreria", None):
         settings["library"] = args.libreria
+        changed = True
+    if getattr(args, "carta_di_prova", None):
+        from pathlib import Path
+
+        settings["carta_di_prova"] = str(Path(args.carta_di_prova).resolve())
+        changed = True
+    if getattr(args, "usa_cie", False) and settings.pop("carta_di_prova", None):
+        changed = True
+    if save and changed:
+        config.save(settings)
     return settings
 
 
@@ -34,10 +48,13 @@ def cmd_pair(args):
 
 
 def cmd_diagnose(args):
-    card = Pkcs11Card(_settings(args).get("library", ""))
+    card = make_card(_settings(args, save=True))
     info = card.status()
     print(f"FASAS Signer {__version__} su {info['os']}")
-    print(f"Modulo PKCS#11: {info.get('middleware_path') or 'NON TROVATO'} {info.get('middleware', '')}")
+    if getattr(card, "is_test", False):
+        print(f"CARTA DI PROVA (non è una CIE, nessun valore legale): {info.get('middleware_path')}")
+    else:
+        print(f"Modulo PKCS#11: {info.get('middleware_path') or 'NON TROVATO'} {info.get('middleware', '')}")
     print(f"Lettori: {', '.join(info.get('readers', [])) or 'nessuno'}")
     print(f"Carta sul lettore: {'sì' if info.get('card_present') else 'no'}")
     if info.get("card_present"):
@@ -89,13 +106,16 @@ def cmd_console(args):
     from .console import ConsoleUI
     from .engine import Service
 
-    settings = _settings(args)
+    settings = _settings(args, save=True)
     if not settings.get("token"):
         sys.exit("Dispositivo non abbinato: eseguire prima «abbina».")
     client = ServerClient(settings["server"], settings["token"], allow_http=settings.get("allow_http", False))
+    card = make_card(settings)
+    if getattr(card, "is_test", False):
+        print("ATTENZIONE: CARTA DI PROVA – non è una CIE, le firme non hanno valore legale.")
     print(f"In linea come {client.me()['user']}. In attesa di richieste di firma (Ctrl+C per uscire)…")
     try:
-        Service(client, Pkcs11Card(settings.get("library", "")), ConsoleUI()).run()
+        Service(client, card, ConsoleUI()).run()
     except KeyboardInterrupt:
         pass
 
@@ -103,6 +123,8 @@ def cmd_console(args):
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="fasas_signer", description="FASAS Signer – firma con CIE")
     parser.add_argument("--libreria", help="percorso del modulo PKCS#11 del Software CIE")
+    parser.add_argument("--carta-di-prova", help="file .p12 della carta di prova (solo prove senza lettore, NON è una CIE)")
+    parser.add_argument("--usa-cie", action="store_true", help="smette di usare la carta di prova")
     sub = parser.add_subparsers(dest="command")
     pair = sub.add_parser("abbina", help="abbina questo computer al proprio utente FASAS")
     pair.add_argument("--server", required=True)
@@ -120,10 +142,7 @@ def main(argv=None):
         elif args.command == "console":
             cmd_console(args)
         else:
-            if args.libreria:
-                settings = config.load()
-                settings["library"] = args.libreria
-                config.save(settings)
+            _settings(args, save=True)
             from .gui import main as gui_main
 
             gui_main()

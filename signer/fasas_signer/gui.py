@@ -9,7 +9,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from . import __version__, config
-from .card import Pkcs11Card, current_os
+from .card import CardError, current_os, make_card
 from .client import ServerClient, ServerError
 from .console import describe
 from .engine import Service, UserInterface
@@ -69,6 +69,9 @@ class App:
         ttk.Label(frame, text="FASAS Signer – firma con CIE", font=("TkDefaultFont", 14, "bold")).pack(anchor="w")
         ttk.Label(frame, text="Firma elettronica avanzata. Il PIN si digita solo qui e va solo alla carta.",
                   wraplength=520).pack(anchor="w", pady=(2, 12))
+        if self.settings.get("carta_di_prova"):
+            tk.Label(frame, text="CARTA DI PROVA – non è una CIE: le firme non hanno valore legale",
+                     bg="#b00020", fg="white", font=("TkDefaultFont", 11, "bold"), padx=8, pady=6).pack(fill="x", pady=(0, 10))
         ttk.Label(frame, textvariable=self.status, wraplength=520, font=("TkDefaultFont", 11)).pack(anchor="w")
         ttk.Label(frame, textvariable=self.components, wraplength=520, foreground="#555").pack(anchor="w", pady=8)
         buttons = ttk.Frame(frame)
@@ -91,10 +94,14 @@ class App:
         self.status.set(text)
 
     def card(self):
-        return Pkcs11Card(self.settings.get("library", ""))
+        return make_card(self.settings)
 
     def check_components(self):
-        info = self.card().status()
+        try:
+            info = self.card().status()
+        except CardError as exc:
+            self.components.set(str(exc))
+            return
         readers = ", ".join(info.get("readers", [])) or "nessuno"
         self.components.set(
             f"Software CIE: {'trovato' if info.get('middleware_found') else 'NON trovato'}"
@@ -113,8 +120,13 @@ class App:
         except (ValueError, ServerError) as exc:
             self.set_status(str(exc))
             return
+        try:
+            card = self.card()
+        except CardError as exc:
+            self.set_status(str(exc))
+            return
         self.set_status(f"In linea come {me['user']}: in attesa di richieste di firma dal FASAS.")
-        self.service = Service(client, self.card(), TkUI(self))
+        self.service = Service(client, card, TkUI(self))
         threading.Thread(target=self.service.run, daemon=True).start()
 
     def pair_dialog(self):
@@ -122,7 +134,8 @@ class App:
         dialog.title("Abbina al FASAS")
         dialog.transient(self.root)
         dialog.grab_set()
-        server = tk.StringVar(value=self.settings.get("server", "https://"))
+        default = "http://127.0.0.1:8000/" if self.settings.get("carta_di_prova") else "https://"
+        server = tk.StringVar(value=self.settings.get("server", default))
         code = tk.StringVar()
         name = tk.StringVar(value=self.settings.get("name", "PC con lettore CIE"))
         for row, (label, var) in enumerate((("Indirizzo del FASAS", server), ("Codice di abbinamento", code),
@@ -189,7 +202,9 @@ class App:
         result = {"pin": None}
         ttk.Label(dialog, text=f"Codice di controllo: {request['verify_code']}",
                   font=("TkDefaultFont", 13, "bold")).pack(padx=16, pady=(16, 4))
-        ttk.Label(dialog, text="Appoggia la CIE sul lettore e digita le ultime 4 cifre del PIN.").pack(padx=16)
+        hint = ("Carta di prova: digita il PIN scelto alla creazione (di solito 1234)." if self.settings.get("carta_di_prova")
+                else "Appoggia la CIE sul lettore e digita le ultime 4 cifre del PIN.")
+        ttk.Label(dialog, text=hint).pack(padx=16)
         if message:
             ttk.Label(dialog, text=message, foreground="#b00020").pack(padx=16, pady=4)
         pin = tk.StringVar()

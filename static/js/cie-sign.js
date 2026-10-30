@@ -41,7 +41,10 @@
         : "Conferma la richiesta su FASAS Signer (controlla che il codice coincida).";
     }
     if (s.status === "card") return "Carta letta: controllo del certificato e preparazione del documento…";
-    if (s.status === "authorizing") return "Digita su FASAS Signer il PIN della CIE (sul computer le ultime 4 cifre).";
+    if (s.status === "authorizing") {
+      return s.test_card ? "Digita su FASAS Signer il PIN della carta di prova."
+        : "Digita su FASAS Signer il PIN della CIE (sul computer le ultime 4 cifre).";
+    }
     if (s.status === "signing") return "Non allontanare la carta dal lettore.";
     if (s.status === "verifying") return "Verifica crittografica della firma e archiviazione del documento…";
     return "";
@@ -61,7 +64,8 @@
     let done = "";
     if (s.status === "signed") {
       const v = s.verification || {};
-      done = "Documento firmato correttamente (" + (v.level || "PAdES") + ", firma elettronica avanzata con CIE)" +
+      done = "Documento firmato correttamente (" + (v.level || "PAdES") + ", " + (s.test_card
+        ? "CARTA DI PROVA: non è una CIE e la firma non ha valore legale)" : "firma elettronica avanzata con CIE)") +
         (s.version ? ": creata la versione " + s.version + "." : ".");
       if (v.trusted === false) done += " Attenzione: " + (v.note || "catena di certificazione non verificata") + ".";
       if (v.chain_note) done += " " + v.chain_note;

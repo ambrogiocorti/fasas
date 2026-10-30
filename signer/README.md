@@ -60,6 +60,21 @@ Se il Software CIE è in un percorso diverso da quello standard, aggiungere `--l
 | macOS | `/Library/ipzs/libcie-pkcs11.dylib`, `/usr/local/lib/libcie-pkcs11.dylib` (con la versione da App Store il percorso va verificato) |
 | Linux | `/usr/local/lib/libcie-pkcs11.so`, `/usr/lib/libcie-pkcs11.so`, `/usr/lib/x86_64-linux-gnu/libcie-pkcs11.so` |
 
+## Senza lettore: carta di prova
+
+Per provare il FASAS senza lettore NFC (solo su un FASAS di prova sullo stesso computer) si può usare la carta di
+prova creata da `python manage.py fasas_carta_di_prova`; non è una CIE e le sue firme non hanno valore legale:
+
+```bash
+fasas-signer/bin/python -m fasas_signer --carta-di-prova ../.carta-di-prova/carta-di-prova-medico.p12
+```
+
+Per tornare alla CIE:
+
+```bash
+fasas-signer/bin/python -m fasas_signer --usa-cie
+```
+
 ## Sicurezza
 
 - Il PIN (le ultime 4 cifre dopo l'abbinamento della carta) si digita solo qui e va solo al modulo PKCS#11;

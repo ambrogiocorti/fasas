@@ -163,6 +163,22 @@ il **codice fiscale**.
 PIN errato: il Signer lo richiede e la pagina mostra i tentativi rimasti quando il modulo li comunica; dopo
 3 errori il PIN si blocca e va sbloccato con il PUK dall'app CIE ID.
 
+### Prova senza lettore (carta di prova)
+
+La CIE ha solo il chip contactless: senza lettore NFC non si può usare dal computer. Per provare tutto il resto
+(pagine, stati, FASAS Signer, PIN, firma PAdES, verifica, archiviazione) c'è una **carta di prova**: una chiave
+software emessa da una CA marcata «SOLO PROVA – NON È UNA CIE».
+
+- Si crea solo in un'installazione di prova (`DJANGO_DEBUG=1`):
+  `python manage.py fasas_carta_di_prova --utente medico` (PIN predefinito `1234`). Il comando aggiunge al file
+  `.env` le CA di prova; poi il FASAS va riavviato.
+- Il Signer la usa con `--carta-di-prova` seguito dal percorso del file `.p12` (cartella `.carta-di-prova`), solo
+  verso un FASAS sullo stesso computer; la finestra mostra in rosso «CARTA DI PROVA».
+- Le firme sono vere dal punto di vista crittografico ma **senza valore legale**: il documento le mostra come
+  «carta di prova – nessun valore legale» e il FASAS le **rifiuta** se `DJANGO_DEBUG` non è attivo.
+- Non prova la CIE, il lettore né il Software CIE: per quelli serve il collaudo con una carta reale.
+- Per tornare alla CIE: `python -m fasas_signer --usa-cie` e togliere da `.env` le righe della carta di prova.
+
 ## 7. Verifica e conservazione
 
 - Nel FASAS: **Verifica firme** sulla versione firmata (integrità, validità, catena verso le CA configurate,
