@@ -1,0 +1,15 @@
+# Proxy HTTPS davanti al FASAS: certificato Let's Encrypt automatico per FASAS_DOMAIN
+# (con «localhost» usa un certificato locale, per le prove).
+{$FASAS_DOMAIN:localhost} {
+	encode gzip
+	handle /static/* {
+		root * /
+		file_server
+	}
+	handle {
+		reverse_proxy web:8000
+	}
+	request_body {
+		max_size 60MB
+	}
+}

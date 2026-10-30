@@ -71,4 +71,4 @@ def error_list(request):
 
 def settings_hub(request):
     """Pagina indice delle configurazioni visibili all'utente."""
-    return render(request, "core/settings_hub.html")
+    return render(request, "core/settings_hub.html", {"version": __version__})

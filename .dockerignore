@@ -1,0 +1,16 @@
+.git
+.github
+.venv
+venv
+**/__pycache__
+*.py[cod]
+*.sqlite3
+.env
+media
+backups
+staticfiles
+mobile
+signer
+docs
+.ruff_cache
+.carta-di-prova

@@ -35,7 +35,8 @@ jobs:
           cache: pip
       - name: SoftHSM2 (modulo PKCS#11 reale per i test del FASAS Signer)
         run: sudo apt-get update && sudo apt-get install -y softhsm2
-      - run: pip install -r requirements-dev.txt -r signer/requirements.txt
+      - run: pip install --require-hashes -r requirements.lock
+      - run: pip install "moto[s3]>=5.0" "ruff>=0.6" -r signer/requirements.txt
       - run: ruff check fasas config signer
       - name: Imposta database
         if: matrix.database == 'postgres'
@@ -65,3 +66,47 @@ jobs:
       - run: python manage.py migrate --verbosity 0
       - run: python manage.py fasas_demo --skip-if-exists
       - run: python manage.py test fasas.tests
+
+  container:
+    # Immagine di produzione e docker compose completo: database, sito, job, proxy HTTPS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configurazione di prova (chiavi generate al momento, mai usate altrove)
+        run: |
+          python3 -c "import base64,os,secrets; print('DJANGO_DEBUG=0'); print('DJANGO_SECRET_KEY=' + secrets.token_hex(32)); print('FASAS_ENCRYPTION_KEYS=' + base64.urlsafe_b64encode(os.urandom(32)).decode()); print('FASAS_BACKUP_KEY=' + base64.urlsafe_b64encode(os.urandom(32)).decode()); print('POSTGRES_PASSWORD=' + secrets.token_hex(16)); print('FASAS_DOMAIN=localhost'); print('FASAS_HEALTH_TOKEN=ci')" > .env
+      - run: docker compose build
+      - run: docker compose up -d
+      - name: Attende il sito
+        run: |
+          for i in $(seq 1 60); do
+            curl -skf https://localhost/salute/ && break
+            sleep 3
+          done
+          curl -skf https://localhost/accesso/entra/ > /dev/null
+          curl -skf https://localhost/static/css/fasas.css > /dev/null
+      - name: Backup PostgreSQL (pg_dump), verifica audit e prova di ripristino in un database separato
+        run: |
+          docker compose exec -T web python manage.py fasas_jobs audit_verify backup
+          docker compose exec -T web python manage.py backup_prova_ripristino
+          docker compose exec -T web pg_dump --version
+      - name: Stato dettagliato
+        run: curl -sk "https://localhost/salute/?token=ci"
+      - name: Log in caso di errore
+        if: failure()
+        run: docker compose logs --tail 100
+      - run: docker compose down -v
+        if: always()
+
+  sicurezza:
+    # Vulnerabilità note nelle dipendenze bloccate e analisi statica del codice
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pip-audit bandit
+      - run: pip-audit --require-hashes --disable-pip -r requirements.lock
+      - run: pip-audit --require-hashes --disable-pip -r signer/requirements.lock
+      - run: bandit -q -r fasas config signer/fasas_signer -x fasas/tests,*/migrations/* -ll

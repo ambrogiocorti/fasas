@@ -35,4 +35,5 @@
     {% if perms.core.view_errorevent %}<li><a href="{% url 'core:errors' %}">Stato del sistema ed errori</a></li>{% endif %}
   </ul></div>
 </div>
+<p><small class="muted">FASAS Digitale versione {{ version }} · <a href="https://github.com/ambrogiocorti/fasas/blob/main/CHANGELOG.md">novità</a></small></p>
 {% endblock %}

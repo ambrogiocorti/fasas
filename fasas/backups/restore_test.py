@@ -65,7 +65,9 @@ def _pick_backup(workdir, steps):
 def _count_sqlite(path):
     db = sqlite3.connect(path)
     try:
-        return {table: db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] for table in COUNTED_TABLES}  # noqa: S608
+        # nomi di tabella fissi in COUNTED_TABLES, nessun input esterno
+        return {table: db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]  # nosec B608
+                for table in COUNTED_TABLES}
     finally:
         db.close()  # su Windows un file aperto impedirebbe di cancellare la cartella temporanea
 
@@ -76,7 +78,7 @@ def _count_postgres(url):
     with psycopg.connect(url) as db, db.cursor() as cursor:
         counts = {}
         for table in COUNTED_TABLES:
-            cursor.execute(f"SELECT COUNT(*) FROM {table}")  # noqa: S608 - nomi fissi, non input
+            cursor.execute(f"SELECT COUNT(*) FROM {table}")  # nosec B608
             counts[table] = cursor.fetchone()[0]
         return counts
 

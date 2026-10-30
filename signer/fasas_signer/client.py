@@ -51,7 +51,9 @@ class ServerClient:
             **({"Authorization": f"Bearer {self.token}"} if self.token else {}),
         })
         try:
-            with urllib.request.urlopen(request, timeout=timeout or self.timeout, context=self._context) as response:
+            # schema già limitato a https (o http locale) nel costruttore
+            with urllib.request.urlopen(request, timeout=timeout or self.timeout,  # nosec B310
+                                        context=self._context) as response:
                 return json.loads(response.read() or b"{}")
         except urllib.error.HTTPError as exc:
             try:
