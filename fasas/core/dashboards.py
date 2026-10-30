@@ -236,6 +236,10 @@ def admin(request):
         warnings.append("Nessuna restrizione di rete: il sistema è raggiungibile da qualsiasi indirizzo (FASAS_ALLOWED_NETWORKS).")
     if last_ok is None or last_ok.created_at < now - datetime.timedelta(hours=26):
         warnings.append("Nessun backup riuscito nelle ultime 26 ore.")
+    unvalidated = Protocol.objects.filter(active=True, validated_at__isnull=True).count()
+    if unvalidated and settings.FASAS_PROTOCOLS_REQUIRE_VALIDATION:
+        warnings.append(f"{unvalidated} protocolli attivi non sono ancora validati dal medico della struttura: "
+                        "finché non li valida non si attivano.")
     if checkpoint is not None and not checkpoint.chain_ok:
         warnings.append("Audit log NON integro: vedere i punti di controllo dell'audit.")
     if checkpoint is None or checkpoint.created_at < now - datetime.timedelta(hours=26):

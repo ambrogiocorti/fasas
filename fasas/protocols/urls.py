@@ -12,4 +12,5 @@ urlpatterns = [
     path("regole/", views.ProtocolListView.as_view(), name="list"),
     path("regole/nuova/", views.ProtocolCreateView.as_view(), name="create"),
     path("regole/<int:pk>/", views.ProtocolUpdateView.as_view(), name="update"),
+    path("regole/<int:pk>/valida/", views.protocol_validate, name="validate"),
 ]

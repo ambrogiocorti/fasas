@@ -60,14 +60,35 @@ class DrugInteraction(models.Model):
     severity = models.CharField("gravità", max_length=10, choices=Severity.choices, default=Severity.MODERATE)
     description = models.TextField("descrizione / indicazioni")
     source = models.CharField("fonte", max_length=255, blank=True)
+    validated_by = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name="validata da", on_delete=models.PROTECT,
+                                     null=True, blank=True, related_name="+")
+    validated_at = models.DateTimeField("validata il", null=True, blank=True)
 
     class Meta:
         verbose_name = "interazione farmacologica"
         verbose_name_plural = "interazioni farmacologiche"
         ordering = ["ingredient_a", "ingredient_b"]
+        permissions = [("validate_druginteraction", "Può validare le interazioni (medico della struttura)")]
 
     def __str__(self):
         return f"{self.ingredient_a} ↔ {self.ingredient_b}"
+
+    @property
+    def is_validated(self):
+        return self.validated_at is not None
+
+    def validation(self):
+        if not self.is_validated:
+            return "DA VALIDARE (non usata nei promemoria)"
+        return f"validata da {self.validated_by} il {timezone.localtime(self.validated_at):%d/%m/%Y}"
+    validation.short_description = "validazione"
+
+    def row_action(self, user):
+        if not self.is_validated and user.has_perm("pharmacy.validate_druginteraction"):
+            from django.urls import reverse
+
+            return reverse("pharmacy:interaction_validate", args=[self.pk]), "Valida"
+        return None
 
 
 class StockLot(models.Model):

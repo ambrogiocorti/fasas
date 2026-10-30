@@ -67,8 +67,9 @@ class TherapyForm(forms.ModelForm):
         cleaned = super().clean()
         drug = cleaned.get("drug")
         if drug and self.guest is not None:
-            from .services import check_therapy_conflicts
+            from .services import THERAPY_CHECK_NOTICE, check_therapy_conflicts
 
+            self.check_notice = THERAPY_CHECK_NOTICE
             self.warnings = check_therapy_conflicts(self.guest, drug, exclude_therapy=self.instance)
             if self.warnings and not cleaned.get("confirm_warnings"):
                 raise forms.ValidationError(

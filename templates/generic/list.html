@@ -17,7 +17,7 @@
     <tbody>
     {% for row in rows %}
       <tr>{% for c in row.cells %}<td>{{ c }}</td>{% endfor %}
-        <td class="nowrap">{% if can_change %}<a class="btn btn-sm" href="{{ row.edit_url }}">Modifica</a>{% endif %}</td></tr>
+        <td class="nowrap">{% if row.action %}<form method="post" action="{{ row.action.0 }}" class="inline-form">{% csrf_token %}<button class="btn btn-sm btn-primary">{{ row.action.1 }}</button></form> {% endif %}{% if can_change %}<a class="btn btn-sm" href="{{ row.edit_url }}">Modifica</a>{% endif %}</td></tr>
     {% empty %}
       <tr><td colspan="{{ headers|length|add:1 }}" class="empty">Nessun elemento.</td></tr>
     {% endfor %}

@@ -15,8 +15,16 @@ class DrugForm(forms.ModelForm):
 class DrugInteractionForm(forms.ModelForm):
     class Meta:
         model = DrugInteraction
-        fields = "__all__"
+        fields = ["ingredient_a", "ingredient_b", "severity", "description", "source"]
         widgets = {"description": forms.Textarea(attrs={"rows": 3})}
+
+    def save(self, commit=True):
+        interaction = super().save(commit=False)
+        if self.changed_data:  # contenuto cambiato: va rivalidato dal medico
+            interaction.validated_by, interaction.validated_at = None, None
+        if commit:
+            interaction.save()
+        return interaction
 
 
 class LotLoadForm(forms.ModelForm):

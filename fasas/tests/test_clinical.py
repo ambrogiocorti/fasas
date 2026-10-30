@@ -1,6 +1,7 @@
 import datetime
 from decimal import Decimal
 
+from django.urls import reverse
 from django.utils import timezone
 
 from fasas.clinical.models import TherapyAdministration
@@ -30,13 +31,40 @@ class TherapyConflictTests(FasasTestCase):
         self.assertTrue(any("principio attivo" in w.message for w in warnings))
 
     def test_interaction_from_table(self):
+        from fasas.core.models import SystemConfig
+
         self.make_therapy(drug=self.make_drug("Coumadin", "warfarin", "B01AA03"))
-        DrugInteraction.objects.create(ingredient_a="warfarin", ingredient_b="acido acetilsalicilico",
-                                       severity="major", description="Rischio emorragico")
+        interaction = DrugInteraction.objects.create(ingredient_a="warfarin", ingredient_b="acido acetilsalicilico",
+                                                     severity="major", description="Rischio emorragico")
         aspirin = self.make_drug("Cardioaspirin", "acido acetilsalicilico", "B01AC06")
+        self.assertEqual(check_therapy_conflicts(self.guest, aspirin), [])  # spenti finché c'è il parere MDR
+        SystemConfig.objects.update(therapy_check_interactions=True)
+        self.assertEqual(check_therapy_conflicts(self.guest, aspirin), [])  # regola non ancora validata dal medico
+        self.login(self.coordinator)
+        self.assertEqual(self.client.post(reverse("pharmacy:interaction_validate", args=[interaction.pk])).status_code,
+                         403)
+        self.login(self.doctor)
+        self.assertContains(self.client.get(reverse("pharmacy:interaction_list")), "DA VALIDARE")
+        self.client.post(reverse("pharmacy:interaction_validate", args=[interaction.pk]))
         warnings = check_therapy_conflicts(self.guest, aspirin)
         self.assertEqual([w.kind for w in warnings], ["interaction"])
         self.assertEqual(warnings[0].level, "danger")
+        # modificare la regola la toglie dai promemoria finché il medico non la rivalida
+        self.client.post(reverse("pharmacy:interaction_update", args=[interaction.pk]), {
+            "ingredient_a": "warfarin", "ingredient_b": "acido acetilsalicilico", "severity": "moderate",
+            "description": "Rischio emorragico", "source": ""})
+        interaction.refresh_from_db()
+        self.assertFalse(interaction.is_validated)
+        self.assertEqual(check_therapy_conflicts(self.guest, aspirin), [])
+
+    def test_checks_can_be_switched_off(self):
+        from fasas.core.models import SystemConfig
+
+        drug = self.make_drug()
+        self.make_therapy(drug=drug)
+        Allergy.objects.create(guest=self.guest, substance="paracetamolo", category="drug")
+        SystemConfig.objects.update(therapy_check_duplicates=False, therapy_check_allergies=False)
+        self.assertEqual(check_therapy_conflicts(self.guest, drug), [])
 
     def test_allergy_warning(self):
         Allergy.objects.create(guest=self.guest, substance="paracetamolo", category="drug")

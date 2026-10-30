@@ -93,6 +93,7 @@ DOCTOR = VIEW_CARE + [
     "documents.add_document",
     "pharmacy.view_drug", "pharmacy.add_drug", "pharmacy.change_drug",
     "pharmacy.view_druginteraction", "pharmacy.add_druginteraction", "pharmacy.change_druginteraction",
+    "pharmacy.validate_druginteraction", "protocols.view_protocol", "protocols.validate_protocol",
     "clinical.add_therapy", "clinical.change_therapy", "clinical.validate_sos",
     "clinical.add_clinicalevent", "clinical.change_restraint",
     "signatures.sign_document", "signatures.view_signingcredential",

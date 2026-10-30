@@ -24,6 +24,9 @@ class FasasTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         call_command("fasas_setup", stdout=io.StringIO())
+        from fasas.protocols.models import Protocol
+
+        Protocol.objects.update(validated_by="Medico di prova", validated_at=timezone.now())  # come dopo la validazione
         cls.admin = cls.make_user("admin", Role.ADMIN)
         cls.coordinator = cls.make_user("coord", Role.COORDINATOR)
         cls.operator = cls.make_user("oper", Role.OPERATOR)

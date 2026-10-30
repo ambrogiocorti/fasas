@@ -2,9 +2,11 @@ from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from .forms import LotAdjustForm, LotLoadForm
-from .models import StockLot
+from .models import DrugInteraction, StockLot
 from .services import adjust_lot, drug_stock_summary, load_lot
 
 
@@ -49,3 +51,14 @@ def lot_detail(request, pk):
             return redirect("pharmacy:lot_detail", pk=lot.pk)
     movements = lot.movements.select_related("created_by", "administration__guest")[:300]
     return render(request, "pharmacy/lot_detail.html", {"lot": lot, "movements": movements, "form": form})
+
+
+@require_POST
+@permission_required("pharmacy.validate_druginteraction", raise_exception=True)
+def interaction_validate(request, pk):
+    """Il medico della struttura conferma l'interazione: solo da allora entra nei promemoria sulle terapie."""
+    interaction = get_object_or_404(DrugInteraction, pk=pk)
+    interaction.validated_by, interaction.validated_at = request.user, timezone.now()
+    interaction.save(update_fields=["validated_by", "validated_at"])
+    messages.success(request, f"Interazione {interaction} validata.")
+    return redirect("pharmacy:interaction_list")

@@ -18,7 +18,7 @@ class ProtocolForm(forms.ModelForm):
     class Meta:
         model = Protocol
         fields = ["name", "kind", "description", "params", "actions", "severity", "applies_to_all", "tags", "guests",
-                  "notify_roles", "validated_by", "active"]
+                  "notify_roles", "active"]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 2}),
             "actions": forms.Textarea(attrs={"rows": 4}),

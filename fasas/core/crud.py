@@ -50,7 +50,9 @@ class ConfigListView(PermRequiredMixin, ListView):
                         for f in self.list_display],
             "rows": [
                 {"obj": obj, "cells": [_display(obj, f) for f in self.list_display],
-                 "edit_url": reverse(f"{self.url_prefix}_update", args=[obj.pk])}
+                 "edit_url": reverse(f"{self.url_prefix}_update", args=[obj.pk]),
+                 # azione aggiuntiva della riga (es. «Valida»), se il modello la prevede per questo utente
+                 "action": obj.row_action(self.request.user) if hasattr(obj, "row_action") else None}
                 for obj in context["object_list"]
             ],
             "create_url": reverse(f"{self.url_prefix}_create"),

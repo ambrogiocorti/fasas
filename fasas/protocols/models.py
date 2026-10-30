@@ -61,12 +61,23 @@ class Protocol(TimeStampedModel):
     notify_roles = models.JSONField("ruoli da avvisare", default=list, blank=True,
                                     help_text="Vuoto = impostazioni generali delle notifiche")
     validated_by = models.CharField("validato da (medico / direttore sanitario)", max_length=150, blank=True)
+    validated_by_user = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name="validato da (utente)",
+                                          on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    validated_at = models.DateTimeField("validato il", null=True, blank=True)
     active = models.BooleanField("attivo", default=True)
+
+    # Cambiare questi campi richiede una nuova validazione del medico
+    CLINICAL_FIELDS = ("kind", "params", "actions", "severity")
 
     class Meta:
         verbose_name = "protocollo"
         verbose_name_plural = "protocolli"
         ordering = ["kind", "name"]
+        permissions = [("validate_protocol", "Può validare soglie e azioni dei protocolli (medico della struttura)")]
+
+    @property
+    def is_validated(self):
+        return self.validated_at is not None
 
     def __str__(self):
         return self.name
@@ -85,7 +96,7 @@ class Protocol(TimeStampedModel):
         return value
 
     def applies_to(self, guest):
-        if not self.active:
+        if not self.active or (settings.FASAS_PROTOCOLS_REQUIRE_VALIDATION and not self.is_validated):
             return False
         if self.applies_to_all:
             return True

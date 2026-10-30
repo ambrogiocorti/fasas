@@ -84,3 +84,38 @@ class ProtocolEngineTests(FasasTestCase):
         self.client.post(f"/protocolli/attivazione/{activation.pk}/chiudi/", {"status": "resolved", "notes": "Crisi risolta"})
         activation.refresh_from_db()
         self.assertEqual(activation.status, "resolved")
+
+
+class ProtocolValidationTests(FasasTestCase):
+    """Un protocollo si attiva solo dopo che il medico ne ha validato soglie e azioni."""
+
+    def test_unvalidated_protocol_does_not_fire_and_change_requires_new_validation(self):
+        from django.urls import reverse
+
+        from fasas.protocols.models import Protocol
+
+        protocol = Protocol.objects.filter(kind=Protocol.Kind.FEVER).first()
+        Protocol.objects.filter(pk=protocol.pk).update(validated_at=None, validated_by="")
+        protocol.refresh_from_db()
+        self.assertFalse(protocol.applies_to(self.guest))
+        self.login(self.admin)
+        self.assertContains(self.client.get("/"), "non sono ancora validati")
+        self.login(self.coordinator)
+        self.assertEqual(self.client.post(reverse("protocols:validate", args=[protocol.pk])).status_code, 403)
+        self.login(self.doctor)
+        page = self.client.get(reverse("protocols:list"))
+        self.assertContains(page, "da validare: non si attiva")
+        self.client.post(reverse("protocols:validate", args=[protocol.pk]))
+        protocol.refresh_from_db()
+        self.assertEqual((protocol.validated_by_user, protocol.is_validated), (self.doctor, True))
+        self.assertTrue(protocol.applies_to(self.guest))
+        # il coordinatore cambia la soglia: il protocollo torna da validare
+        self.login(self.coordinator)
+        self.client.post(reverse("protocols:update", args=[protocol.pk]), {
+            "name": protocol.name, "kind": protocol.kind, "description": protocol.description,
+            "params": '{"threshold": 38.0, "parameter": "temperatura"}', "actions": protocol.actions,
+            "severity": protocol.severity, "applies_to_all": "on", "active": "on"})
+        protocol.refresh_from_db()
+        self.assertEqual(protocol.params["threshold"], 38.0)
+        self.assertFalse(protocol.is_validated)
+        self.assertFalse(protocol.applies_to(self.guest))

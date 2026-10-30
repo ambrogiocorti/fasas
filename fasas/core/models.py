@@ -93,6 +93,16 @@ class SystemConfig(models.Model):
         "tema scuro automatico durante il turno di notte", default=True
     )
 
+    # Promemoria sulle nuove terapie (docs/DISPOSITIVO_MEDICO.md). Confrontano dati già registrati dalla struttura;
+    # le interazioni restano spente finché il parere regolatorio non conferma l'uso previsto.
+    therapy_check_duplicates = models.BooleanField(
+        "promemoria: stesso farmaco o principio attivo già in terapia", default=True)
+    therapy_check_allergies = models.BooleanField(
+        "promemoria: farmaco che contiene una sostanza registrata tra le allergie dell'ospite", default=True)
+    therapy_check_interactions = models.BooleanField(
+        "promemoria: interazioni dalla tabella validata dal medico della struttura", default=False,
+        help_text="Attivare solo dopo il parere sul regolamento dei dispositivi medici (docs/DISPOSITIVO_MEDICO.md).")
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

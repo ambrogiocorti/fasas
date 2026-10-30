@@ -18,6 +18,6 @@ urlpatterns = [
     search_fields=("name", "active_ingredient", "atc_code"), namespace="pharmacy",
 ) + config_urls(
     "interazioni", "interaction", DrugInteraction, DrugInteractionForm,
-    ("ingredient_a", "ingredient_b", "severity", "description"),
+    ("ingredient_a", "ingredient_b", "severity", "description", "validation"),
     search_fields=("ingredient_a", "ingredient_b"), namespace="pharmacy",
-)
+) + [path("interazioni/<int:pk>/valida/", views.interaction_validate, name="interaction_validate")]

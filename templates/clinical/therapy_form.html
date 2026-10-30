@@ -6,9 +6,10 @@
   <h1>{{ page_title }}</h1>
   {% if form.warnings %}
     <div class="alert alert-danger">
-      <strong>Controllo automatico duplicati, interazioni e allergie</strong>
+      <strong>Promemoria sulla nuova terapia</strong>
       <ul>{% for w in form.warnings %}<li>{{ w.message }}</li>{% endfor %}</ul>
       Spuntare la conferma in fondo al modulo per procedere: la conferma sarà registrata e i coordinatori avvisati.
+      <br><small>{{ form.check_notice }}</small>
     </div>
   {% endif %}
   <form method="post" novalidate>

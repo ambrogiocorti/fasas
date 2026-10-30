@@ -100,6 +100,17 @@ class Command(BaseCommand):
             ingredient_a="warfarin", ingredient_b="acido acetilsalicilico",
             defaults={"severity": "major", "description": "Aumento del rischio emorragico: associazione da valutare dal medico.",
                       "source": "Esempio dimostrativo – verificare su fonti ufficiali (AIFA / scheda tecnica)"})
+        # Demo: il medico di fantasia «valida» protocolli e interazione e si attivano tutti i promemoria,
+        # così si vede come funzionano. In una comunità reale lo fa il medico della struttura.
+        from django.utils import timezone
+
+        from fasas.core.models import SystemConfig
+        from fasas.protocols.models import Protocol
+
+        DrugInteraction.objects.filter(validated_at=None).update(validated_by=users["doctor"], validated_at=timezone.now())
+        Protocol.objects.filter(validated_at=None).update(
+            validated_by_user=users["doctor"], validated_by=str(users["doctor"]), validated_at=timezone.now())
+        SystemConfig.objects.update(therapy_check_interactions=True)
 
         coordinator = users["coordinator"]
         with audit_context(user=users["operator"]):

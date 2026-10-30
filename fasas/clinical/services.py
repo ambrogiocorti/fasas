@@ -35,7 +35,18 @@ def _ingredients(drug):
     return {_norm(part) for part in raw.split(",") if part.strip()}
 
 
+THERAPY_CHECK_NOTICE = ("Promemoria calcolati confrontando i dati registrati dalla struttura (terapie, allergie, "
+                        "tabella delle interazioni validata dal medico): non sostituiscono la valutazione del medico.")
+
+
 def check_therapy_conflicts(guest, drug, exclude_therapy=None):
+    """
+    Promemoria su una nuova terapia, secondo gli interruttori in Configurazione (docs/DISPOSITIVO_MEDICO.md):
+    duplicati, allergie registrate e interazioni della tabella validata dal medico della struttura.
+    """
+    from fasas.core.models import SystemConfig
+
+    config = SystemConfig.get()
     warnings = []
     active = Therapy.objects.filter(guest=guest).exclude(status=Therapy.Status.ENDED).select_related("drug")
     if exclude_therapy is not None and exclude_therapy.pk:
@@ -43,7 +54,7 @@ def check_therapy_conflicts(guest, drug, exclude_therapy=None):
     new_ingredients = _ingredients(drug)
     atc = (drug.atc_code or "").upper()
 
-    for therapy in active:
+    for therapy in (active if config.therapy_check_duplicates else []):
         other = therapy.drug
         if other.pk == drug.pk:
             warnings.append(TherapyWarning("danger", "duplicate",
@@ -61,8 +72,8 @@ def check_therapy_conflicts(guest, drug, exclude_therapy=None):
     for therapy in active:
         for ingredient in _ingredients(therapy.drug):
             other_ingredients.setdefault(ingredient, therapy.drug)
-    if new_ingredients and other_ingredients:
-        pairs = DrugInteraction.objects.all()
+    if config.therapy_check_interactions and new_ingredients and other_ingredients:
+        pairs = DrugInteraction.objects.filter(validated_at__isnull=False)  # solo regole validate dal medico
         for interaction in pairs:
             a, b = _norm(interaction.ingredient_a), _norm(interaction.ingredient_b)
             for mine, theirs in ((a, b), (b, a)):
@@ -72,7 +83,7 @@ def check_therapy_conflicts(guest, drug, exclude_therapy=None):
                         f"Interazione {interaction.get_severity_display().lower()} con {other_ingredients[theirs]}: "
                         f"{interaction.description}"))
 
-    for allergy in guest.allergies.filter(category="drug"):
+    for allergy in (guest.allergies.filter(category="drug") if config.therapy_check_allergies else []):
         substance = _norm(allergy.substance)
         if substance and (substance in new_ingredients or substance in _norm(drug.name)
                           or any(substance in ing or ing in substance for ing in new_ingredients)):

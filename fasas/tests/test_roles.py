@@ -51,11 +51,12 @@ class RoleAccessTests(FasasTestCase):
         self.assert_status(self.doctor, [
             ("clinical:therapy_overview", []), ("clinical:therapy_create", [self.guest.pk]),
             ("clinical:sos_pending", []), ("documents:to_sign", []), ("guests:detail", [self.guest.pk]),
+            ("protocols:list", []),  # il medico valida soglie e azioni dei protocolli
         ], 200)
         self.assert_status(self.doctor, [
             ("clinical:board", []), ("daily:checklist", []), ("daily:evacuations", []), ("daily:closures", []),
             ("pharmacy:stock", []), ("guests:create", []), ("reports:list", []), ("accounts:user_list", []),
-            ("protocols:list", []),
+            ("protocols:create", []),
         ], 403)
 
     def test_admin_system_only_no_clinical_records(self):
