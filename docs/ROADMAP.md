@@ -32,8 +32,8 @@ Stato al [29/10/2026]. ✅ fatto · 🟡 da decidere o da completare fuori dal s
 | ⬜ | Pacchetto «pronto per l'ispezione» | report unico per la vigilanza ATS |
 | ⬜ | Conservazione a norma | invio dei fascicoli chiusi a un conservatore accreditato |
 | ⬜ | Firma di più documenti con un'unica autorizzazione | firma massiva per i medici |
-| ⬜ | FASAS Signer per Android | prototipo: protocollo collaudato contro il server, NFC con libreria IAS di PagoPA/IPZS; da compilare con Android Studio e collaudare con una CIE reale |
-| ⬜ | FASAS Signer per iPhone | studio e prototipo Core NFC (CieSDK di PagoPA + patch per la firma); serve un Mac, l'Apple Developer Program e il collaudo con una CIE reale |
+| 🟡 | FASAS Signer per Android | APK di prova compilato da GitHub, da collaudare con una CIE reale; poi FASAS in HTTPS e APK firmato dalla struttura |
+| 🟡 | FASAS Signer per iPhone | app SwiftUI che compila nella CI; per installarla servono l'Apple Developer Program e TestFlight, poi il collaudo con una CIE reale |
 | ⬜ | Pacchetti installabili del FASAS Signer | eseguibili firmati per Windows (Authenticode) e macOS (notarizzazione Apple) |
 
 ## Fase 3 – Futuro

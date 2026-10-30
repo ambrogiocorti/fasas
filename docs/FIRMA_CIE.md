@@ -191,19 +191,20 @@ software emessa da una CA marcata «SOLO PROVA – NON È UNA CIE».
 
 ## 8. Telefoni (Android e iPhone)
 
-- **Il browser non basta.** Web NFC (Chrome su Android) legge solo etichette NDEF e non può inviare i comandi
-  ISO 7816 (APDU) al chip della CIE; Safari e le PWA su iPhone non hanno accesso all'NFC. Serve un'app nativa.
-- **Android** – prototipo in [mobile/android](../mobile/android/README.md): il protocollo verso il FASAS e il
-  flusso di firma (Kotlin) sono stati **collaudati contro il server** con una chiave di prova; l'app usa NFC
-  IsoDep e la libreria IAS open source (MIT) di PagoPA/IPZS già usata per l'accesso con CIE, scaricata a una
-  versione fissata. Il codice compila contro le API di Android 14, ma l'APK non è stato generato (SDK Android
-  non disponibile qui) e **non è collaudato con una CIE reale**. Distribuzione: APK interno (gratuito) o
-  Google Play (account sviluppatore, quota una tantum).
-- **iPhone** – studio e prototipo in [mobile/ios](../mobile/ios/README.md): Core NFC (`NFCTagReaderSession`,
-  tag ISO 7816) con la libreria CieSDK di PagoPA (MIT) più una piccola patch che aggiunge la firma del DigestInfo.
-  Servono un Mac con Xcode, l'**Apple Developer Program** (quota annuale; esiste un esonero per enti non profit,
-  istituti scolastici ed enti pubblici dei paesi ammessi: da verificare), la capability «NFC Tag Reading» e gli
-  identificativi ISO 7816 della CIE nell'Info.plist. **Non compilato né collaudato.**
+Il browser non basta: Web NFC (Chrome su Android) legge solo etichette NDEF e non invia comandi ISO 7816 al chip
+della CIE; Safari e le PWA su iPhone non accedono all'NFC. Per firmare con il telefono serve l'app **FASAS Signer**,
+che usa l'NFC del telefono al posto del lettore e le stesse API del Signer per computer (PIN completo di 8 cifre).
+
+| | Android | iPhone |
+|---|---|---|
+| Codice | Kotlin, NFC IsoDep, libreria IAS di PagoPA/IPZS (MIT) | SwiftUI, Core NFC, CieSDK di PagoPA (MIT) + patch per la firma |
+| Compilazione | ✅ APK di prova compilato da GitHub (artifact `fasas-signer-android-prova`) | ✅ compila su macOS nella CI, senza firma |
+| Installazione | APK di prova da installare sul telefono (gratuito) | serve l'Apple Developer Program e TestFlight |
+| Collaudo con una CIE reale | ⬜ | ⬜ |
+| Guida | [mobile/android](../mobile/android/README.md) | [mobile/ios](../mobile/ios/README.md) |
+
+Per la prova, `avvia-telefono.bat` avvia il FASAS raggiungibile dal telefono sulla stessa Wi-Fi e mostra
+l'indirizzo da inserire nell'app; solo le versioni di prova delle app accettano HTTP, e solo verso la rete locale.
 
 ## 9. Prove eseguite
 

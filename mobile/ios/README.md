@@ -1,42 +1,48 @@
-# FASAS Signer per iPhone – studio e prototipo
+# FASAS Signer per iPhone
 
-> **Prototipo non compilato né collaudato**: richiede un Mac con Xcode, l'Apple Developer Program e un iPhone
-> con NFC (iPhone 7 o successivi). Non va usato sui documenti degli ospiti prima del collaudo con una CIE reale.
+> **Prototipo: compila, ma non è ancora stato installato su un iPhone né collaudato con una CIE reale.**
 
-## Fattibilità
+## Come funziona
 
-- Safari e le PWA **non** possono usare la CIE: non hanno accesso all'NFC.
-- Un'app nativa può dialogare con il chip con **Core NFC** (`NFCTagReaderSession`, polling ISO 14443, tag
-  `NFCISO7816Tag`), dichiarando gli identificativi ISO 7816 della CIE e la capability «Near Field Communication
-  Tag Reading».
-- PagoPA pubblica [CieSDK](https://github.com/pagopa/cie-sdk-ios) (Swift, licenza MIT), usata per l'accesso con
-  CIE: implementa canale sicuro, verifica del PIN (8 cifre), lettura del certificato e firma sul chip, ma non
-  espone un metodo pubblico per firmare un dato arbitrario. La patch
-  `patches/cie-sdk-ios-63d2195-performSignature.patch` (verificata con `git apply --check` sul commit
-  `63d2195`) aggiunge `performSignature(withPin:prepare:)`: in un'unica sessione NFC apre il canale sicuro,
-  verifica il PIN, legge il certificato, lo passa al FASAS e firma il DigestInfo restituito.
+- Safari e le PWA **non** possono usare la CIE: non hanno accesso all'NFC. Serve un'app nativa.
+- L'app usa **Core NFC** (`NFCTagReaderSession`, tag ISO 7816) tramite [CieSDK](https://github.com/pagopa/cie-sdk-ios)
+  di PagoPA (Swift, licenza MIT), la stessa base usata per l'accesso con CIE. CieSDK non espone un metodo per
+  firmare un dato qualsiasi: la patch `patches/cie-sdk-ios-63d2195-performSignature.patch` aggiunge
+  `performSignature(withPin:prepare:)`, che in un'unica sessione NFC apre il canale sicuro, verifica il PIN,
+  legge il certificato, lo passa al FASAS e firma il DigestInfo restituito.
+- Flusso nell'app: richiesta dal FASAS → conferma con codice di controllo → PIN completo (8 cifre) → CIE sul
+  retro dell'iPhone → esito. PIN errato: l'app lo richiede mostrando i tentativi rimasti. Il token del
+  dispositivo è nel Portachiavi.
 
-## File
+## Stato
 
-| File | Contenuto |
+| Cosa | Stato |
 |---|---|
-| `FasasSigner/FasasAPI.swift` | client delle API FASAS (solo HTTPS) |
-| `FasasSigner/CieSigner.swift` | flusso di firma con CieSDK (patch inclusa) |
-| `FasasSigner/Entitlements.plist` | capability NFC (`TAG`) |
-| `FasasSigner/Info-NFC.plist` | descrizione d'uso e identificativi ISO 7816 della CIE (ordine indicato da PagoPA) |
+| Compilazione per iPhone (Xcode 16, iOS 15+) | ✅ nella CI su macOS, senza firma (workflow «App FASAS Signer») |
+| Installazione su un iPhone | ⬜ serve la firma dell'app con un account Apple Developer |
+| Collaudo con una CIE reale | ⬜ |
 
-## Costi e distribuzione
+## Per installarla su un iPhone
 
-- **Apple Developer Program**: quota annuale (99 USD/anno secondo il listino Apple; verificare l'importo in euro).
-  Apple prevede un esonero dalla quota per enti non profit, istituti di istruzione e enti pubblici dei paesi
-  ammessi: verificare se la comunità o l'ente gestore ne ha diritto.
-- Distribuzione: TestFlight per il collaudo, poi App Store o distribuzione privata (app personalizzate tramite
-  Apple Business Manager). Serve comunque un Mac per compilare.
+1. **Apple Developer Program** (99 USD l'anno secondo il listino Apple; esiste un esonero dalla quota per enti
+   non profit, istituti di istruzione ed enti pubblici dei paesi ammessi: da verificare). Con l'account gratuito
+   («Personal Team») secondo i forum e le guide la lettura NFC non è disponibile.
+2. Registrare l'identificativo `it.fasas.signer` con la capability «NFC Tag Reading».
+3. Distribuzione con **TestFlight**: la CI su macOS può firmare e caricare l'app se le si forniscono come
+   segreti di GitHub il certificato di distribuzione, il profilo e una chiave API di App Store Connect (non serve
+   un Mac). I tester la installano con l'app TestFlight.
 
-## Da fare
+## Compilare in proprio (Mac con Xcode 16)
 
-1. Progetto Xcode con CieSDK (Swift Package o CocoaPods) e la patch.
-2. Interfaccia (SwiftUI): abbinamento, attesa delle richieste, conferma con codice di controllo, PIN, esito.
-3. Mappatura precisa degli errori di CieSDK sui codici del FASAS (PIN errato con tentativi rimasti, carta
-   bloccata, sessione NFC interrotta) e token del dispositivo nel Portachiavi (Keychain).
-4. Collaudo con CIE reali su più modelli di iPhone.
+```bash
+brew install xcodegen
+```
+
+```bash
+./scripts/prepare.sh
+```
+
+Poi aprire `FasasSigner.xcodeproj`, scegliere il proprio team e avviare su un iPhone collegato.
+
+La versione Debug è una **versione di prova**: accetta anche un FASAS sul PC della stessa rete Wi-Fi via HTTP
+(solo indirizzi IP della rete locale) e lo segnala in rosso; la versione Release accetta solo HTTPS.
