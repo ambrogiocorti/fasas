@@ -38,7 +38,7 @@ def _project_frames(tb):
     for frame in traceback.extract_tb(tb):
         filename = str(Path(frame.filename).resolve())
         if filename.startswith(PROJECT_ROOT) and "site-packages" not in filename:
-            frames.append(f"{Path(filename).relative_to(PROJECT_ROOT)}:{frame.lineno} in {frame.name}")
+            frames.append(f"{Path(filename).relative_to(PROJECT_ROOT).as_posix()}:{frame.lineno} in {frame.name}")
     return frames[-10:]
 
 

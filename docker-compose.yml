@@ -56,6 +56,11 @@ services:
     command: ["worker"]
     healthcheck:
       disable: true
+    depends_on:  # parte dopo il sito, che applica le migrazioni e prepara il volume dei dati
+      web:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   proxy:
     image: caddy:2

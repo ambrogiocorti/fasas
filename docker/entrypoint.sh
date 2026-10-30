@@ -1,6 +1,7 @@
 #!/bin/sh
 # Avvio dei container FASAS: «web» (sito), «worker» (job periodici), oppure un comando qualsiasi.
 set -e
+mkdir -p "${FASAS_MEDIA_ROOT:-/data/media}" "${FASAS_BACKUP_DIR:-/data/backups}"
 case "$1" in
   web)
     python manage.py migrate --noinput

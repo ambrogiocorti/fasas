@@ -16,7 +16,7 @@ RUN apt-get update \
  && apt-get purge -y gnupg && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
 RUN useradd --system --uid 10001 --create-home --home-dir /home/fasas fasas \
- && install -d -o fasas -g fasas -m 700 /data /data/media /data/backups \
+ && install -d -o fasas -g fasas -m 700 /data \
  && install -d -o fasas -g fasas /static
 
 WORKDIR /app
