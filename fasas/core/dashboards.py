@@ -214,8 +214,7 @@ def doctor(request):
 
 def admin(request):
     from fasas.accounts.models import AccessLog, Role, User
-    from fasas.audit.models import AuditLog
-    from fasas.audit.services import verify_chain
+    from fasas.audit.models import AuditCheckpoint, AuditLog
     from fasas.backups.models import BackupRecord
     from fasas.notifications.models import NotificationSetting
     from fasas.protocols.models import Protocol
@@ -227,7 +226,8 @@ def admin(request):
     role_counts = dict(users.order_by().values_list("role").annotate(n=Count("pk")))
     last_ok = BackupRecord.objects.filter(status=BackupRecord.Status.OK).first()
     audit_count = AuditLog.objects.count()
-    chain = verify_chain() if audit_count <= 20000 else None
+    checkpoint = AuditCheckpoint.objects.first()  # verifica notturna salvata: niente ricalcolo all'apertura
+    chain = (checkpoint.chain_ok, checkpoint.entries, checkpoint.broken_at) if checkpoint else None
 
     warnings = []
     if settings.DEBUG:
@@ -236,8 +236,10 @@ def admin(request):
         warnings.append("Nessuna restrizione di rete: il sistema è raggiungibile da qualsiasi indirizzo (FASAS_ALLOWED_NETWORKS).")
     if last_ok is None or last_ok.created_at < now - datetime.timedelta(hours=26):
         warnings.append("Nessun backup riuscito nelle ultime 26 ore.")
-    if chain is not None and not chain[0]:
-        warnings.append(f"Catena di integrità dell'audit log interrotta alla voce #{chain[2]}.")
+    if checkpoint is not None and not checkpoint.chain_ok:
+        warnings.append("Audit log NON integro: vedere i punti di controllo dell'audit.")
+    if checkpoint is None or checkpoint.created_at < now - datetime.timedelta(hours=26):
+        warnings.append("Nessuna verifica dell'audit log nelle ultime 26 ore (job «audit_verify»).")
 
     config_changes = AuditLog.objects.filter(
         Q(action__in=[AuditLog.Action.CONFIG, AuditLog.Action.PERMISSION, AuditLog.Action.BACKUP])
@@ -255,7 +257,7 @@ def admin(request):
         "backups": BackupRecord.objects.select_related("created_by")[:5],
         "last_ok_backup": last_ok,
         "audit_count": audit_count,
-        "chain": chain,
+        "chain": chain, "audit_checkpoint": checkpoint,
         "config": config,
         "protocols_active": Protocol.objects.filter(active=True).count(),
         "protocols_unvalidated": Protocol.objects.filter(active=True, validated_by="").count(),

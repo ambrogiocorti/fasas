@@ -124,3 +124,52 @@ class AuditLog(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ImmutableRecordError("I registri di audit non possono essere cancellati.")
+
+
+class AuditCheckpoint(models.Model):
+    """
+    Punto di controllo dell'audit log (vedi fasas.audit.anchoring): esito della verifica completa e impronta
+    dell'ultima voce, con marca temporale RFC 3161 se è configurata una TSA. In sola aggiunta.
+    """
+
+    created_at = models.DateTimeField("data e ora", default=timezone.now, db_index=True)
+    source = models.CharField("origine", max_length=20, default="job")
+    entries = models.PositiveIntegerField("voci verificate", default=0)
+    chain_ok = models.BooleanField("integro")
+    broken_at = models.BigIntegerField("prima voce non valida", null=True, blank=True)
+    mismatched_checkpoints = models.JSONField("punti di controllo non più corrispondenti", default=list, blank=True)
+    last_entry_id = models.BigIntegerField("ultima voce", null=True, blank=True)
+    head_hash = models.CharField("impronta dell'ultima voce", max_length=64, blank=True)
+    timestamp_token = models.BinaryField("marca temporale (RFC 3161)", null=True, blank=True)
+    timestamp_time = models.DateTimeField("ora della marca", null=True, blank=True)
+    tsa_url = models.CharField("TSA", max_length=255, blank=True)
+    timestamp_error = models.CharField("errore della marca", max_length=255, blank=True)
+    duration_ms = models.PositiveIntegerField(default=0)
+
+    objects = AppendOnlyQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "punto di controllo dell'audit"
+        verbose_name_plural = "punti di controllo dell'audit"
+        ordering = ["-id"]
+        default_permissions = ("view",)
+
+    def __str__(self):
+        return f"{self.created_at:%d/%m/%Y %H:%M} – {'integro' if self.chain_ok else 'NON integro'}"
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            raise ImmutableRecordError("I punti di controllo dell'audit non possono essere modificati.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ImmutableRecordError("I punti di controllo dell'audit non possono essere cancellati.")
+
+    def message(self):
+        from .anchoring import anchor_message
+
+        return anchor_message(self.last_entry_id, self.head_hash, self.entries)
+
+    @property
+    def timestamped(self):
+        return bool(self.timestamp_token)

@@ -2,7 +2,7 @@
 {% block title %}Audit log{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Audit log</h1>
-  <div class="actions"><a class="btn" href="{% url 'audit:verify' %}">Verifica integrità catena</a></div></div>
+  <div class="actions"><a class="btn" href="{% url 'audit:checkpoints' %}">Punti di controllo</a> <form method="post" action="{% url 'audit:verify' %}" class="inline-form">{% csrf_token %}<button class="btn">Verifica integrità catena</button></form></div></div>
 <p class="muted">Registro non cancellabile di tutte le modifiche: utente, data e ora, valore precedente e nuovo. Ogni voce è concatenata alla precedente con un'impronta SHA-256.</p>
 <form class="filters" method="get">
   <input type="text" name="user" value="{{ request.GET.user|default:'' }}" placeholder="Utente">

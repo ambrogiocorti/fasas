@@ -149,16 +149,9 @@ def verify_chain():
 
 
 def scheduled_chain_verification():
-    ok, count, broken = verify_chain()
-    if not ok:
-        from fasas.notifications.services import notify
+    """Job notturno: verifica completa, controllo dei punti precedenti, nuovo punto di controllo con marca."""
+    from .anchoring import create_checkpoint
 
-        notify(
-            "audit_chain_broken",
-            "Integrità audit log compromessa",
-            f"La catena di hash dell'audit log è interrotta alla voce #{broken}. Verificare subito il database.",
-            level="critical",
-            dedup_key=f"audit-broken-{broken}",
-        )
-        logger.error("Catena audit interrotta alla voce %s", broken)
-    return {"ok": ok, "entries": count, "broken_at": broken}
+    checkpoint = create_checkpoint("job")
+    return {"ok": checkpoint.chain_ok, "entries": checkpoint.entries, "broken_at": checkpoint.broken_at,
+            "timestamped": checkpoint.timestamped}

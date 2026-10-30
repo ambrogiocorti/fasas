@@ -211,6 +211,8 @@ FASAS_2FA_ISSUER = os.environ.get("FASAS_2FA_ISSUER", "FASAS")
 FASAS_SIGNATURE_TSA_URL = os.environ.get("FASAS_SIGNATURE_TSA_URL", "")  # marca temporale RFC 3161
 FASAS_SIGNATURE_TSA_USER = os.environ.get("FASAS_SIGNATURE_TSA_USER", "")
 FASAS_SIGNATURE_TSA_PASSWORD = os.environ.get("FASAS_SIGNATURE_TSA_PASSWORD", "")
+# Punti di controllo notturni dell'audit con marca temporale della TSA qui sopra (se configurata)
+FASAS_AUDIT_TIMESTAMP = env_bool("FASAS_AUDIT_TIMESTAMP", True)
 FASAS_SIGNATURE_LEVEL = os.environ.get("FASAS_SIGNATURE_LEVEL", "")  # B-B, B-T, B-LT, B-LTA (vuoto: B-T se c'è la TSA)
 FASAS_SIGNATURE_TRUST_ROOTS = os.environ.get("FASAS_SIGNATURE_TRUST_ROOTS", "")  # file PEM con le CA dei QTSP
 FASAS_CSC_SERVICE_URL = os.environ.get("FASAS_CSC_SERVICE_URL", "")  # URL base delle API CSC del prestatore

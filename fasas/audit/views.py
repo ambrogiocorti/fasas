@@ -1,12 +1,16 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.shortcuts import redirect
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 from django.views.generic import DetailView, ListView
 
 from fasas.core.views_mixins import PermRequiredMixin
 
-from .models import AuditLog
-from .services import registered_models, verify_chain
+from .anchoring import create_checkpoint, receipt_zip
+from .models import AuditCheckpoint, AuditLog
+from .services import log_event, registered_models
 
 
 class AuditLogListView(PermRequiredMixin, ListView):
@@ -50,12 +54,36 @@ class AuditLogDetailView(PermRequiredMixin, DetailView):
     template_name = "audit/auditlog_detail.html"
 
 
+@require_POST
 def verify_view(request):
     if not request.user.has_perm("audit.view_auditlog"):
         return redirect("core:dashboard")
-    ok, count, broken = verify_chain()
-    if ok:
-        messages.success(request, f"Catena di integrità verificata: {count} voci, nessuna alterazione.")
+    checkpoint = create_checkpoint("manuale")
+    if checkpoint.chain_ok:
+        stamp = " e marcato temporalmente" if checkpoint.timestamped else " (senza marca temporale: nessuna TSA)"
+        messages.success(request, f"Catena di integrità verificata: {checkpoint.entries} voci, nessuna alterazione. "
+                                  f"Punto di controllo salvato{stamp}.")
+    elif checkpoint.broken_at:
+        messages.error(request, f"ATTENZIONE: catena interrotta alla voce #{checkpoint.broken_at}. Il registro è stato alterato.")
     else:
-        messages.error(request, f"ATTENZIONE: catena interrotta alla voce #{broken}. Il registro è stato alterato.")
-    return redirect("audit:list")
+        messages.error(request, "ATTENZIONE: voci già ancorate hanno oggi un'impronta diversa: la storia è stata riscritta.")
+    return redirect("audit:checkpoints")
+
+
+def checkpoint_list(request):
+    if not request.user.has_perm("audit.view_auditlog"):
+        return redirect("core:dashboard")
+    checkpoints = AuditCheckpoint.objects.all()[:100]
+    return render(request, "audit/checkpoints.html", {
+        "checkpoints": checkpoints, "tsa": bool(settings.FASAS_SIGNATURE_TSA_URL) and settings.FASAS_AUDIT_TIMESTAMP,
+    })
+
+
+def checkpoint_receipt(request, pk):
+    if not request.user.has_perm("audit.view_auditlog"):
+        return redirect("core:dashboard")
+    checkpoint = get_object_or_404(AuditCheckpoint, pk=pk)
+    log_event(AuditLog.Action.DOWNLOAD, checkpoint, repr_text=f"Ricevuta punto di controllo audit #{checkpoint.pk}")
+    response = HttpResponse(receipt_zip(checkpoint), content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="audit-punto-di-controllo-{checkpoint.pk}.zip"'
+    return response

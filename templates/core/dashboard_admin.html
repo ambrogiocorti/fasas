@@ -32,7 +32,7 @@
   <div class="card stat {% if chain and not chain.0 %}tone-danger{% else %}tone-ok{% endif %}">
     <span class="label">Audit log <span class="stat-icon">{% icon "shield" %}</span></span>
     <span class="value"><a href="{% url 'audit:list' %}">{{ audit_count }}</a></span>
-    <small>{% if chain %}{% if chain.0 %}catena di integrità verificata{% else %}catena INTERROTTA{% endif %}{% else %}<a href="{% url 'audit:verify' %}">verifica integrità</a>{% endif %}</small></div>
+    <small>{% if chain %}<a href="{% url 'audit:checkpoints' %}">{% if chain.0 %}integro{% else %}NON INTEGRO{% endif %} · verificato {{ audit_checkpoint.created_at|date:"d/m H:i" }}{% if audit_checkpoint.timestamped %} · marca temporale{% endif %}</a>{% else %}<a href="{% url 'audit:checkpoints' %}">verifica integrità</a>{% endif %}</small></div>
 </div>
 
 <div class="grid grid-2">

@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Punti di controllo dell'audit{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Punti di controllo dell'audit</h1><span class="subtitle">Ogni notte la catena dell'audit log viene verificata per intero e l'impronta dell'ultima voce viene fissata{% if tsa %} con una marca temporale della TSA{% endif %}.</span></div>
+  <div class="actions"><a class="btn" href="{% url 'audit:list' %}">{% icon "arrow-left" %}Audit log</a>
+    <form method="post" action="{% url 'audit:verify' %}" class="inline-form">{% csrf_token %}<button class="btn btn-primary">Verifica adesso</button></form></div>
+</div>
+{% if not tsa %}<div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Nessuna TSA configurata (<span class="mono">FASAS_SIGNATURE_TSA_URL</span>): i punti di controllo vengono salvati e copiati nei backup, ma <strong>senza marca temporale</strong>. Con la marca chiunque può verificare con OpenSSL che l'audit non è stato riscritto dopo quell'ora.</div></div>{% endif %}
+<div class="card table-wrap">
+  <table>
+    <thead><tr><th>Data</th><th>Esito</th><th class="num">Voci</th><th>Ultima voce e impronta</th><th>Marca temporale</th><th></th></tr></thead>
+    <tbody>{% for cp in checkpoints %}
+      <tr><td>{{ cp.created_at|date:"d/m/Y H:i" }}<br><small class="muted">{% if cp.source == "job" %}notturno{% else %}manuale{% endif %} · {{ cp.duration_ms }} ms</small></td>
+        <td>{% if cp.chain_ok %}<span class="pill pill-ok">integro</span>{% else %}<span class="pill pill-danger">NON integro</span><br><small>{% if cp.broken_at %}catena interrotta alla voce #{{ cp.broken_at }}{% else %}impronta cambiata per i punti {{ cp.mismatched_checkpoints|join:", " }}{% endif %}</small>{% endif %}</td>
+        <td class="num">{{ cp.entries }}</td>
+        <td>{% if cp.last_entry_id %}#{{ cp.last_entry_id }}<br><small class="mono">{{ cp.head_hash|truncatechars:20 }}</small>{% else %}—{% endif %}</td>
+        <td>{% if cp.timestamped %}<span class="pill pill-ok">{{ cp.timestamp_time|date:"d/m/Y H:i:s" }}</span>{% elif cp.timestamp_error %}<span class="pill pill-warn">non ottenuta</span><br><small class="muted">{{ cp.timestamp_error|truncatechars:80 }}</small>{% else %}<span class="pill">nessuna</span>{% endif %}</td>
+        <td class="num">{% if cp.last_entry_id %}<a class="btn btn-sm" href="{% url 'audit:checkpoint_receipt' cp.pk %}">{% icon "download" %}Ricevuta</a>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">Nessun punto di controllo: il primo viene creato dal job notturno «audit_verify» o con «Verifica adesso».</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+<p><small class="muted">La ricevuta contiene il testo marcato, la marca temporale (RFC 3161) e il comando OpenSSL per verificarla senza usare il FASAS. Se qualcuno riscrivesse la storia dell'audit, l'impronta della voce ancorata cambierebbe e la verifica successiva lo segnalerebbe.</small></p>
+{% endblock %}
