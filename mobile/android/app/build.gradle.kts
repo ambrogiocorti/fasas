@@ -1,6 +1,6 @@
 // App FASAS Signer per Android – PROTOTIPO NON COMPILATO NÉ COLLAUDATO in questo ambiente (manca l'SDK Android)
 plugins {
-    id("com.android.application") version "8.7.3"
+    id("com.android.application")   // versione nel build.gradle.kts principale
     kotlin("android")
 }
 

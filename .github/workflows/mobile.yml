@@ -1,0 +1,37 @@
+name: App FASAS Signer
+
+# Compila le app per telefono quando cambiano. Il repository è pubblico: i minuti di GitHub Actions sono gratuiti.
+on:
+  push:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile.yml"
+  workflow_dispatch:
+
+jobs:
+  android:
+    # APK di PROVA (build debug): da installare sul telefono per il collaudo con una CIE reale
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+      - name: Libreria IAS (PagoPA/IPZS, licenza MIT) a versione fissata
+        run: ./scripts/fetch_ias.sh
+      - name: Test del protocollo FASAS
+        run: gradle --no-daemon :signer-core:test
+      - name: APK di prova
+        run: gradle --no-daemon :app:assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fasas-signer-android-prova
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30

@@ -25,4 +25,6 @@ echo "Utenti: admin, coordinatore, operatore, medico, amministrativo - password:
 echo "Per fermare il sistema premi CTRL+C."
 echo
 ( sleep 4; command -v open >/dev/null && open http://127.0.0.1:8000 || xdg-open http://127.0.0.1:8000 ) >/dev/null 2>&1 &
+# «./avvia.sh telefono»: raggiungibile dal telefono (app FASAS Signer) sulla stessa rete Wi-Fi
+[ "${1:-}" = "telefono" ] && exec python manage.py fasas_avvia_rete
 exec python manage.py runserver

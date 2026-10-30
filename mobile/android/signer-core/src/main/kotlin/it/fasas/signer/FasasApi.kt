@@ -17,18 +17,28 @@ data class Prepared(val nonce: String, val toBeSigned: ByteArray, val digestInfo
 
 /**
  * Client delle API /api/firma/v1/ del FASAS. Il telefono contatta il server in uscita; il token del dispositivo
- * viaggia solo nell'intestazione Authorization e solo in HTTPS (HTTP ammesso solo verso localhost in sviluppo).
+ * viaggia solo nell'intestazione Authorization e solo in HTTPS. HTTP è ammesso solo verso il telefono stesso e,
+ * con allowLanHttp (versione di prova dell'app), verso un indirizzo IP della rete locale (es. 192.168.1.20).
  */
-class FasasApi(baseUrl: String, var token: String = "", allowHttp: Boolean = false, private val timeoutMs: Int = 30_000) {
+class FasasApi(baseUrl: String, var token: String = "", allowLanHttp: Boolean = false, private val timeoutMs: Int = 30_000) {
     private val base: String
 
     init {
         val url = URL(baseUrl.trim())
         val local = url.host in setOf("localhost", "127.0.0.1", "::1", "10.0.2.2")
-        require(url.protocol == "https" || (url.protocol == "http" && (local || allowHttp))) {
+        require(url.protocol == "https" || (url.protocol == "http" && (local || (allowLanHttp && isPrivateIpv4(url.host))))) {
             "Il FASAS va raggiunto in HTTPS: con HTTP token e firma viaggerebbero in chiaro."
         }
         base = baseUrl.trim().trimEnd('/') + "/api/firma/v1/"
+    }
+
+    companion object {
+        /** 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 scritti come indirizzo numerico (non nomi a dominio). */
+        fun isPrivateIpv4(host: String): Boolean {
+            val parts = host.split(".").map { it.toIntOrNull() ?: return false }
+            if (parts.size != 4 || parts.any { it !in 0..255 }) return false
+            return parts[0] == 10 || (parts[0] == 172 && parts[1] in 16..31) || (parts[0] == 192 && parts[1] == 168)
+        }
     }
 
     private fun call(method: String, path: String, body: JSONObject? = null, timeout: Int = timeoutMs): JSONObject {

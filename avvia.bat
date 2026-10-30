@@ -36,5 +36,10 @@ echo Utenti: admin, coordinatore, operatore, medico, amministrativo - password: 
 echo Per fermare il sistema premi CTRL+C oppure chiudi questa finestra.
 echo.
 start "" /min cmd /c "ping -n 5 127.0.0.1 >nul & start http://127.0.0.1:8000"
-python manage.py runserver
+if /i "%~1"=="telefono" (
+  rem Avvio per provare l'app FASAS Signer sul telefono: mostra l'indirizzo da inserire nell'app
+  python manage.py fasas_avvia_rete
+) else (
+  python manage.py runserver
+)
 pause

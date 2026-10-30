@@ -37,6 +37,12 @@ class SigningFlowTest {
     @Test
     fun httpIsRefusedForRemoteServers() {
         assertFailsWith<IllegalArgumentException> { FasasApi("http://fasas.esempio.it/") }
+        assertFailsWith<IllegalArgumentException> { FasasApi("http://fasas.esempio.it/", allowLanHttp = true) }
+        assertFailsWith<IllegalArgumentException> { FasasApi("http://192.168.1.20:8000/") }
+        assertFailsWith<IllegalArgumentException> { FasasApi("http://8.8.8.8:8000/", allowLanHttp = true) }
+        FasasApi("http://192.168.1.20:8000/", allowLanHttp = true)
+        FasasApi("http://10.0.0.5:8000/", allowLanHttp = true)
+        FasasApi("http://172.20.1.2:8000/", allowLanHttp = true)
         FasasApi("https://fasas.esempio.it/")
         FasasApi("http://127.0.0.1:8000/")
     }

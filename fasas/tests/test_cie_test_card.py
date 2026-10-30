@@ -37,6 +37,28 @@ def make_card(folder, username="doc", pin="1234", env_dir=None):
     return Path(folder) / f"carta-di-prova-{username}.p12"
 
 
+class LanStartTests(FasasTestCase):
+    def test_lan_start_only_in_test_installations(self):
+        from unittest import mock
+
+        from fasas.core.management.commands import fasas_avvia_rete
+
+        with self.assertRaises(CommandError):
+            call_command("fasas_avvia_rete", stdout=io.StringIO())
+        self.assertTrue(all(ip.startswith(("10.", "172.", "192.168.")) for ip in fasas_avvia_rete.lan_addresses()))
+        out = io.StringIO()
+        with override_settings(DEBUG=True), \
+                mock.patch.object(fasas_avvia_rete, "lan_addresses", return_value=["192.168.1.20"]), \
+                mock.patch.object(fasas_avvia_rete, "call_command") as runserver, \
+                mock.patch.dict("os.environ", {}):
+            call_command("fasas_avvia_rete", stdout=out)
+            import os
+
+            self.assertEqual(os.environ["DJANGO_ALLOWED_HOSTS"], "localhost,127.0.0.1,192.168.1.20")
+        runserver.assert_called_once_with("runserver", "0.0.0.0:8000")
+        self.assertIn("http://192.168.1.20:8000/", out.getvalue())
+
+
 class TestCardCommandTests(FasasTestCase):
     def test_only_in_test_installations(self):
         with self.assertRaises(CommandError):

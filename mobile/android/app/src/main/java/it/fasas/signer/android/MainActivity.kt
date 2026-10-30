@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.IsoDep
@@ -31,7 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * un'unica sessione NFC (canale sicuro, certificato, firma) → esito. Il PIN non lascia il telefono.
  */
 class MainActivity : Activity() {
-    private val worker = Executors.newSingleThreadExecutor()
+    private val worker = Executors.newSingleThreadExecutor()   // azioni (abbinamento, presa in carico, annullamento)
+    private val poller = Executors.newSingleThreadExecutor()   // attesa delle richieste: un ciclo che non si ferma
     private val polling = AtomicBoolean(false)
     private val busy = AtomicBoolean(false)
     private lateinit var status: TextView
@@ -47,6 +49,9 @@ class MainActivity : Activity() {
 
     private val prefs get() = getSharedPreferences("fasas_signer", Context.MODE_PRIVATE)
 
+    /** Versione di prova (build debug): accetta anche un FASAS in rete locale via HTTP, es. il PC dell'ufficio. */
+    private val testBuild get() = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
     private fun render() {
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(48, 64, 48, 48) }
         root.addView(TextView(this).apply { text = "FASAS Signer – firma con CIE"; textSize = 22f })
@@ -54,12 +59,23 @@ class MainActivity : Activity() {
             text = "Firma elettronica avanzata. Prototipo: non ancora collaudato con una CIE reale."
             setPadding(0, 8, 0, 24)
         })
+        if (testBuild) {
+            root.addView(TextView(this).apply {
+                text = "VERSIONE DI PROVA: si collega anche a un FASAS sul PC della stessa rete Wi-Fi (http://192.168…)."
+                setBackgroundColor(0xFFB00020.toInt())
+                setTextColor(0xFFFFFFFF.toInt())
+                setPadding(24, 16, 24, 16)
+            })
+        }
         status = TextView(this).apply { textSize = 16f }
         root.addView(status)
         val server = prefs.getString("server", null)
         val token = prefs.getString("token", null)
         if (server == null || token == null) {
-            val serverField = EditText(this).apply { hint = "Indirizzo del FASAS (https://…)"; setText("https://") }
+            val serverField = EditText(this).apply {
+                hint = if (testBuild) "Indirizzo del FASAS (es. http://192.168.1.20:8000/)" else "Indirizzo del FASAS (https://…)"
+                setText(if (testBuild) "http://" else "https://")
+            }
             val codeField = EditText(this).apply { hint = "Codice di abbinamento" }
             root.addView(serverField)
             root.addView(codeField)
@@ -69,7 +85,7 @@ class MainActivity : Activity() {
             })
             status.text = "Nel FASAS apri Impostazioni › Firma digitale › «Abbina un nuovo FASAS Signer»."
         } else {
-            api = runCatching { FasasApi(server, token) }.getOrNull()
+            api = runCatching { FasasApi(server, token, allowLanHttp = testBuild) }.getOrNull()
             status.text = "In attesa di richieste di firma dal FASAS…"
         }
         setContentView(root)
@@ -77,7 +93,7 @@ class MainActivity : Activity() {
 
     private fun pair(server: String, code: String) = worker.execute {
         try {
-            val client = FasasApi(server)
+            val client = FasasApi(server, allowLanHttp = testBuild)
             val data = client.pair(code.trim(), android.os.Build.MODEL ?: "Telefono")
             prefs.edit().putString("server", server.trim()).putString("token", client.token).apply()
             runOnUiThread { render(); show("Abbinato all'utente ${data.getString("user")}.") }
@@ -110,7 +126,7 @@ class MainActivity : Activity() {
     private fun startPolling() {
         val client = api ?: return
         if (!polling.compareAndSet(false, true)) return
-        worker.execute {
+        poller.execute {
             runCatching {
                 client.reportStatus(mapOf("middleware_found" to true, "middleware" to "IAS su NFC (prototipo)",
                     "readers" to listOf("NFC del telefono"), "nfc" to if (nfc?.isEnabled == true) "attivo" else "spento"))
