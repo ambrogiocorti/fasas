@@ -96,6 +96,7 @@ class AccessLog(models.Model):
         FAILED = "failed", "Accesso fallito"
         LOCKED = "locked", "Accesso bloccato"
         TIMEOUT = "timeout", "Sessione scaduta"
+        OTP_FAILED = "otp_failed", "Codice di verifica errato"
 
     timestamp = models.DateTimeField("data e ora", default=timezone.now, db_index=True)
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name="access_logs")
@@ -123,3 +124,34 @@ class AccessLog(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ImmutableRecordError("Il log accessi non può essere cancellato.")
+
+
+class TwoFactorDevice(models.Model):
+    """App di autenticazione (TOTP) collegata all'utente: il segreto è cifrato con le chiavi dei documenti."""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="two_factor")
+    secret = models.BinaryField("segreto cifrato")
+    confirmed_at = models.DateTimeField("attivata il", default=timezone.now)
+    last_step = models.BigIntegerField(default=0, help_text="Ultimo passo temporale accettato: un codice vale una volta")
+    last_used_at = models.DateTimeField("ultimo uso", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "verifica in due passaggi"
+        verbose_name_plural = "verifiche in due passaggi"
+        default_permissions = ()
+
+    def __str__(self):
+        return f"{self.user} – verifica in due passaggi"
+
+
+class RecoveryCode(models.Model):
+    """Codice di recupero monouso: nel database c'è solo l'impronta SHA-256."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="recovery_codes")
+    code_hash = models.CharField(max_length=64, db_index=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "codice di recupero"
+        verbose_name_plural = "codici di recupero"
+        default_permissions = ()

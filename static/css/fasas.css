@@ -685,3 +685,9 @@ td.rota-cell.changed { outline: 2px dashed var(--primary); outline-offset: -2px;
   .pdf-frame { height: 60vh; }
 }
 @media (prefers-reduced-motion: reduce) { .sign-steps li.current::before { animation: none; } }
+/* Verifica in due passaggi */
+.otp-qr { background: #fff; border-radius: 12px; padding: .75rem; width: max-content; max-width: 100%; margin: .5rem 0 1rem; border: 1px solid var(--border); }
+.otp-qr svg { display: block; max-width: 100%; height: auto; }
+.steps-plain { padding-left: 1.2rem; margin: .5rem 0 1rem; display: grid; gap: .3rem; }
+.recovery-codes { list-style: none; padding: 0; margin: 1rem 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; font-size: 1.05rem; }
+.recovery-codes li { border: 1px dashed var(--border-strong); border-radius: 8px; padding: .4rem .6rem; text-align: center; }

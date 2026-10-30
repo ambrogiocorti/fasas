@@ -201,6 +201,11 @@ FASAS_TRUSTED_PROXY_COUNT = int(os.environ.get("FASAS_TRUSTED_PROXY_COUNT", "0")
 # Tentativi di accesso falliti prima del blocco temporaneo
 FASAS_LOGIN_MAX_FAILURES = int(os.environ.get("FASAS_LOGIN_MAX_FAILURES", "5"))
 FASAS_LOGIN_LOCKOUT_MINUTES = int(os.environ.get("FASAS_LOGIN_LOCKOUT_MINUTES", "15"))
+# Verifica in due passaggi (codice dall'app sul telefono): obbligatoria per questi ruoli; vuoto = facoltativa per tutti
+FASAS_2FA_REQUIRED_ROLES = env_list("FASAS_2FA_REQUIRED_ROLES", "admin,coordinator,doctor")
+# Reti della struttura (CIDR): da fuori serve sempre la verifica, e la si può attivare solo da dentro. Vuoto = ovunque.
+FASAS_2FA_TRUSTED_NETWORKS = env_list("FASAS_2FA_TRUSTED_NETWORKS")
+FASAS_2FA_ISSUER = os.environ.get("FASAS_2FA_ISSUER", "FASAS")
 # Firma digitale (docs/FIRMA_DIGITALE.md). Ogni medico sceglie il proprio strumento: certificato PKCS#12
 # o firma remota qualificata presso un prestatore (QTSP) tramite API CSC.
 FASAS_SIGNATURE_TSA_URL = os.environ.get("FASAS_SIGNATURE_TSA_URL", "")  # marca temporale RFC 3161

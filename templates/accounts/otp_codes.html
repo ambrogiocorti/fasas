@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Codici di recupero{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 640px">
+  <div class="card-head"><h1>{% if first %}Verifica attiva: salva i codici di recupero{% else %}Nuovi codici di recupero{% endif %}</h1></div>
+  <p>Ogni codice funziona <strong>una sola volta</strong>, al posto del codice dell'app, se il telefono non è disponibile. Stampali o scrivili e tienili in un posto sicuro: <strong>non li vedrai più</strong>. {% if not first %}I codici precedenti non valgono più.{% endif %}</p>
+  <ul class="recovery-codes mono">{% for code in codes %}<li>{{ code }}</li>{% endfor %}</ul>
+  <div class="form-actions"><button class="btn" type="button" onclick="window.print()">{% icon "printer" %}Stampa</button> <a class="btn btn-primary" href="{{ next_url }}">Ho salvato i codici, continua</a></div>
+</div>
+{% endblock %}

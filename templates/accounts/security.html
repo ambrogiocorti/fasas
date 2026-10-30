@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Verifica in due passaggi{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Verifica in due passaggi</h1><span class="subtitle">Oltre alla password, un codice di 6 cifre dall'app sul telefono.</span></div>
+  <div class="actions"><a class="btn" href="{% url 'accounts:profile' %}">{% icon "arrow-left" %}Il mio profilo</a></div></div>
+<div class="card" style="max-width: 760px">
+  {% if enrolled %}
+    <p><span class="pill pill-ok">attiva</span> dal {{ device.confirmed_at|date:"d/m/Y H:i" }}{% if device.last_used_at %} · ultimo uso {{ device.last_used_at|date:"d/m/Y H:i" }}{% endif %} · codici di recupero rimasti: <strong>{{ codes_left }}</strong>{% if codes_left < 3 %} <span class="pill pill-warn">pochi</span>{% endif %}</p>
+    <p class="muted">Per generare nuovi codici di recupero{% if not required %} o disattivare la verifica{% endif %} inserisci un codice dell'app.</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include "partials/form_fields.html" %}
+      <div class="form-actions">
+        <button class="btn btn-primary" name="action" value="codes">Genera nuovi codici di recupero</button>
+        {% if not required %}<button class="btn btn-danger" name="action" value="disable" data-confirm="Disattivare la verifica in due passaggi?">Disattiva</button>{% endif %}
+      </div>
+    </form>
+    {% if required %}<p><small class="muted">Per il tuo ruolo la verifica è obbligatoria. Se cambi telefono chiedi all'amministratore di reimpostarla e riattivala al prossimo accesso.</small></p>{% endif %}
+  {% else %}
+    <p><span class="pill">non attiva</span>{% if required %} <span class="pill pill-warn">obbligatoria per il tuo ruolo</span>{% endif %}</p>
+    <p>Con la verifica attiva, chi conosce solo la tua password non può entrare. Serve un'app di autenticazione sul telefono.</p>
+    <div class="form-actions"><a class="btn btn-primary" href="{% url 'accounts:otp_setup' %}">{% icon "key" %}Attiva la verifica in due passaggi</a></div>
+  {% endif %}
+</div>
+{% endblock %}

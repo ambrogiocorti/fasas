@@ -6,6 +6,7 @@
   <div class="card"><h2>Personale</h2><ul class="list-plain">
     <li><a href="{% url 'accounts:profile' %}">Il mio profilo e tema</a></li>
     <li><a href="{% url 'accounts:password_change' %}">Cambia password</a></li>
+    <li><a href="{% url 'accounts:security' %}">Verifica in due passaggi</a></li>
     <li><a href="{% url 'notifications:devices' %}">Notifiche sul telefono</a></li>
     {% if perms.signatures.sign_document or perms.signatures.sign_with_cie %}<li><a href="{% url 'signatures:credential' %}">Firma digitale (CIE, firma remota, certificato)</a></li>{% endif %}
   </ul></div>

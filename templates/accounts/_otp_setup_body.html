@@ -1,0 +1,15 @@
+{% load fasas_tags %}
+<h2>Attiva la verifica in due passaggi</h2>
+{% if required %}<p class="muted">Per il tuo ruolo è obbligatoria: serve a proteggere le cartelle degli ospiti anche se qualcuno scopre la password.</p>{% endif %}
+<ol class="steps-plain">
+  <li>Installa sul telefono un'app di autenticazione (Google Authenticator, Microsoft Authenticator, FreeOTP…).</li>
+  <li>Nell'app scegli «Aggiungi» e inquadra il QR code.</li>
+  <li>Scrivi qui sotto il codice di 6 cifre che compare nell'app.</li>
+</ol>
+{% if qr %}<div class="otp-qr">{{ qr|safe }}</div>{% endif %}
+<p><small class="muted">Se non puoi inquadrare il QR code, inserisci a mano nell'app questa chiave (tipo «basato sull'ora»):</small><br><span class="mono">{{ secret }}</span></p>
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% include "partials/form_fields.html" %}
+  <div class="form-actions" style="border-top:0; padding-top:0"><button class="btn btn-primary btn-lg">Attiva</button>{% if not pending %} <a class="btn" href="{% url 'accounts:security' %}">Annulla</a>{% endif %}</div>
+</form>

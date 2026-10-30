@@ -1,0 +1,12 @@
+{% extends "accounts/auth_base.html" %}{% load fasas_tags %}
+{% block title %}Verifica{% endblock %}
+{% block panel %}
+<h2>Codice di verifica</h2>
+<p class="muted">Ciao {{ pending.get_full_name|default:pending.username }}: apri l'app di autenticazione sul telefono e inserisci il codice di 6 cifre di «FASAS».</p>
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% include "partials/form_fields.html" %}
+  <div class="form-actions" style="border-top:0; padding-top:0"><button class="btn btn-primary btn-lg" style="width:100%">Verifica e accedi</button></div>
+</form>
+<p class="muted" style="font-size:.8rem; margin:1rem 0 0">Telefono perso o cambiato? Usa uno dei codici di recupero oppure chiedi all'amministratore di reimpostare la verifica. <a href="{% url 'accounts:login' %}">Torna all'accesso</a></p>
+{% endblock %}

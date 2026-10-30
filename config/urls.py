@@ -1,10 +1,22 @@
 from django.contrib import admin
+from django.contrib.auth.views import redirect_to_login
+from django.shortcuts import redirect
 from django.urls import include, path
 
 from fasas.offline import views as offline_views
 
 admin.site.site_header = "FASAS Digitale – amministrazione tecnica"
 admin.site.site_title = "FASAS"
+
+
+def _admin_login(request, extra_context=None):
+    """L'area tecnica non ha un accesso proprio: si entra dal login del FASAS, con la verifica in due passaggi."""
+    if request.user.is_authenticated:
+        return redirect("core:dashboard")
+    return redirect_to_login(request.get_full_path())
+
+
+admin.site.login = _admin_login
 
 urlpatterns = [
     path("", include("fasas.core.urls")),

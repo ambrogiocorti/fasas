@@ -1,13 +1,16 @@
 """API REST: base per la futura app mobile degli operatori. Stesse regole di permessi e blocco del web."""
 from django.utils import timezone
 from rest_framework import mixins, serializers, viewsets
+from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from fasas.accounts.services import is_locked_out
+from fasas.accounts import twofactor
+from fasas.accounts.models import AccessLog
+from fasas.accounts.services import is_locked_out, record_access
 from fasas.audit.context import set_current_user
 from fasas.clinical.models import ClinicalEvent, ParameterReading, Therapy, TherapyAdministration
 from fasas.clinical.services import register_administration, scheduled_doses
@@ -135,4 +138,14 @@ class TokenView(ObtainAuthToken):
         username = request.data.get("username", "")
         if username and is_locked_out(username, client_ip(request)):
             raise PermissionDenied("Troppi tentativi falliti. Riprova più tardi.")
-        return super().post(request, *args, **kwargs)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data["user"]
+        need = twofactor.requirement(user, request)
+        if need in ("setup", "refused"):
+            raise PermissionDenied("Attiva prima la verifica in due passaggi dal sito del FASAS.")
+        if need == "verify" and not twofactor.verify(user, request.data.get("otp", "")):
+            record_access(request, AccessLog.Event.OTP_FAILED, user.get_username(), user)
+            raise PermissionDenied("Codice di verifica («otp») mancante, errato o già usato.")
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({"token": token.key})

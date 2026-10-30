@@ -1,0 +1,4 @@
+{% extends pending|yesno:"accounts/auth_base.html,base.html" %}{% load fasas_tags %}
+{% block title %}Attiva la verifica in due passaggi{% endblock %}
+{% block panel %}{% include "accounts/_otp_setup_body.html" %}{% endblock %}
+{% block content %}<div class="card" style="max-width: 640px">{% include "accounts/_otp_setup_body.html" %}</div>{% endblock %}

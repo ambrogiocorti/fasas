@@ -52,12 +52,13 @@ def is_locked_out(username, ip=None):
     limit = settings.FASAS_LOGIN_MAX_FAILURES
     recent = AccessLog.objects.filter(timestamp__gte=since)
 
+    failed = [AccessLog.Event.FAILED, AccessLog.Event.OTP_FAILED]  # password e codice di verifica sbagliati
     last_ok = recent.filter(username__iexact=username, event=AccessLog.Event.LOGIN).order_by("-timestamp").first()
-    failures = recent.filter(username__iexact=username, event=AccessLog.Event.FAILED)
+    failures = recent.filter(username__iexact=username, event__in=failed)
     if last_ok:
         failures = failures.filter(timestamp__gt=last_ok.timestamp)
     if failures.count() >= limit:
         return True
     if ip:
-        return recent.filter(ip_address=ip, event=AccessLog.Event.FAILED).count() >= limit * 3
+        return recent.filter(ip_address=ip, event__in=failed).count() >= limit * 3
     return False

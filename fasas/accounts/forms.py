@@ -21,6 +21,15 @@ class LoginForm(AuthenticationForm):
         return super().clean()
 
 
+class OTPForm(forms.Form):
+    code = forms.CharField(
+        label="Codice di verifica", max_length=20,
+        widget=forms.TextInput(attrs={"autocomplete": "one-time-code", "inputmode": "numeric", "autofocus": True,
+                                      "placeholder": "6 cifre dall'app"}),
+        help_text="Il codice di 6 cifre dell'app sul telefono. Senza telefono: un codice di recupero (es. abcde-fghjk).",
+    )
+
+
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = User
