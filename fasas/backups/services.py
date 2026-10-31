@@ -22,8 +22,9 @@ import tempfile
 from pathlib import Path
 
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.management import call_command
-from django.db import connection
+from django.db import connection, transaction
 from django.utils import timezone
 
 from fasas import __version__
@@ -119,6 +120,8 @@ def create_backup(kind=BackupRecord.Kind.AUTO, user=None, include_media=True):
                 "db_format": db_format,
                 "db_vendor": connection.vendor,
                 "audit_entries_before_dump": audit_entries,
+                # numeri interni dei tipi di oggetto: il ripristino JSON li riporta uguali (vedi _align_content_types)
+                "content_types": list(ContentType.objects.order_by("pk").values_list("pk", "app_label", "model")),
                 "files": {p.name: {"sha256": _sha256_file(p), "size": p.stat().st_size} for p in parts},
             }
             archive = workdir / "backup.tar.gz"
@@ -241,6 +244,41 @@ def _pg_restore(dump):
             raise BackupError(f"Ripristino fallito: {message[:500]}")
 
 
+def _align_content_types(mapping):
+    """
+    In un database appena creato i tipi di oggetto possono avere numeri interni diversi dall'originale (l'ordine delle
+    migrazioni cambia nel tempo). Le voci di audit con impronta versione 1 contengono quel numero: prima di caricare
+    un backup JSON si riportano i numeri dell'originale, aggiornando anche le tabelle che li usano.
+    """
+    from django.apps import apps
+
+    ContentType.objects.clear_cache()
+    current = {(ct.app_label, ct.model): ct.pk for ct in ContentType.objects.all()}
+    wanted = {(app_label, model): pk for pk, app_label, model in mapping}
+    if all(current.get(key) == pk for key, pk in wanted.items() if key in current):
+        return
+    references = [(m._meta.db_table, f.column) for m in apps.get_models() for f in m._meta.concrete_fields
+                  if f.is_relation and f.related_model is ContentType]
+    quote = connection.ops.quote_name
+    ct_table = quote(ContentType._meta.db_table)
+    offset = max([*current.values(), *wanted.values()]) + 1000
+    spare = iter(range(max(wanted.values()) + 1, offset))
+    targets = {old: wanted.get(key) or next(spare) for key, old in current.items()}
+
+    def move(cursor, old, new):  # nomi di tabella e colonna dai modelli, valori come parametri
+        cursor.execute(f"UPDATE {ct_table} SET id = %s WHERE id = %s", [new, old])  # nosec B608
+        for table, column in references:
+            sql = f"UPDATE {quote(table)} SET {quote(column)} = %s WHERE {quote(column)} = %s"  # nosec B608
+            cursor.execute(sql, [new, old])
+
+    with transaction.atomic(), connection.constraint_checks_disabled(), connection.cursor() as cursor:
+        for old in targets:  # prima tutti fuori dall'intervallo, così nessun numero si scontra
+            move(cursor, old, old + offset)
+        for old, new in targets.items():
+            move(cursor, old + offset, new)
+    ContentType.objects.clear_cache()
+
+
 def restore_backup(path, restore_media=True):
     """
     Ripristino completo. Da usare solo da riga di comando (manage.py backup_restore) con
@@ -266,6 +304,8 @@ def restore_backup(path, restore_media=True):
             _pg_restore(workdir / "database.dump")
         else:
             dump = next(name for name in ("database.fasasjson", "database.json") if (workdir / name).exists())
+            if manifest.get("content_types"):
+                _align_content_types(manifest["content_types"])
             call_command("loaddata", str(workdir / dump))
         if restore_media and (workdir / "media.tar").exists():
             with tarfile.open(workdir / "media.tar") as media:

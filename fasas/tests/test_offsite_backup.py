@@ -147,3 +147,26 @@ class RestoreTestTests(FasasTestCase):
         test = run_restore_test()
         self.assertEqual(test.result, RestoreTest.Result.FAILED)
         self.assertIn("impronta", test.steps[-1])
+
+
+class ContentTypeAlignmentTests(FasasTestCase):
+    """Ripristino JSON: i numeri interni dei tipi di oggetto tornano quelli dell'originale (impronte audit v1)."""
+
+    def test_ids_are_realigned_with_references(self):
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+
+        from fasas.backups.services import _align_content_types
+
+        guest_ct = ContentType.objects.get(app_label="guests", model="guest")
+        user_ct = ContentType.objects.get(app_label="accounts", model="user")
+        guest_perms = set(Permission.objects.filter(content_type=guest_ct).values_list("codename", flat=True))
+        mapping = [(pk, a, m) for pk, a, m in ContentType.objects.values_list("pk", "app_label", "model")]
+        swapped = [(user_ct.pk if (a, m) == ("guests", "guest") else guest_ct.pk if (a, m) == ("accounts", "user")
+                    else pk, a, m) for pk, a, m in mapping]
+        _align_content_types(swapped)
+        self.assertEqual(ContentType.objects.get(app_label="guests", model="guest").pk, user_ct.pk)
+        self.assertEqual(ContentType.objects.get(app_label="accounts", model="user").pk, guest_ct.pk)
+        moved = ContentType.objects.get(app_label="guests", model="guest")
+        self.assertEqual(set(Permission.objects.filter(content_type=moved).values_list("codename", flat=True)),
+                         guest_perms)
