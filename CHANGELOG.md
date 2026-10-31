@@ -10,6 +10,17 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
 3. Commit, poi tag `vX.Y.Z` sul commit con la CI verde.
 4. Installare prima nell'ambiente di prova (vedi docs/CONTAINER.md), poi in produzione dopo il collaudo.
 
+## Non ancora rilasciato
+
+### Installazione
+- Guida per installare il FASAS su un PC in struttura raggiungibile in HTTPS senza costi, con lista degli oggetti e
+  della spesa (docs/INSTALLAZIONE_IN_STRUTTURA.md): Ubuntu Server con disco cifrato sbloccato dal TPM, DuckDNS,
+  Backblaze B2 nel piano gratuito, copia mensile su disco USB, calendario di manutenzione e problemi frequenti.
+- `scripts/prepara_server.sh`: crea il `.env` con chiavi nuove (mai rigenerate se esiste), aggiorna DuckDNS,
+  firewall, aggiornamenti e riavvio automatici, avvio e controllo HTTPS; provato a ogni modifica su Ubuntu 24.04
+  nella CI (job «installazione»).
+- `scripts/copia_backup_usb.sh`: copia verificata dell'ultimo backup e della busta delle chiavi su disco USB.
+
 ## 0.9.0 – 30/10/2026 (versione per il pilota)
 
 ### Sicurezza

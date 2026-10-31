@@ -3,6 +3,9 @@
 Un solo comando avvia database, sito, job periodici e proxy HTTPS con certificato automatico. È l'installazione
 consigliata per una nuova comunità e per l'ambiente di prova.
 
+> Per installarlo su un PC della struttura senza costi (Ubuntu Server, indirizzo DuckDNS, backup su Backblaze B2 e
+> disco USB), con lista della spesa e script che prepara tutto: [INSTALLAZIONE_IN_STRUTTURA.md](INSTALLAZIONE_IN_STRUTTURA.md).
+
 ## Servizi
 
 | Servizio | Immagine | Ruolo |

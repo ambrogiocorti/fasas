@@ -1,7 +1,8 @@
 # Installazione in produzione
 
 > Modo più semplice e consigliato: **Docker** ([CONTAINER.md](CONTAINER.md)), con database, job e HTTPS già
-> configurati. Questa pagina descrive l'installazione tradizionale su un server Linux.
+> configurati; su un PC in struttura, passo passo e senza costi: [INSTALLAZIONE_IN_STRUTTURA.md](INSTALLAZIONE_IN_STRUTTURA.md).
+> Questa pagina descrive l'installazione tradizionale su un server Linux.
 
 Architettura consigliata per una comunità (10–100 ospiti):
 

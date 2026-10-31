@@ -71,7 +71,7 @@ def record_error(record):
 
         notify("system_error", "Errore del sistema",
                f"{exc_type or 'Errore'} in {where} ({event.count} volt{'a' if event.count == 1 else 'e'}). "
-               "Dettagli in Impostazioni › Errori di sistema.",
+               "Dettagli in Impostazioni › Stato del sistema ed errori.",
                link="/sistema/errori/", level="warning", dedup_key=f"error-{fingerprint}-{event.count}")
     return event
 

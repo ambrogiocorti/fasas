@@ -165,7 +165,8 @@ Il software è completo, ma un sistema che tratta dati sanitari richiede passagg
 4. **GDPR**: registro, DPIA, informative, nomine e accordo art. 28 con il fornitore: bozze in
    [docs/gdpr/](docs/gdpr/README.md), da completare con il DPO.
 5. **Requisiti regionali e conservazione a norma**: checklist per l'ATS in [docs/gdpr/CHECKLIST_ATS.md](docs/gdpr/CHECKLIST_ATS.md).
-6. **Installazione**: preferibilmente con Docker ([docs/CONTAINER.md](docs/CONTAINER.md)), copia fuori sede dei
+6. **Installazione**: preferibilmente con Docker ([docs/CONTAINER.md](docs/CONTAINER.md)); su un PC in struttura,
+   gratis e passo passo, con [docs/INSTALLAZIONE_IN_STRUTTURA.md](docs/INSTALLAZIONE_IN_STRUTTURA.md). Copia fuori sede dei
    backup configurata, busta di custodia delle chiavi creata e conservata fuori dal server, monitoraggio esterno
    su `/salute/`.
 7. **Test di penetrazione** da parte di un soggetto esterno e **pilota** di 2–4 settimane accanto alla carta.

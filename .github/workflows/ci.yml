@@ -101,6 +101,37 @@ jobs:
       - run: docker compose down -v
         if: always()
 
+  installazione:
+    # scripts/prepara_server.sh su un vero Ubuntu 24.04 con Docker, come nella guida d'installazione in struttura.
+    # Dominio .localhost (certificato locale di Caddy), senza DuckDNS, firewall né backup fuori sede.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prima installazione
+        run: >
+          sudo python3 .github/ci/prova_prepara_server.py . '[["Indirizzo del FASAS", "fasas.localhost"],
+          ["Rete della struttura \\[", "192.168.77.0/24"], ["Email", "direzione@esempio.it"],
+          ["bucket B2", "n"], ["Attivo il firewall", "n"], ["Riavvio automatico", "n"]]'
+      - name: Controlli dopo l'installazione
+        run: |
+          test "$(sudo stat -c %a .env)" = 600
+          sudo grep -Eq '^FASAS_VAPID_PRIVATE_KEY=.{40,}$' .env
+          sudo grep -q '^FASAS_2FA_TRUSTED_NETWORKS=192.168.77.0/24$' .env
+          curl -skf --resolve fasas.localhost:443:127.0.0.1 https://fasas.localhost/salute/
+          curl -skf --resolve fasas.localhost:443:127.0.0.1 https://fasas.localhost/accesso/entra/ > /dev/null
+          sudo docker compose exec -T web python manage.py fasas_chiavi verifica
+      - name: Rilancio dello script (le chiavi non devono cambiare)
+        run: |
+          sudo sha256sum .env > /tmp/env-prima
+          sudo python3 .github/ci/prova_prepara_server.py . '[["Attivo il firewall", "n"], ["Riavvio automatico", "n"]]'
+          sudo sha256sum .env | diff - /tmp/env-prima
+          sudo docker compose exec -T web python manage.py fasas_chiavi verifica
+      - name: Log in caso di errore
+        if: failure()
+        run: sudo docker compose logs --tail 100
+      - run: sudo docker compose down -v
+        if: always()
+
   sicurezza:
     # Vulnerabilità note nelle dipendenze bloccate e analisi statica del codice
     runs-on: ubuntu-latest
