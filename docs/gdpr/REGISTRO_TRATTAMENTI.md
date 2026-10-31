@@ -11,7 +11,7 @@ Titolare: [ente gestore] · DPO: [ ] · Data: [ ]. Ogni voce va inserita nel reg
 | Interessati | ospiti; familiari, tutori, amministratori di sostegno |
 | Categorie di dati | anagrafici e di contatto; dati relativi alla salute; disabilità; tutela legale; documenti |
 | Destinatari | personale autorizzato secondo il ruolo; medici; ATS (vigilanza); struttura di destinazione in caso di trasferimento; autorità giudiziaria se richiesto |
-| Responsabili (art. 28) | [hosting], [Supabase o altro DBaaS], [manutenzione software], [backup fuori sede], [prestatore firma qualificata] |
+| Responsabili (art. 28) | [hosting], [Supabase o altro DBaaS], [manutenzione software], [backup fuori sede], [prestatore firma qualificata]. Con l'installazione in struttura: **Backblaze** (copia fuori sede dei backup già cifrati, regione UE); server di proprietà della struttura, nessun hosting esterno |
 | Trasferimenti extra-UE | nessuno previsto: [verificare regione e sub-responsabili dei fornitori] |
 | Conservazione | [secondo normativa regionale; per la documentazione sanitaria la prassi è la conservazione illimitata (circolare del Ministero della Sanità 19/12/1986 n. 900.2/2.7/190) – da verificare con l'ATS]; in FASAS: «conservazione cartelle archiviate (anni)» in Configurazione |
 | Misure di sicurezza | vedi [docs/SICUREZZA.md](../SICUREZZA.md) e DPIA |
@@ -47,7 +47,8 @@ Titolare: [ente gestore] · DPO: [ ] · Data: [ ]. Ogni voce va inserita nel reg
 | Interessati | utenti del sistema |
 | Dati | log accessi (utente, data e ora, IP, dispositivo, esito); audit log delle operazioni |
 | Destinatari | amministratore di sistema; DPO; autorità se richiesto |
-| Conservazione | [audit log per tutta la durata della cartella cui si riferisce; log accessi almeno 6 mesi per gli amministratori di sistema (provv. Garante 27/11/2008) – definire] |
+| Conservazione | [audit log per tutta la durata della cartella cui si riferisce; log accessi almeno 6 mesi per gli amministratori di sistema (provv. Garante 27/11/2008) – definire]. Installazione in struttura: accessi al server (SSH, sudo) circa 7 mesi sul server, più una copia mensile con impronte sul disco USB dei backup |
+| Servizi tecnici senza dati degli ospiti | DuckDNS (riceve l'IP pubblico della struttura); servizio di controllo del funzionamento (indirizzo `/salute/` ed email di chi riceve gli avvisi); Let's Encrypt (nome dell'indirizzo per il certificato) |
 
 ## T5 – Notifiche sui dispositivi (facoltative)
 

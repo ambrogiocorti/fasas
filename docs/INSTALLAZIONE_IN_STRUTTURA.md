@@ -434,7 +434,8 @@ cd /opt/fasas && sudo ./scripts/copia_backup_usb.sh /dev/sdb1
 ```
 
    Lo script verifica l'ultimo backup (lo decifra e ne controlla l'impronta), lo copia, confronta la copia con
-   l'originale, tiene sul disco gli ultimi 12 e smonta il disco.
+   l'originale, tiene sul disco gli ultimi 12, copia anche il registro degli accessi al server (con le impronte,
+   per la nomina dell'amministratore di sistema) e smonta il disco.
 3. Scollegare il disco e portarlo **in un altro luogo** (sede amministrativa, cassaforte della direzione): mai
    nella stessa stanza del server. Annotare data e firma su un registro.
 
@@ -600,9 +601,12 @@ un database vuoto). Poi:
 
 ## Cosa resta fuori da questa guida
 
+Come affrontare ciascun punto, chi lo fa, i modelli pronti e il calendario:
+**[ADEMPIMENTI_PRIMA_DELL_AVVIO.md](ADEMPIMENTI_PRIMA_DELL_AVVIO.md)**.
+
 - **Privacy**: DPIA, registro dei trattamenti, informative e nomine (bozze in `docs/gdpr/`): Backblaze e il
   servizio di controllo vanno indicati nel registro; per Backblaze serve il suo accordo sul trattamento dei dati
   (DPA) pubblicato da Backblaze: verificare come sottoscriverlo. Chi gestisce il server va nominato **amministratore di sistema**.
-- **Sicurezza fisica**: il server in un locale chiuso, l'elenco di chi ne ha la chiave.
-- **Assistenza**: una seconda persona che conosca questa guida, per ferie e malattie.
+- **Sicurezza fisica e assistenza**: locale chiuso, registro delle chiavi, cassaforte, una seconda persona che
+  conosca questa guida: [SICUREZZA_FISICA_E_CONTINUITA.md](SICUREZZA_FISICA_E_CONTINUITA.md).
 - **Firma con CIE, dispositivo medico, assicurazione**: docs/FIRMA_CIE.md e docs/DISPOSITIVO_MEDICO.md.

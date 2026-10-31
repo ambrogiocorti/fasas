@@ -19,7 +19,12 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
 - `scripts/prepara_server.sh`: crea il `.env` con chiavi nuove (mai rigenerate se esiste), aggiorna DuckDNS,
   firewall, aggiornamenti e riavvio automatici, avvio e controllo HTTPS; provato a ogni modifica su Ubuntu 24.04
   nella CI (job «installazione»).
-- `scripts/copia_backup_usb.sh`: copia verificata dell'ultimo backup e della busta delle chiavi su disco USB.
+- `scripts/copia_backup_usb.sh`: copia verificata dell'ultimo backup e della busta delle chiavi su disco USB, con
+  il registro degli accessi al server e le sue impronte.
+- Adempimenti prima dei dati veri (docs/ADEMPIMENTI_PRIMA_DELL_AVVIO.md): chi fa cosa e calendario; modelli di
+  nomina dell'amministratore di sistema e di autorizzazione del personale, procedura e registro delle violazioni,
+  sicurezza fisica e continuità (docs/SICUREZZA_FISICA_E_CONTINUITA.md); DPIA e registro aggiornati per
+  l'installazione in struttura.
 
 ### Correzioni
 - Un backup in formato JSON (installazioni con SQLite) su PostgreSQL ora è rifiutato con un messaggio chiaro: prima

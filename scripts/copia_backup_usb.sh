@@ -7,6 +7,7 @@
 #   sudo ./scripts/copia_backup_usb.sh /dev/sdc1 --busta     copia la busta di custodia delle chiavi
 #
 # I backup sono cifrati: senza FASAS_BACKUP_KEY (busta di custodia + frase segreta) non si aprono.
+# Con ogni backup copia anche il registro degli accessi al server (/var/log/auth.log*), con le impronte SHA-256.
 # Tenere il disco dei backup e la chiavetta della busta in due posti diversi. Guida: docs/INSTALLAZIONE_IN_STRUTTURA.md
 set -euo pipefail
 
@@ -70,8 +71,8 @@ copy_checked() {  # copy_checked origine destinazione → copia e confronta l'im
   ok "copiato e controllato: $(basename "$dst") (SHA-256 ${a:0:16}…)"
 }
 
+shopt -s nullglob
 if [ "$MODE" = busta ]; then
-  shopt -s nullglob
   ENVELOPES=("$DATA"/*.fkey)
   [ ${#ENVELOPES[@]} -gt 0 ] || die "nessuna busta trovata. Crearla prima con: sudo docker compose exec web python manage.py fasas_chiavi busta /data/busta-chiavi.fkey"
   mkdir -p "$MOUNTPOINT/FASAS-busta-chiavi"
@@ -113,3 +114,16 @@ recupera dalla busta di custodia con la sua frase segreta, e la procedura «Ripr
 Non contengono dati leggibili senza la chiave. Conservare il disco in un luogo chiuso, lontano dal server.
 EOF
 echo "  Sul disco: $(find "$TARGET" -maxdepth 1 -name 'fasas-backup-*.fbk' | wc -l) backup, $(du -sh "$TARGET" | cut -f1)."
+
+# Registro degli accessi al server (SSH, sudo): copia mensile fuori dal server, con impronte per verificarne
+# l'integrità (amministratori di sistema, provvedimento del Garante 27/11/2008). Contiene nomi utente e indirizzi
+# IP degli amministratori, nessun dato degli ospiti. Le copie mensili restano tutte (pochi kB ciascuna).
+LOGS=("${AUTH_LOG_DIR:-/var/log}"/auth.log*)
+if [ ${#LOGS[@]} -gt 0 ]; then
+  MONTH_DIR="$MOUNTPOINT/FASAS-registro-accessi-server/$(date +%Y-%m-%d)"
+  mkdir -p "$MONTH_DIR"
+  cp --preserve=timestamps "${LOGS[@]}" "$MONTH_DIR/"  # exFAT non conserva proprietario e permessi
+  (cd "$MONTH_DIR" && sha256sum -- auth.log* >SHA256SUMS && sha256sum -c --quiet SHA256SUMS) \
+    || die "copia del registro degli accessi non riuscita"
+  ok "registro degli accessi al server copiato in $(basename "$MONTH_DIR") (impronte in SHA256SUMS)"
+fi

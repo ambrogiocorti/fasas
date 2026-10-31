@@ -13,6 +13,12 @@ Non costituiscono parere legale.
 | [INFORMATIVA_PERSONALE.md](INFORMATIVA_PERSONALE.md) | Informativa per il personale (turni, log accessi, audit) |
 | [RESPONSABILI_E_NOMINE.md](RESPONSABILI_E_NOMINE.md) | Fornitori da nominare responsabili (art. 28), autorizzati, amministratori di sistema |
 | [CHECKLIST_ATS.md](CHECKLIST_ATS.md) | Requisiti FASAS regionali, vigilanza, dematerializzazione e conservazione a norma: cosa verificare e cosa chiedere |
+| [MODELLO_NOMINA_AMMINISTRATORE_SISTEMA.md](MODELLO_NOMINA_AMMINISTRATORE_SISTEMA.md) | Lettera di designazione dell'amministratore di sistema e del vice, con elenco interno |
+| [MODELLO_AUTORIZZAZIONE_PERSONALE.md](MODELLO_AUTORIZZAZIONE_PERSONALE.md) | Autorizzazione al trattamento e istruzioni per ogni utente del FASAS |
+| [PROCEDURA_VIOLAZIONI.md](PROCEDURA_VIOLAZIONI.md) | Cosa fare in caso di violazione di dati (72 ore) e registro interno delle violazioni |
+
+Piano di tutto ciò che la struttura deve fare prima dei dati veri, con chi fa cosa e il calendario:
+[../ADEMPIMENTI_PRIMA_DELL_AVVIO.md](../ADEMPIMENTI_PRIMA_DELL_AVVIO.md).
 
 Ordine consigliato: 1) registro dei trattamenti, 2) DPIA, 3) nomine dei responsabili, 4) informative,
 5) incontro con l'ATS con la checklist, 6) avvio con dati reali.
