@@ -18,10 +18,11 @@ from .base import FasasTestCase
 
 class ReportTests(FasasTestCase):
     def setUp(self):
-        ClinicalEvent.objects.create(guest=self.guest, event_type="fall", description="=HYPERLINK(\"x\")")
+        self.event = ClinicalEvent.objects.create(guest=self.guest, event_type="fall", description="=HYPERLINK(\"x\")")
 
     def test_pdf_and_excel_reports(self):
-        today = timezone.localdate()
+        # i report vanno per giornata di turno: dopo mezzanotte l'evento è della notte del giorno prima
+        today = self.event.shift_date
         pdf = generate_report("events", "pdf", today, today, user=self.coordinator)
         data = read_encrypted(pdf.storage_name)
         self.assertTrue(data.startswith(b"%PDF"))
@@ -30,7 +31,17 @@ class ReportTests(FasasTestCase):
         ws = load_workbook(BytesIO(read_encrypted(xlsx.storage_name))).active
         values = [c.value for row in ws.iter_rows() for c in row if c.value]
         self.assertTrue(any(str(v).startswith("'=HYPERLINK") for v in values))  # niente formule iniettate
-        self.assertEqual(pdf.expires_on.year, today.year + 5)
+        self.assertEqual(pdf.expires_on.year, timezone.localdate().year + 5)
+
+    def test_event_after_midnight_belongs_to_previous_night(self):
+        tz = timezone.get_current_timezone()
+        night = timezone.make_aware(datetime.datetime(2026, 11, 1, 0, 15), tz)
+        event = ClinicalEvent.objects.create(guest=self.guest, event_type="fall", description="caduta notturna",
+                                             occurred_at=night)
+        self.assertEqual(event.shift_date, datetime.date(2026, 10, 31))
+        report = generate_report("events", "xlsx", event.shift_date, event.shift_date, user=self.coordinator)
+        ws = load_workbook(BytesIO(read_encrypted(report.storage_name))).active
+        self.assertIn("caduta notturna", [c.value for row in ws.iter_rows() for c in row])
 
     def test_all_report_types_render(self):
         today = timezone.localdate()

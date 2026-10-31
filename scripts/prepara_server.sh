@@ -231,15 +231,18 @@ fi
 
 # --- 3. Firewall e aggiornamenti -----------------------------------------------------------------------
 say "3. Firewall e aggiornamenti di sicurezza"
-install_missing() {  # installa i pacchetti indicati solo se mancano
-  local missing=()
+install_missing() {  # installa i pacchetti indicati solo se mancano; mai attese senza limite
+  local missing=() package
   for package in "$@"; do dpkg -s "$package" >/dev/null 2>&1 || missing+=("$package"); done
-  if [ ${#missing[@]} -gt 0 ]; then
-    apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${missing[@]}" >/dev/null
-  fi
+  [ ${#missing[@]} -eq 0 ] && return 0
+  echo "  installo ${missing[*]} (qualche minuto; se è in corso un aggiornamento automatico, lo aspetto)…"
+  # fino a 5 minuti di attesa se un altro aggiornamento tiene occupato apt, 15 minuti al massimo per comando
+  timeout 900 apt-get -o DPkg::Lock::Timeout=300 update -qq \
+    && DEBIAN_FRONTEND=noninteractive timeout 900 apt-get -o DPkg::Lock::Timeout=300 install -y -qq \
+      "${missing[@]}" >/dev/null
 }
 if yes_no "Attivo il firewall (da fuori solo le porte 80 e 443, accesso SSH solo dalla rete $LAN)?" s; then
-  install_missing ufw
+  install_missing ufw || die "installazione del firewall non riuscita: riprovare tra qualche minuto (forse era in corso un aggiornamento)."
   ufw default deny incoming >/dev/null
   ufw default allow outgoing >/dev/null
   ufw allow from "$LAN" to any port 22 proto tcp comment "SSH dalla rete della struttura" >/dev/null
@@ -252,7 +255,8 @@ else
   warn "firewall non modificato da questo script (guida, passo 15)"
 fi
 
-install_missing unattended-upgrades
+UPDATES_OK=1
+install_missing unattended-upgrades || UPDATES_OK=""
 if [ ! -f /etc/apt/apt.conf.d/20auto-upgrades ]; then
   printf '%s\n' 'APT::Periodic::Update-Package-Lists "1";' 'APT::Periodic::Unattended-Upgrade "1";' \
     >/etc/apt/apt.conf.d/20auto-upgrades
@@ -261,7 +265,11 @@ fi
 printf '%s\n' '// FASAS: aggiornamenti di sicurezza anche dei pacchetti con configurazione modificata in locale' \
   'Dpkg::Options { "--force-confdef"; "--force-confold"; };' >/etc/apt/apt.conf.d/51fasas-configurazione
 timedatectl set-timezone Europe/Rome 2>/dev/null || true
-ok "aggiornamenti di sicurezza automatici ogni giorno, fuso orario Europe/Rome"
+if [ -n "$UPDATES_OK" ]; then
+  ok "aggiornamenti di sicurezza automatici ogni giorno, fuso orario Europe/Rome"
+else
+  warn "aggiornamenti automatici non installati ora (apt occupato o non raggiungibile): rilanciare lo script più tardi"
+fi
 echo "  Se il disco chiede la frase di cifratura a ogni accensione (guida, passo 5), rispondere n."
 if yes_no "Riavvio automatico alle 05:15 quando un aggiornamento lo richiede?" s; then
   printf '%s\n' '// FASAS: riavvio automatico dopo gli aggiornamenti che lo richiedono, fuori dai job notturni' \
