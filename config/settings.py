@@ -35,8 +35,24 @@ def env_list(name, default=""):
     return [item.strip() for item in os.environ.get(name, default).split(",") if item.strip()]
 
 
+def env_secret(name, default=""):
+    """
+    Segreto letto da file quando possibile, così le chiavi non stanno nel .env né nell'ambiente dei processi:
+    1) NOME_FILE=/percorso (segreti di Docker, file con permessi 600);
+    2) credenziali di systemd (LoadCredential=NOME:/percorso → $CREDENTIALS_DIRECTORY/NOME);
+    3) altrimenti la variabile d'ambiente NOME.
+    """
+    path = os.environ.get(f"{name}_FILE")
+    if not path and os.environ.get("CREDENTIALS_DIRECTORY"):
+        candidate = Path(os.environ["CREDENTIALS_DIRECTORY"]) / name
+        path = str(candidate) if candidate.exists() else ""
+    if path:
+        return Path(path).read_text(encoding="utf-8").strip()
+    return os.environ.get(name, default)
+
+
 DEBUG = env_bool("DJANGO_DEBUG", False)
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+SECRET_KEY = env_secret("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     if DEBUG:
         SECRET_KEY = "dev-only-insecure-key-change-me"
@@ -116,8 +132,8 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+    "default": dj_database_url.parse(
+        env_secret("DATABASE_URL") or f"sqlite:///{BASE_DIR / 'db.sqlite3'}",  # contiene la password: anche da file
         conn_max_age=int(os.environ.get("DATABASE_CONN_MAX_AGE", "60")),
         ssl_require=env_bool("DATABASE_SSL_REQUIRE", False),
     )
@@ -193,16 +209,16 @@ if not DEBUG:
 
 # Chiavi di cifratura dei file (Fernet, separate da virgola: la prima cifra, le altre decifrano
 # per consentire la rotazione). Generare con: python manage.py fasas_genkey
-FASAS_ENCRYPTION_KEYS = env_list("FASAS_ENCRYPTION_KEYS")
+FASAS_ENCRYPTION_KEYS = [k.strip() for k in env_secret("FASAS_ENCRYPTION_KEYS").split(",") if k.strip()]
 # Chiave AES-256 dei backup (base64 url-safe, 32 byte). Va conservata fuori dal server.
-FASAS_BACKUP_KEY = os.environ.get("FASAS_BACKUP_KEY", "")
+FASAS_BACKUP_KEY = env_secret("FASAS_BACKUP_KEY")
 FASAS_BACKUP_DIR = Path(os.environ.get("FASAS_BACKUP_DIR", BASE_DIR / "backups"))
 # Copia fuori sede su object storage compatibile S3 in UE, con blocco delle modifiche (docs/BACKUP.md)
 FASAS_OFFSITE_ENDPOINT = os.environ.get("FASAS_OFFSITE_ENDPOINT", "")  # es. https://s3.<regione>.<fornitore>
 FASAS_OFFSITE_REGION = os.environ.get("FASAS_OFFSITE_REGION", "")
 FASAS_OFFSITE_BUCKET = os.environ.get("FASAS_OFFSITE_BUCKET", "")
 FASAS_OFFSITE_ACCESS_KEY = os.environ.get("FASAS_OFFSITE_ACCESS_KEY", "")
-FASAS_OFFSITE_SECRET_KEY = os.environ.get("FASAS_OFFSITE_SECRET_KEY", "")
+FASAS_OFFSITE_SECRET_KEY = env_secret("FASAS_OFFSITE_SECRET_KEY")
 FASAS_OFFSITE_PREFIX = os.environ.get("FASAS_OFFSITE_PREFIX", "fasas")
 FASAS_OFFSITE_LOCK_DAYS = int(os.environ.get("FASAS_OFFSITE_LOCK_DAYS", "30"))
 FASAS_OFFSITE_LOCK_MODE = os.environ.get("FASAS_OFFSITE_LOCK_MODE", "COMPLIANCE")  # COMPLIANCE | GOVERNANCE
@@ -225,7 +241,7 @@ FASAS_2FA_ISSUER = os.environ.get("FASAS_2FA_ISSUER", "FASAS")
 # o firma remota qualificata presso un prestatore (QTSP) tramite API CSC.
 FASAS_SIGNATURE_TSA_URL = os.environ.get("FASAS_SIGNATURE_TSA_URL", "")  # marca temporale RFC 3161
 FASAS_SIGNATURE_TSA_USER = os.environ.get("FASAS_SIGNATURE_TSA_USER", "")
-FASAS_SIGNATURE_TSA_PASSWORD = os.environ.get("FASAS_SIGNATURE_TSA_PASSWORD", "")
+FASAS_SIGNATURE_TSA_PASSWORD = env_secret("FASAS_SIGNATURE_TSA_PASSWORD")
 # Protocolli automatici: si attivano solo dopo la validazione di soglie e azioni da parte del medico della struttura
 FASAS_PROTOCOLS_REQUIRE_VALIDATION = env_bool("FASAS_PROTOCOLS_REQUIRE_VALIDATION", True)
 # Punti di controllo notturni dell'audit con marca temporale della TSA qui sopra (se configurata)
@@ -237,9 +253,9 @@ FASAS_CSC_API_VERSION = os.environ.get("FASAS_CSC_API_VERSION", "v1")
 FASAS_CSC_AUTH = os.environ.get("FASAS_CSC_AUTH", "basic")  # basic | oauth2 | token
 FASAS_CSC_OAUTH_TOKEN_URL = os.environ.get("FASAS_CSC_OAUTH_TOKEN_URL", "")
 FASAS_CSC_CLIENT_ID = os.environ.get("FASAS_CSC_CLIENT_ID", "")
-FASAS_CSC_CLIENT_SECRET = os.environ.get("FASAS_CSC_CLIENT_SECRET", "")
+FASAS_CSC_CLIENT_SECRET = env_secret("FASAS_CSC_CLIENT_SECRET")
 FASAS_CSC_OAUTH_SCOPE = os.environ.get("FASAS_CSC_OAUTH_SCOPE", "service")
-FASAS_CSC_TOKEN = os.environ.get("FASAS_CSC_TOKEN", "")
+FASAS_CSC_TOKEN = env_secret("FASAS_CSC_TOKEN")
 FASAS_CSC_TIMEOUT = int(os.environ.get("FASAS_CSC_TIMEOUT", "30"))
 FASAS_CSC_PROVIDER_NAME = os.environ.get("FASAS_CSC_PROVIDER_NAME", "")  # nome mostrato ai medici, es. «InfoCert»
 
@@ -258,7 +274,7 @@ FASAS_FEA_TERMS_FILE = os.environ.get("FASAS_FEA_TERMS_FILE", "")  # testo appro
 FASAS_FEA_RETENTION_YEARS = int(os.environ.get("FASAS_FEA_RETENTION_YEARS", "20"))
 
 # Notifiche push (Web Push). Chiave generata con «manage.py fasas_vapid_keys»; in sviluppo se ne deriva una da SECRET_KEY.
-FASAS_VAPID_PRIVATE_KEY = os.environ.get("FASAS_VAPID_PRIVATE_KEY", "")
+FASAS_VAPID_PRIVATE_KEY = env_secret("FASAS_VAPID_PRIVATE_KEY")
 FASAS_VAPID_SUBJECT = os.environ.get("FASAS_VAPID_SUBJECT", "mailto:amministrazione@fasas.invalid")
 FASAS_PUSH_SHOW_DETAILS = env_bool("FASAS_PUSH_SHOW_DETAILS", False)  # titolo e messaggio completi sul telefono
 FASAS_PUSH_ASYNC = env_bool("FASAS_PUSH_ASYNC", True)
@@ -274,7 +290,7 @@ EMAIL_BACKEND = os.environ.get("DJANGO_EMAIL_BACKEND", "django.core.mail.backend
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_HOST_PASSWORD = env_secret("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "fasas@localhost")
 
@@ -298,7 +314,7 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", False)
 
 # Monitoraggio (docs/MONITORAGGIO.md): dettaglio di /salute/ solo con questo token; spazio minimo su disco
-FASAS_HEALTH_TOKEN = os.environ.get("FASAS_HEALTH_TOKEN", "")
+FASAS_HEALTH_TOKEN = env_secret("FASAS_HEALTH_TOKEN")
 FASAS_HEALTH_MIN_FREE_GB = float(os.environ.get("FASAS_HEALTH_MIN_FREE_GB", "5"))
 FASAS_ERROR_RECORDING = env_bool("FASAS_ERROR_RECORDING", True)
 

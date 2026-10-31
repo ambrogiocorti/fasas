@@ -257,3 +257,21 @@ class ErrorEvent(models.Model):
 
     def __str__(self):
         return f"{self.exception or 'errore'} in {self.where}"
+
+
+class KeyCanary(models.Model):
+    """
+    Piccolo testo cifrato alla prima esecuzione con le chiavi in uso: se poi il server parte con una chiave mancante
+    o sbagliata (es. .env perso o sostituito) il controllo di salute lo segnala subito, prima che nascano documenti
+    o backup cifrati con una chiave diversa e quindi illeggibili con la vecchia.
+    """
+
+    kind = models.CharField(max_length=20, unique=True)  # documenti | backup
+    token = models.BinaryField()
+    fingerprint = models.CharField("impronta della chiave", max_length=16)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = "verifica chiave"
+        verbose_name_plural = "verifiche chiavi"
+        default_permissions = ()

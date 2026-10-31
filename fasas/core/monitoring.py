@@ -153,6 +153,10 @@ def checks():
     if not ping_database():
         return [("database", "error", "non raggiungibile")]
     results.append(("database", "ok", "raggiungibile"))
+    from .keys import check_keys
+
+    for kind, state, detail in check_keys():
+        results.append((f"chiave_{kind}", state, detail))
     for name, path in (("file", settings.MEDIA_ROOT), ("cartella_backup", settings.FASAS_BACKUP_DIR)):
         results.append((name, "ok" if _writable(path) else "error", "scrivibile" if _writable(path) else "non scrivibile"))
     free = shutil.disk_usage(Path(settings.MEDIA_ROOT)).free / 1024 ** 3
