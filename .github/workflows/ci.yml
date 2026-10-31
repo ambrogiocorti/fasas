@@ -28,7 +28,7 @@ jobs:
       FASAS_BACKUP_KEY: Y2ktb25seS1mYXNhcy1iYWNrdXAta2V5LTAwMDAwMDA=
       FASAS_LOG_LEVEL: WARNING
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -57,7 +57,7 @@ jobs:
       FASAS_LOG_LEVEL: WARNING
       PYTHONUTF8: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -74,7 +74,7 @@ jobs:
     env:
       FASAS_POSTGRES_IMAGE: postgres:16
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Configurazione di prova (chiavi generate al momento, mai usate altrove)
         run: |
           python3 -c "import base64,os,secrets; print('DJANGO_DEBUG=0'); print('DJANGO_SECRET_KEY=' + secrets.token_hex(32)); print('FASAS_ENCRYPTION_KEYS=' + base64.urlsafe_b64encode(os.urandom(32)).decode()); print('FASAS_BACKUP_KEY=' + base64.urlsafe_b64encode(os.urandom(32)).decode()); print('POSTGRES_PASSWORD=' + secrets.token_hex(16)); print('FASAS_DOMAIN=localhost'); print('FASAS_HEALTH_TOKEN=ci')" > .env
@@ -106,7 +106,7 @@ jobs:
     # Dominio .localhost (certificato locale di Caddy), senza DuckDNS, firewall né backup fuori sede.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Prima installazione
         run: >
           sudo python3 .github/ci/prova_prepara_server.py . '[["Indirizzo del FASAS", "fasas.localhost"],
@@ -136,7 +136,7 @@ jobs:
     # Vulnerabilità note nelle dipendenze bloccate e analisi statica del codice
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
