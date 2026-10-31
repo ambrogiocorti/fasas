@@ -87,6 +87,14 @@ Definiti in `fasas/core/jobs.py`, eseguiti da Celery beat (`config/celery.py`) o
 | Lavoro senza rete | `offline` (`pack.py` pacchetto del turno, `sync.py` sincronizzazione idempotente, `OfflineRecord`, `emergency.py`), `static/js/offline.js` (cifratura AES-GCM nel browser) |
 | Presenze e rette | `billing` (`AttendanceMonth`/`AttendanceMonthRow`, `GuestFeeLine`, `FeeStatement`, `FeePayment`, `services.guest_days`) |
 | Turni del personale | `staffing` (`RotaEntry`, `RotaMonth`, `LeaveRequest`, `ShiftChange`, `services.month_grid` con copertura e riposi) |
+| Verifica in due passaggi | `accounts/twofactor.py` (TOTP RFC 6238, codici di recupero), `TwoFactorDevice`, `RecoveryCode`, viste `otp_verify`/`otp_setup`/`security` |
+| Punti di controllo dell'audit | `audit/anchoring.py` (verifica, marca temporale RFC 3161, ricevuta), `AuditCheckpoint` in sola aggiunta |
+| Backup fuori sede e prova di ripristino | `backups/offsite.py` (S3 con Object Lock), `backups/restore_test.py`, `RestoreTest`; `core/exactjson.py` (JSON con orari esatti) |
+| Monitoraggio | `core/monitoring.py` (`/salute/`, `ErrorRecordHandler`, `JobRun`, `ErrorEvent`) |
+| Custodia delle chiavi | `config/settings.env_secret`, `core/keys.py` (`KeyCanary`, busta di custodia), comando `fasas_chiavi` |
+| Promemoria terapie e validazioni | interruttori in `SystemConfig`, validazione del medico su `DrugInteraction` e `Protocol` |
+| Accettazione della FEA | `signatures/fea_terms.py`, `FEAAcceptance`, scopo `acceptance` delle richieste di firma con CIE |
+| Configurazione per richiesta | `core.models.config_scope` (configurazione e comunità lette una volta per richiesta e per job) |
 
 ## Schema del database
 

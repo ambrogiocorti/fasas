@@ -2,6 +2,8 @@
 
 ## Fornitori da nominare responsabili (art. 28 GDPR)
 
+Bozza dell'accordo con il fornitore del FASAS: [ACCORDO_ART28_FORNITORE.md](ACCORDO_ART28_FORNITORE.md).
+
 | Fornitore | Ruolo | Cosa verificare nel contratto |
 |---|---|---|
 | [Hosting del server applicativo] | conserva applicazione, file cifrati, backup locali | sede dei data center in UE, misure di sicurezza, sub-responsabili, notifica delle violazioni entro 24–48 ore, cancellazione a fine contratto |

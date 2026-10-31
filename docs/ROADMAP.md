@@ -1,6 +1,6 @@
 # Roadmap
 
-Stato al [29/10/2026]. ✅ fatto · 🟡 da decidere o da completare fuori dal software · ⬜ da fare
+Stato al [31/10/2026], versione 0.9.0 ([CHANGELOG](../CHANGELOG.md)). ✅ fatto · 🟡 da decidere o da completare fuori dal software · ⬜ da fare
 
 ## Fase 1 – Prima di inserire dati reali
 
@@ -8,14 +8,20 @@ Stato al [29/10/2026]. ✅ fatto · 🟡 da decidere o da completare fuori dal s
 |---|---|---|
 | ✅ | Importazione dal FASAS cartaceo | modello Excel con anteprima degli errori, scansioni abbinate all'ospite – [IMPORTAZIONE.md](IMPORTAZIONE.md) |
 | ✅ | Firma digitale remota qualificata | API CSC, PIN + OTP, PAdES con marca temporale – [FIRMA_DIGITALE.md](FIRMA_DIGITALE.md). Serve il contratto con un prestatore e una prova nella sua sandbox |
-| 🟡 | Firma elettronica avanzata con CIE (FASAS Sign) | server, interfaccia e FASAS Signer per computer pronti e provati con PKCS#11 reale (SoftHSM) – [FIRMA_CIE.md](FIRMA_CIE.md). **Da collaudare con una CIE reale** su Windows, macOS e Linux; CA della CIE da configurare; uso della FEA da validare con il consulente legale/DPO |
+| 🟡 | Firma elettronica avanzata con CIE (FASAS Sign) | server, interfaccia e FASAS Signer pronti e provati con PKCS#11 reale (SoftHSM); accettazione delle condizioni firmata con la CIE e conservata 20 anni (art. 57) – [FIRMA_CIE.md](FIRMA_CIE.md). **Da collaudare con una CIE reale**; testo delle condizioni da far approvare al legale; assicurazione dell'erogatore |
 | ✅ | Lavoro senza rete e foglio di emergenza | [NOTIFICHE_E_SENZA_RETE.md](NOTIFICHE_E_SENZA_RETE.md) |
-| 🟡 | Backup fuori sede | da scegliere tra le opzioni proposte (consigliata: object storage UE con blocco delle modifiche); poi integrazione e prova di ripristino |
-| ⬜ | Autenticazione a due fattori | obbligatoria per amministratore, coordinatore, medico e accessi da fuori rete |
-| ⬜ | Verifica notturna dell'audit log con risultato salvato | evita il ricalcolo all'apertura del pannello amministratore |
-| 🟡 | GDPR: registro, DPIA, informative, nomine | bozze pronte in [gdpr/](gdpr/README.md), da completare con DPO/consulente |
+| 🟡 | Backup fuori sede | software pronto e provato (object storage S3 con Object Lock, prova di ripristino trimestrale con verbale) – [BACKUP.md](BACKUP.md). **Da scegliere il fornitore** (UE, contratto art. 28) |
+| ✅ | Autenticazione a due fattori | obbligatoria per amministratore, coordinatore, medico e per gli accessi da fuori rete |
+| ✅ | Verifica notturna dell'audit log con risultato salvato | punti di controllo con marca temporale RFC 3161 (se c'è una TSA), ricevuta verificabile con OpenSSL |
+| ✅ | Installazione ripetibile | versione 0.9.0, dipendenze con impronte, immagine Docker e compose con HTTPS provati nella CI – [CONTAINER.md](CONTAINER.md) |
+| ✅ | Monitoraggio | `/salute/`, job sorvegliati, registro errori senza dati sanitari – [MONITORAGGIO.md](MONITORAGGIO.md) |
+| ✅ | Custodia delle chiavi | segreti da file, verifica delle chiavi, busta di custodia cifrata – [SICUREZZA.md](SICUREZZA.md#custodia-delle-chiavi) |
+| ✅ | Prova di carico | 20 operatori contemporanei, 60 ospiti: 95% delle pagine sotto 0,6 s – [PRESTAZIONI.md](PRESTAZIONI.md) |
+| 🟡 | Dispositivo medico (MDR) | promemoria configurabili, interazioni spente fino al parere, validazione del medico – [DISPOSITIVO_MEDICO.md](DISPOSITIVO_MEDICO.md). **Serve il parere di un consulente regolatorio** |
+| ⬜ | Test di penetrazione esterno | da affidare a un soggetto indipendente prima del pilota |
+| 🟡 | GDPR: registro, DPIA, informative, nomine | bozze pronte in [gdpr/](gdpr/README.md), compreso l'accordo art. 28 con il fornitore; da completare con DPO/consulente |
 | 🟡 | Requisiti FASAS regionali e conservazione | checklist per l'ATS in [gdpr/CHECKLIST_ATS.md](gdpr/CHECKLIST_ATS.md) |
-| 🟡 | Validazione clinica di protocolli e interazioni | a cura del medico / direttore sanitario |
+| 🟡 | Validazione clinica di protocolli e interazioni | pulsante «Valida» del medico: prima i protocolli non si attivano e le interazioni non entrano nei promemoria |
 | 🟡 | Prova sul campo | 2–4 settimane con 2–3 operatori, accanto alla carta |
 
 ## Fase 2 – Miglioramenti di grande utilità
@@ -55,6 +61,8 @@ integrità, ma oggi resta sullo stesso server. Opzioni per la seconda copia:
 | B. Backup gestiti del database (es. Supabase Pro, eventuale ripristino a un istante preciso) | nessun lavoro, ripristino rapido del database | copre solo il database, non i documenti; stesso fornitore della produzione | incluso nel piano a pagamento |
 | C. NAS in struttura che scarica i backup | ripristino veloce in locale, nessun canone | rischi fisici (furto, incendio), da proteggere dal ransomware, manutenzione | acquisto del NAS |
 | D. Disco esterno mensile in cassaforte | copia offline, semplicissima | manuale, si dimentica, dati fino a un mese vecchi | trascurabile |
+
+**Decisione tecnica presa**: il software implementa l'opzione A (copia fuori sede immutabile, [BACKUP.md](BACKUP.md)); resta da scegliere il fornitore.
 
 **Proposta**: A come copia principale (ogni notte, conservazione 30 giornalieri + 12 mensili, blocco 30 giorni),
 B se il database è su Supabase con piano a pagamento, D come ulteriore copia trimestrale. In ogni caso: chiave

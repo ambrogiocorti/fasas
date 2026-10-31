@@ -17,6 +17,12 @@
 
 - **Rete**: `FASAS_ALLOWED_NETWORKS` limita l'accesso agli indirizzi della comunità (es. rete della struttura o VPN).
 - **Password**: minimo 10 caratteri, controlli contro password comuni o simili ai dati utente.
+- **Verifica in due passaggi** (TOTP, RFC 6238): dopo la password un codice di 6 cifre dall'app sul telefono.
+  Obbligatoria per amministratore, coordinatore e medico (`FASAS_2FA_REQUIRED_ROLES`), facoltativa per gli altri; con
+  `FASAS_2FA_TRUSTED_NETWORKS` diventa obbligatoria per tutti gli accessi da fuori rete e si attiva solo dalla rete
+  della struttura. Segreto cifrato, ogni codice vale una volta, 10 codici di recupero (salvati come impronta),
+  reimpostazione da parte dell'amministratore con audit. I codici sbagliati contano per il blocco; il token API
+  richiede il codice. L'area tecnica (`/gestione-tecnica/`) non ha un accesso proprio.
 - **Blocco**: dopo `FASAS_LOGIN_MAX_FAILURES` tentativi falliti (default 5) l'utente è bloccato per `FASAS_LOGIN_LOCKOUT_MINUTES`; anche l'endpoint token dell'API applica il blocco.
 - **Inattività**: disconnessione automatica dopo i minuti configurati (default 30) – i terminali di reparto sono condivisi.
 - **Log accessi**: accesso, uscita, tentativo fallito, blocco, scadenza sessione con IP, user agent e dispositivo. Tabella in sola aggiunta.
@@ -60,13 +66,31 @@ L'amministratore può concedere o negare singoli permessi a singoli utenti (pagi
 esempio dare a un medico l'approvazione del PAI; ogni variazione è nell'audit log. I permessi predefiniti dei ruoli
 vengono riallineati a ogni `migrate` (e da `manage.py fasas_setup`); le eccezioni per singolo utente restano.
 
+## Custodia delle chiavi
+
+- **Dove stanno**: ogni segreto si può leggere da un file (`NOME_FILE=/percorso`, segreti di Docker) o dalle
+  credenziali di systemd (`LoadCredential=`) invece che dal `.env`; vale anche per `DATABASE_URL`.
+- **Verifica**: alla prima esecuzione il FASAS cifra un testo di prova con le chiavi in uso. Se poi parte con una chiave
+  mancante o diversa (es. `.env` perso), `/salute/` risponde 503 e indica l'impronta della chiave giusta, prima che
+  nascano dati cifrati con la chiave sbagliata. `python manage.py fasas_chiavi verifica` fa lo stesso controllo.
+- **Busta di custodia**: `python manage.py fasas_chiavi busta <file>` crea un file cifrato con una frase segreta
+  (scrypt + AES-256-GCM) con tutte le chiavi; stampa un foglio di custodia con le sole impronte. Conservare la busta in
+  due luoghi (cassaforte, gestore di password della direzione) e la frase separata. `fasas_chiavi apri <file>`
+  restituisce le righe del `.env`.
+- **Rotazione**: nuova chiave in testa a `FASAS_ENCRYPTION_KEYS`, le vecchie restano in coda per decifrare.
+
 ## Tracciabilità legale
 
 - **Audit log** (`audit_auditlog`): utente, data e ora, azione, oggetto, ospite, valore precedente e nuovo di ogni campo,
   motivazione, IP, origine (web, API, job). Ogni voce contiene l'impronta SHA-256 della precedente.
   - L'applicazione impedisce modifiche e cancellazioni.
   - Su PostgreSQL un trigger rifiuta `UPDATE`, `DELETE` e `TRUNCATE` anche a chi accede direttamente al database.
-  - `manage.py audit_verify` (e il job giornaliero) ricalcola la catena: un'alterazione viene individuata e notificata.
+  - `manage.py audit_verify` (e il job notturno) ricalcola la catena: un'alterazione viene individuata e notificata.
+  - **Punti di controllo**: ogni notte si salva l'impronta dell'ultima voce con l'esito della verifica e, se è
+    configurata una TSA, una marca temporale RFC 3161. Chi riscrivesse tutta la catena cambierebbe l'impronta delle
+    voci già ancorate: la verifica successiva lo rileva. La ricevuta di ogni punto di controllo si verifica con
+    OpenSSL senza usare il FASAS; i punti di controllo finiscono anche nei backup e nella copia fuori sede immutabile.
+    Il registro **rileva** le manomissioni; non è «legalmente immodificabile».
 - **Annullamento al posto della cancellazione**: le registrazioni cliniche annullate restano visibili (barrate) con motivo, autore e data.
 - **Blocco modifiche**: entro la finestra (default 24 h) le correzioni sono libere; oltre, secondo la politica configurata
   (bloccato / con motivazione obbligatoria / solo coordinatore con motivazione).
@@ -74,6 +98,12 @@ vengono riallineati a ogni `migrate` (e da `manage.py fasas_setup`); le eccezion
   dopo la tolleranza configurata. La riapertura straordinaria è disattivata di default; se abilitata è riservata
   all'amministratore, con motivazione tracciata.
 - **Cartelle archiviate**: in sola lettura, con data di conservazione.
+
+## Monitoraggio
+
+Controllo di salute `/salute/`, job sorvegliati e registro errori senza dati sanitari: vedi
+[MONITORAGGIO.md](MONITORAGGIO.md). Dipendenze bloccate con impronte e controllate ogni settimana (Dependabot) e a ogni
+modifica (pip-audit, bandit nella CI).
 
 ## Firma digitale
 

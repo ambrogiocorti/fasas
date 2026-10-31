@@ -1,5 +1,8 @@
 # Installazione in produzione
 
+> Modo più semplice e consigliato: **Docker** ([CONTAINER.md](CONTAINER.md)), con database, job e HTTPS già
+> configurati. Questa pagina descrive l'installazione tradizionale su un server Linux.
+
 Architettura consigliata per una comunità (10–100 ospiti):
 
 ```
@@ -45,6 +48,11 @@ cd /opt/fasas/app && sudo -u fasas python3 -m venv .venv && sudo -u fasas .venv/
 ```bash
 sudo -u fasas .venv/bin/python manage.py fasas_genkey
 ```
+
+Meglio non lasciare le chiavi nel `.env`: con systemd usare `LoadCredential=` (es.
+`LoadCredential=FASAS_ENCRYPTION_KEYS:/etc/fasas/chiave-documenti`) oppure `FASAS_ENCRYPTION_KEYS_FILE=/percorso`.
+Dopo il primo avvio creare la busta di custodia (`manage.py fasas_chiavi busta <file>`, vedi
+[SICUREZZA.md](SICUREZZA.md#custodia-delle-chiavi)).
 
 ```bash
 sudo -u fasas .venv/bin/python manage.py fasas_vapid_keys
@@ -150,7 +158,8 @@ Non esporre mai la cartella `media`: i file sono serviti solo dall'applicazione 
 
 - Il job `backup` crea ogni notte un file `.fbk` cifrato in `FASAS_BACKUP_DIR`, lo verifica e applica la conservazione
   configurata (default 30 giorni, l'ultimo backup verificato non viene mai eliminato).
-- **Copiare i backup fuori dal server** (es. `rclone` verso uno storage S3 europeo con versioning): il file è già cifrato.
+- **Copia fuori sede**: con `FASAS_OFFSITE_*` ogni backup verificato viene caricato su un object storage S3 in UE con
+  blocco delle modifiche (Object Lock): vedi [BACKUP.md](BACKUP.md). Il file è già cifrato.
 - Supabase effettua anche i propri backup del database (piani a pagamento): sono complementari, non sostitutivi,
   perché non comprendono i documenti.
 - Ripristino (applicazione ferma, database di destinazione vuoto e raggiungibile):
@@ -163,12 +172,13 @@ Non esporre mai la cartella `media`: i file sono serviti solo dall'applicazione 
 .venv/bin/python manage.py audit_verify
 ```
 
-Provare il ripristino su un database di prova almeno ogni sei mesi.
+Prova di ripristino ogni tre mesi, con verbale: `manage.py backup_prova_ripristino` (job `restore_test`), su un
+database separato indicato in `FASAS_RESTORE_TEST_DATABASE_URL` – vedi [BACKUP.md](BACKUP.md).
 
 ## 4. Aggiornamenti
 
 ```bash
-cd /opt/fasas/app && sudo -u fasas git pull && sudo -u fasas .venv/bin/pip install -r requirements.txt
+cd /opt/fasas/app && sudo -u fasas git pull && sudo -u fasas .venv/bin/pip install --require-hashes -r requirements.lock
 ```
 
 ```bash
