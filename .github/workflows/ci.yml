@@ -64,7 +64,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements-dev.txt
       - run: python manage.py migrate --verbosity 0
-      - run: python manage.py fasas_demo --skip-if-exists
+      - run: python manage.py fasas_demo --skip-if-exists --ambiente-di-prova
       - run: python manage.py test fasas.tests
 
   container:

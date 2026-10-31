@@ -6,6 +6,7 @@ import datetime
 import random
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
@@ -55,9 +56,17 @@ class Command(BaseCommand):
         parser.add_argument("--force", action="store_true", help="Esegue anche se esistono già ospiti")
         parser.add_argument("--skip-if-exists", action="store_true",
                             help="Se esistono già ospiti non fa nulla (usato dagli script di avvio)")
+        parser.add_argument("--ambiente-di-prova", action="store_true",
+                            help="Conferma che è un'installazione di prova anche se DEBUG è spento (es. container di prova)")
 
     def handle(self, *args, **options):
         from fasas.guests.models import Guest
+
+        if not settings.DEBUG and not options["ambiente_di_prova"]:
+            # Gli utenti demo hanno password pubblicate nel README: su un'installazione vera sarebbero una porta aperta
+            raise CommandError("I dati demo creano utenti (anche un amministratore) con password pubbliche: si usano "
+                               "solo nelle installazioni di prova. Su un'installazione di prova con DEBUG spento "
+                               "aggiungere --ambiente-di-prova; MAI dove ci sono o ci saranno dati reali.")
 
         if Guest.objects.exists() and options["skip_if_exists"]:
             from fasas.accounts.models import User

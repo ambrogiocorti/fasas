@@ -49,7 +49,7 @@ docker compose -p fasas-prova up -d --build
 ```
 
 ```bash
-docker compose -p fasas-prova exec web python manage.py fasas_demo
+docker compose -p fasas-prova exec web python manage.py fasas_demo --ambiente-di-prova
 ```
 
 Ogni nuova versione si installa prima qui; in produzione solo dopo il collaudo (vedi CHANGELOG.md).

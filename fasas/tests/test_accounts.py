@@ -1,7 +1,7 @@
 from django.contrib.auth.models import Permission
 from django.test import override_settings
 
-from fasas.accounts.models import AccessLog, UserPermissionOverride
+from fasas.accounts.models import AccessLog, User, UserPermissionOverride
 
 from .base import PASSWORD, FasasTestCase
 
@@ -83,3 +83,14 @@ class AccessLogTests(FasasTestCase):
         mw = AllowedNetworksMiddleware(lambda r: HttpResponse("ok"))
         self.assertEqual(mw(RequestFactory().get("/", REMOTE_ADDR="192.168.1.5")).status_code, 403)
         self.assertEqual(mw(RequestFactory().get("/", REMOTE_ADDR="10.1.2.3")).status_code, 200)
+
+
+class DemoDataGuardTests(FasasTestCase):
+    def test_demo_users_refused_outside_test_installations(self):
+        import io
+
+        from django.core.management import CommandError, call_command
+
+        with override_settings(DEBUG=False), self.assertRaises(CommandError):
+            call_command("fasas_demo", "--skip-if-exists", stdout=io.StringIO())
+        self.assertFalse(User.objects.filter(username="medico").exists())
