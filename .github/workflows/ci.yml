@@ -68,8 +68,11 @@ jobs:
       - run: python manage.py test fasas.tests
 
   container:
-    # Immagine di produzione e docker compose completo: database, sito, job, proxy HTTPS
+    # Immagine di produzione e docker compose completo: database, sito, job, proxy HTTPS.
+    # PostgreSQL 16 con client 17: prova anche il ripristino verso un server più vecchio (es. Supabase).
     runs-on: ubuntu-latest
+    env:
+      FASAS_POSTGRES_IMAGE: postgres:16
     steps:
       - uses: actions/checkout@v4
       - name: Configurazione di prova (chiavi generate al momento, mai usate altrove)

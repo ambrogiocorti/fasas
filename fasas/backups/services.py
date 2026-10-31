@@ -192,6 +192,55 @@ def verify_backup(record):
     return record.verify_ok
 
 
+# Impostazioni scritte da pg_dump recenti che un server PostgreSQL più vecchio non conosce
+# (pg_dump 17 aggiunge «SET transaction_timeout», che PostgreSQL 15 e 16 rifiutano).
+NEWER_SERVER_SETTINGS = {17: ("SET transaction_timeout = 0;",)}
+
+
+def _server_major():
+    connection.ensure_connection()
+    return connection.pg_version // 10000
+
+
+def _pg_restore(dump):
+    """Ripristino in un'unica transazione; verso server più vecchi del client si tolgono le impostazioni sconosciute."""
+    database = settings.DATABASES["default"]["NAME"]
+    options = ["--clean", "--if-exists", "--no-owner", "--no-privileges"]
+    skip = {line for major, lines in NEWER_SERVER_SETTINGS.items() if _server_major() < major for line in lines}
+    if not skip:
+        result = subprocess.run(["pg_restore", *options, "--single-transaction", "--dbname", database, str(dump)],
+                                env=_pg_env(), capture_output=True, text=True, timeout=3600)
+        if result.returncode != 0:
+            raise BackupError(f"pg_restore fallito: {result.stderr.strip()[:500]}")
+        return
+    # pg_restore produce l'SQL, si filtrano le righe incompatibili e psql lo esegue in un'unica transazione.
+    # Gli errori vanno su file temporanei: una pipe piena bloccherebbe i due processi.
+    with tempfile.TemporaryFile() as source_err, tempfile.TemporaryFile() as target_err:
+        source = subprocess.Popen(["pg_restore", *options, "--file", "-", str(dump)], env=_pg_env(),
+                                  stdout=subprocess.PIPE, stderr=source_err)
+        target = subprocess.Popen(["psql", "--quiet", "--no-psqlrc", "--single-transaction", "-v", "ON_ERROR_STOP=1",
+                                   "--dbname", database], env=_pg_env(), stdin=subprocess.PIPE,
+                                  stdout=subprocess.DEVNULL, stderr=target_err)
+        try:
+            for line in source.stdout:
+                if line.decode("utf-8", "replace").strip() not in skip:
+                    target.stdin.write(line)
+        except BrokenPipeError:  # psql si è fermato su un errore: il messaggio è nel suo file d'errore
+            source.kill()
+        finally:
+            source.stdout.close()
+            try:
+                target.stdin.close()
+            except BrokenPipeError:
+                pass
+        failed = source.wait(timeout=3600) != 0 or target.wait(timeout=3600) != 0
+        if failed:
+            target_err.seek(0)
+            source_err.seek(0)
+            message = (target_err.read() or source_err.read()).decode("utf-8", "replace").strip()
+            raise BackupError(f"Ripristino fallito: {message[:500]}")
+
+
 def restore_backup(path, restore_media=True):
     """
     Ripristino completo. Da usare solo da riga di comando (manage.py backup_restore) con
@@ -214,13 +263,7 @@ def restore_backup(path, restore_media=True):
         if manifest["db_format"] == "pg_dump":
             if connection.vendor != "postgresql":
                 raise BackupError("Il backup è PostgreSQL: il database di destinazione deve essere PostgreSQL.")
-            result = subprocess.run(
-                ["pg_restore", "--clean", "--if-exists", "--no-owner", "--no-privileges", "--single-transaction",
-                 "--dbname", settings.DATABASES["default"]["NAME"], str(workdir / "database.dump")],
-                env=_pg_env(), capture_output=True, text=True, timeout=3600,
-            )
-            if result.returncode != 0:
-                raise BackupError(f"pg_restore fallito: {result.stderr.strip()[:500]}")
+            _pg_restore(workdir / "database.dump")
         else:
             dump = next(name for name in ("database.fasasjson", "database.json") if (workdir / name).exists())
             call_command("loaddata", str(workdir / dump))
