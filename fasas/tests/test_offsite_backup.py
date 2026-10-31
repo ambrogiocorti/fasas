@@ -153,6 +153,8 @@ class ContentTypeAlignmentTests(FasasTestCase):
     """Ripristino JSON: i numeri interni dei tipi di oggetto tornano quelli dell'originale (impronte audit v1)."""
 
     def test_ids_are_realigned_with_references(self):
+        if connection.vendor == "postgresql":
+            self.skipTest("su PostgreSQL i backup sono pg_dump e l'audit è in sola aggiunta (vedi test sotto)")
         from django.contrib.auth.models import Permission
         from django.contrib.contenttypes.models import ContentType
 
@@ -170,3 +172,16 @@ class ContentTypeAlignmentTests(FasasTestCase):
         moved = ContentType.objects.get(app_label="guests", model="guest")
         self.assertEqual(set(Permission.objects.filter(content_type=moved).values_list("codename", flat=True)),
                          guest_perms)
+
+    def test_json_backup_is_refused_on_postgresql(self):
+        if connection.vendor != "postgresql":
+            self.skipTest("solo su PostgreSQL")
+        from fasas.backups.services import BackupError, restore_backup
+
+        with mock.patch("fasas.backups.services.shutil.which", return_value=None):  # senza pg_dump: formato JSON
+            record = create_backup(include_media=False)
+        self.assertEqual(record.db_format, "json")
+        before = AuditLog.objects.count()
+        with self.assertRaisesMessage(BackupError, "formato JSON"):
+            restore_backup(record.path, restore_media=False)
+        self.assertGreaterEqual(AuditLog.objects.count(), before)

@@ -303,6 +303,10 @@ def restore_backup(path, restore_media=True):
                 raise BackupError("Il backup è PostgreSQL: il database di destinazione deve essere PostgreSQL.")
             _pg_restore(workdir / "database.dump")
         else:
+            if connection.vendor == "postgresql":
+                # su PostgreSQL l'audit è in sola aggiunta: le voci create dalle migrazioni non si possono sovrascrivere
+                raise BackupError("Il backup è in formato JSON (installazione con SQLite): si ripristina su SQLite. "
+                                  "Su PostgreSQL l'audit è in sola aggiunta e il caricamento lo altererebbe.")
             dump = next(name for name in ("database.fasasjson", "database.json") if (workdir / name).exists())
             if manifest.get("content_types"):
                 _align_content_types(manifest["content_types"])

@@ -21,6 +21,10 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
   nella CI (job «installazione»).
 - `scripts/copia_backup_usb.sh`: copia verificata dell'ultimo backup e della busta delle chiavi su disco USB.
 
+### Correzioni
+- Un backup in formato JSON (installazioni con SQLite) su PostgreSQL ora è rifiutato con un messaggio chiaro: prima
+  il ripristino si fermava a metà sul blocco dell'audit in sola aggiunta. Test su PostgreSQL di nuovo verdi.
+
 ## 0.9.0 – 30/10/2026 (versione per il pilota)
 
 ### Sicurezza
