@@ -9,7 +9,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.functional import SimpleLazyObject
 
-from .models import Community, SystemConfig
+from .models import Community, SystemConfig, config_scope
 
 
 def client_ip(request):
@@ -46,9 +46,10 @@ class CommunityMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        request.community = SimpleLazyObject(Community.default)
-        request.fasas_config = SimpleLazyObject(SystemConfig.get)
-        return self.get_response(request)
+        with config_scope():  # configurazione letta al più una volta per richiesta
+            request.community = SimpleLazyObject(Community.default)
+            request.fasas_config = SimpleLazyObject(SystemConfig.get)
+            return self.get_response(request)
 
 
 class SessionIdleTimeoutMiddleware:

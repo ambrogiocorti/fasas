@@ -6,6 +6,8 @@ from django.utils.module_loading import import_string
 
 from fasas.audit.context import audit_context
 
+from .models import config_scope
+
 logger = logging.getLogger("fasas.jobs")
 
 JOBS = {
@@ -32,7 +34,7 @@ def run_job(name):
     func = import_string(path)
     job_started(name)
     try:
-        with audit_context(user=None, ip="", reason="", source=f"job:{name}"):
+        with config_scope(), audit_context(user=None, ip="", reason="", source=f"job:{name}"):
             if name in ("backup", "restore_test"):  # gestiscono da sé le transazioni: niente transazione lunga
                 result = func()
             else:

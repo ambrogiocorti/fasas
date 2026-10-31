@@ -123,10 +123,25 @@ def days_since_last_evacuation(guest, today=None):
 
 
 def evacuation_overview(guests, today=None):
+    """Giorni dall'ultima evacuazione per ogni ospite, con due sole letture del database (non una per ospite)."""
+    from django.db.models import OuterRef, Subquery
+
+    from fasas.guests.models import Guest
+
+    today = today or timezone.localdate()
+    guests = list(guests)
+    latest = EvacuationRecord.objects.filter(guest=OuterRef("pk"), outcome=True).order_by("-occurred_at")
+    last_ids = dict(Guest.objects.filter(pk__in=[g.pk for g in guests])
+                    .annotate(last_id=Subquery(latest.values("pk")[:1])).values_list("pk", "last_id"))
+    records = EvacuationRecord.objects.in_bulk([pk for pk in last_ids.values() if pk])
     rows = []
     for guest in guests:
-        days, last = days_since_last_evacuation(guest, today)
-        rows.append({"guest": guest, "days": days, "last": last})
+        last = records.get(last_ids.get(guest.pk))
+        if last is not None:
+            reference = timezone.localtime(last.occurred_at).date()
+        else:
+            reference = max(guest.admission_date, timezone.localtime(guest.created_at).date())
+        rows.append({"guest": guest, "days": (today - reference).days, "last": last})
     return sorted(rows, key=lambda r: -r["days"])
 
 

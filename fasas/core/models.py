@@ -1,3 +1,5 @@
+import contextlib
+import contextvars
 import datetime
 
 from django.conf import settings
@@ -6,6 +8,35 @@ from django.db import models
 from django.utils import timezone
 
 from .shifts import Shift, resolve_shift
+
+# Configurazione e comunità lette una volta per richiesta (o per job): il calcolo del turno le usa per ogni
+# somministrazione e senza questa memoria un cruscotto ne faceva migliaia di letture (prova di carico).
+_scope = contextvars.ContextVar("fasas_config_scope", default=None)
+
+
+@contextlib.contextmanager
+def config_scope():
+    token = _scope.set({})
+    try:
+        yield
+    finally:
+        _scope.reset(token)
+
+
+def _cached(key, loader):
+    scope = _scope.get()
+    if scope is None:
+        return loader()
+    if key not in scope:
+        scope[key] = loader()
+    return scope[key]
+
+
+def _forget(*keys):
+    scope = _scope.get()
+    if scope is not None:
+        for key in keys:
+            scope.pop(key, None)
 
 
 class Community(models.Model):
@@ -28,10 +59,17 @@ class Community(models.Model):
 
     @classmethod
     def default(cls):
-        community = cls.objects.filter(active=True).order_by("pk").first()
-        if community is None:
-            community = cls.objects.create(name="Comunità", code="comunita")
-        return community
+        def load():
+            community = cls.objects.filter(active=True).order_by("pk").first()
+            if community is None:
+                community = cls.objects.create(name="Comunità", code="comunita")
+            return community
+
+        return _cached("community", load)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        _forget("community", "config")
 
 
 class SystemConfig(models.Model):
@@ -115,9 +153,15 @@ class SystemConfig(models.Model):
 
     @classmethod
     def get(cls):
-        community = Community.default()
-        config, _ = cls.objects.select_related("community").get_or_create(community=community)
-        return config
+        def load():
+            config, _ = cls.objects.select_related("community").get_or_create(community=Community.default())
+            return config
+
+        return _cached("config", load)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        _forget("config")
 
     @property
     def extensions(self):

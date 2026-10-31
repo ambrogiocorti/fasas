@@ -3,6 +3,7 @@ import datetime
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.core.exceptions import PermissionDenied
+from django.db.models import prefetch_related_objects
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -205,6 +206,7 @@ def administration_board(request):
     grouped = {}
     for dose in doses:
         grouped.setdefault(dose.guest, []).append(dose)
+    prefetch_related_objects(list(grouped), "tags", "allergies")  # una lettura per tutti, non per ospite
     start, end = shift_bounds(day, shift)
     sos_today = TherapyAdministration.objects.filter(is_sos=True, occurred_at__gte=start, occurred_at__lt=end).select_related(
         "therapy__drug", "guest"
