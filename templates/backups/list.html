@@ -15,7 +15,7 @@
       <td class="num">{{ b.size|filesizeformat }}</td>
       <td>{% if b.verify_ok %}<span class="pill pill-ok">integro</span>{% elif b.verify_ok is False %}<span class="pill pill-danger">KO</span>{% else %}—{% endif %}<br><small>{{ b.verified_at|date:"d/m H:i" }}</small></td>
       <td>{% if b.offsite_at %}<span class="pill pill-ok">copiato</span><br><small class="muted">bloccato fino al {{ b.offsite_locked_until|date:"d/m/Y"|default:"—" }}</small>{% elif b.offsite_error %}<span class="pill pill-danger">non riuscito</span><br><small style="color:var(--danger)">{{ b.offsite_error|truncatechars:80 }}</small>{% else %}—{% endif %}</td>
-      <td class="num nowrap">{% if b.status == 'ok' and not b.deleted_at %}
+      <td class="num">{% if b.status == 'ok' and not b.deleted_at %}
         <form method="post" action="{% url 'backups:verify' b.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm">Verifica</button></form>
         <a class="btn btn-sm" href="{% url 'backups:download' b.pk %}">{% icon "download" %}Scarica</a>{% endif %}</td></tr>
   {% empty %}<tr><td colspan="8" class="empty">Nessun backup eseguito.</td></tr>{% endfor %}</tbody>
