@@ -171,6 +171,7 @@ class SignatureRequest(models.Model):
     class Purpose(models.TextChoices):
         DOCUMENT = "document", "Documento"
         TEST = "test", "Prova di funzionamento"
+        ACCEPTANCE = "acceptance", "Accettazione delle condizioni della FEA"
 
     ACTIVE = ("waiting", "card", "authorizing", "signing", "verifying")
     CANCELLABLE = ("waiting", "card", "authorizing", "signing")
@@ -239,3 +240,43 @@ class SignatureRequest(models.Model):
         if self.status in ("signing", "verifying"):
             return "FIRMA_IN_CORSO"
         return {"signed": "FIRMATO", "failed": "ERRORE", "cancelled": "ANNULLATO", "expired": "ANNULLATO"}[self.status]
+
+
+class FEAAcceptance(models.Model):
+    """
+    Dichiarazione di accettazione delle condizioni della firma elettronica avanzata con CIE (DPCM 22/02/2013,
+    art. 57): firmata dal firmatario con la propria CIE prima della prima firma e conservata almeno 20 anni,
+    insieme al certificato che lo identifica. Il firmatario ne può scaricare copia in ogni momento.
+    """
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name="firmatario", on_delete=models.PROTECT,
+                             related_name="fea_acceptances")
+    request = models.OneToOneField(SignatureRequest, on_delete=models.PROTECT, related_name="fea_acceptance")
+    accepted_at = models.DateTimeField("accettata il", default=timezone.now)
+    terms_version = models.CharField("versione delle condizioni", max_length=40)
+    terms_sha256 = models.CharField("impronta del testo delle condizioni", max_length=64)
+    signed_storage = models.CharField(max_length=255, editable=False)
+    signed_sha256 = models.CharField("impronta del PDF firmato", max_length=64)
+    certificate = models.TextField("certificato della CIE (DER base64)")
+    certificate_subject = models.CharField("titolare certificato", max_length=255)
+    certificate_serial = models.CharField("seriale", max_length=100)
+    is_test_card = models.BooleanField("carta di prova (nessun valore legale)", default=False)
+    retain_until = models.DateField("conservare fino al")
+    revoked_at = models.DateTimeField("revocata il", null=True, blank=True)
+    revoked_reason = models.CharField("motivo della revoca", max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = "accettazione condizioni FEA"
+        verbose_name_plural = "accettazioni condizioni FEA"
+        ordering = ["-accepted_at"]
+        default_permissions = ("view",)
+
+    def __str__(self):
+        return f"Accettazione FEA di {self.user} del {timezone.localtime(self.accepted_at):%d/%m/%Y}"
+
+    @property
+    def is_valid(self):
+        return self.revoked_at is None
+
+    def delete(self, *args, **kwargs):
+        raise PermissionError("Le accettazioni della FEA vanno conservate almeno 20 anni: si revocano, non si cancellano.")

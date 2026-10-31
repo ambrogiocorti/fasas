@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Accettazioni della firma con CIE{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Registro delle accettazioni della firma con CIE</h1><span class="subtitle">Dichiarazioni firmate con la CIE prima della prima firma (DPCM 22/02/2013, art. 57): da conservare almeno {{ retention_years }} anni, copia gratuita al firmatario su richiesta.</span></div>
+  <div class="actions"><a class="btn" href="{% url 'signatures:fea_characteristics' %}" target="_blank" rel="noopener">Caratteristiche pubbliche</a></div></div>
+{% if terms_draft %}<div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Le condizioni in uso sono la <strong>bozza</strong> fornita con FASAS. Prima dell'uso reale vanno approvate dal consulente legale/DPO e indicate in <span class="mono">FASAS_FEA_TERMS_FILE</span>.</div></div>{% endif %}
+<div class="card table-wrap"><table>
+  <thead><tr><th>Firmatario</th><th>Accettata il</th><th>Condizioni</th><th>Certificato CIE</th><th>Conservare fino al</th><th>Stato</th><th></th></tr></thead>
+  <tbody>{% for a in acceptances %}
+    <tr><td>{{ a.user }}<br><small class="mono">{{ a.user.fiscal_code }}</small></td><td>{{ a.accepted_at|date:"d/m/Y H:i" }}</td>
+      <td class="mono">{{ a.terms_version }}</td><td><small>{{ a.certificate_subject|truncatechars:60 }}<br>n. {{ a.certificate_serial|truncatechars:24 }}</small></td>
+      <td>{{ a.retain_until|date:"d/m/Y" }}</td>
+      <td>{% if a.is_test_card %}<span class="pill pill-warn">carta di prova</span> {% endif %}{% if a.revoked_at %}<span class="pill">revocata il {{ a.revoked_at|date:"d/m/Y" }}</span><br><small class="muted">{{ a.revoked_reason }}</small>{% else %}<span class="pill pill-ok">valida</span>{% endif %}</td>
+      <td class="num"><a class="btn btn-sm" href="{% url 'signatures:fea_file' a.pk %}">{% icon "download" %}PDF firmato</a></td></tr>
+  {% empty %}<tr><td colspan="7" class="empty">Nessuna accettazione.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

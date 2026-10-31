@@ -252,6 +252,10 @@ FASAS_CIE_TIMESTAMP = env_bool("FASAS_CIE_TIMESTAMP", True)  # marca temporale s
 FASAS_CIE_REQUEST_MINUTES = int(os.environ.get("FASAS_CIE_REQUEST_MINUTES", "5"))
 FASAS_CIE_PAIRING_MINUTES = int(os.environ.get("FASAS_CIE_PAIRING_MINUTES", "10"))
 FASAS_CIE_ALLOW_HTTP = env_bool("FASAS_CIE_ALLOW_HTTP", DEBUG)  # solo sviluppo: in produzione il Signer usa HTTPS
+# Prima della prima firma con CIE il firmatario firma con la CIE l'accettazione delle condizioni (DPCM 22/02/2013, art. 57)
+FASAS_FEA_REQUIRE_ACCEPTANCE = env_bool("FASAS_FEA_REQUIRE_ACCEPTANCE", True)
+FASAS_FEA_TERMS_FILE = os.environ.get("FASAS_FEA_TERMS_FILE", "")  # testo approvato dal legale (vuoto = bozza)
+FASAS_FEA_RETENTION_YEARS = int(os.environ.get("FASAS_FEA_RETENTION_YEARS", "20"))
 
 # Notifiche push (Web Push). Chiave generata con «manage.py fasas_vapid_keys»; in sviluppo se ne deriva una da SECRET_KEY.
 FASAS_VAPID_PRIVATE_KEY = os.environ.get("FASAS_VAPID_PRIVATE_KEY", "")

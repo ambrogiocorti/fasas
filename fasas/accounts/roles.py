@@ -116,6 +116,8 @@ ADMIN = [
     "reports.view_reportschedule", "reports.add_reportschedule", "reports.change_reportschedule",
     # Revoca dei dispositivi di firma (es. computer smarrito); non firma e non vede i documenti
     "signatures.manage_signer_devices",
+    # Registro delle accettazioni della firma con CIE (conservazione 20 anni, copie su richiesta)
+    "signatures.view_feaacceptance",
 ]
 
 # Amministrativo (ufficio amministrativo, oltre la spec. §2): presenze per la rendicontazione, rette, prospetti

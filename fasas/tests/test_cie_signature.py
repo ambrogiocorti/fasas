@@ -6,6 +6,7 @@ ma non sono firme con CIE. Il test con PKCS#11 reale (SoftHSM) è in test_cie_si
 """
 import base64
 import datetime
+import hashlib
 
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -22,7 +23,7 @@ from fasas.signatures.models import LegalLevel, Signature, SignatureRequest, Sig
 from fasas.signatures.providers import SignatureError, verify_pdf
 
 from .base import FasasTestCase
-from .cie_helpers import DeviceClient, TestPKI
+from .cie_helpers import DeviceClient, TestPKI, record_acceptance
 from .test_documents import sample_pdf
 
 PKI = TestPKI()
@@ -42,6 +43,8 @@ class CIESignatureTests(FasasTestCase):
         cls.coordinator.save()
         cls.card = PKI.card(DOCTOR_CF)
         cls.coord_card = PKI.card(COORD_CF, "Giuseppe", "Verdi")
+        record_acceptance(cls.doctor)
+        record_acceptance(cls.coordinator)
 
     def setUp(self):
         cache.clear()
@@ -70,7 +73,7 @@ class CIESignatureTests(FasasTestCase):
         self.assertContains(page, reverse("documents:view", args=[self.version.pk]))
         response = self.client.post(reverse("documents:sign_cie", args=[self.version.pk]),
                                     {"reason": "Approvazione", "confirm": "on"})
-        request = SignatureRequest.objects.get()
+        request = SignatureRequest.objects.get(purpose="document")
         self.assertRedirects(response, reverse("signatures:cie_request", args=[request.pk]))
         status, pending = self.device.get("richieste/")
         self.assertEqual([r["verify_code"] for r in pending["requests"]], [request.verify_code])
@@ -224,7 +227,7 @@ class CIESignatureTests(FasasTestCase):
         self.assertEqual((retry.attempt, retry.status), (2, "waiting"))
         self.assertNotEqual(retry.verify_code, request.verify_code)
         self.client.post(reverse("signatures:cie_retry", args=[request.pk]))
-        self.assertEqual(SignatureRequest.objects.count(), 2)
+        self.assertEqual(SignatureRequest.objects.filter(purpose="document").count(), 2)
         self.assertEqual(self.device.sign_flow(retry.pk, self.card)[1]["status"], "signed")
 
     # 14. Errori del dispositivo: carta assente, PIN errato con tentativi rimasti, PIN bloccato, carta rimossa
@@ -401,3 +404,79 @@ class LegalLevelTests(FasasTestCase):
         for user in (self.operator, self.admin, self.make_user("amm", Role.ADMINISTRATIVE)):
             self.assertFalse(user.has_perm("signatures.sign_with_cie"), user.username)
         self.assertTrue(self.admin.has_perm("signatures.manage_signer_devices"))
+
+
+@override_settings(**PKI.settings())
+class FEAAcceptanceTests(FasasTestCase):
+    """Prima della prima firma: accettazione delle condizioni firmata con la CIE, conservata 20 anni."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.doctor.fiscal_code = DOCTOR_CF
+        cls.doctor.save()
+        cls.card = PKI.card(DOCTOR_CF)
+
+    def setUp(self):
+        cache.clear()
+        self.device = DeviceClient(self.client_class())
+        self.device.pair(cie.create_pairing(self.doctor), "PC ambulatorio")
+        self.document = create_document(self.guest, Document.Category.MEDICAL_REPORT, "Relazione clinica",
+                                        user=self.doctor, data=sample_pdf(), filename="relazione.pdf")
+
+    def test_first_signature_requires_signed_acceptance(self):
+        from fasas.signatures.models import FEAAcceptance
+
+        with self.assertRaises(SignatureError) as raised:
+            cie.create_request(self.document.current_version, self.doctor)
+        self.assertEqual(raised.exception.code, "acceptance_required")
+        self.login(self.doctor)
+        page = self.client.get(reverse("signatures:credential"))
+        self.assertContains(page, "Leggi e firma l'accettazione")
+        self.assertContains(page, "testo in bozza")
+
+        response = self.client.post(reverse("signatures:fea_accept"))
+        request = SignatureRequest.objects.get(purpose="acceptance")
+        self.assertRedirects(response, reverse("signatures:cie_request", args=[request.pk]))
+        preview = self.client.get(reverse("signatures:cie_test_file", args=[request.pk]))
+        self.assertEqual(preview["Content-Type"], "application/pdf")
+        status, pending = self.device.get("richieste/")
+        self.assertEqual(pending["requests"][0]["title"], "Accettazione delle condizioni della firma con CIE")
+        status, data = self.device.sign_flow(request.pk, self.card)
+        self.assertEqual(status, 200, data)
+
+        acceptance = FEAAcceptance.objects.get(user=self.doctor)
+        self.assertTrue(acceptance.is_valid)
+        self.assertEqual(acceptance.retain_until.year - acceptance.accepted_at.year, 20)
+        self.assertIn(DOCTOR_CF, acceptance.certificate_subject)
+        self.assertEqual(acceptance.terms_version, "bozza-2026-10")
+        copy = self.client.get(reverse("signatures:fea_file", args=[acceptance.pk]))
+        signed = b"".join(copy.streaming_content) if copy.streaming else copy.content
+        self.assertEqual(hashlib.sha256(signed).hexdigest(), acceptance.signed_sha256)
+        [result] = verify_pdf(signed)
+        self.assertTrue(result["intact"] and result["valid"])
+        self.assertTrue(AuditLog.objects.filter(action="sign", changes__icontains="accettazione_FEA").exists())
+
+        # ora la firma dei documenti è possibile
+        self.assertEqual(cie.create_request(self.document.current_version, self.doctor).purpose, "document")
+
+    def test_registry_revocation_and_public_page(self):
+        acceptance = record_acceptance(self.doctor)
+        self.login(self.operator)
+        self.assertEqual(self.client.get(reverse("signatures:fea_file", args=[acceptance.pk])).status_code, 403)
+        self.login(self.admin)
+        registry = self.client.get(reverse("signatures:fea_registry"))
+        self.assertContains(registry, str(self.doctor))
+        self.assertContains(registry, "bozza")
+        self.login(self.doctor)
+        self.client.post(reverse("signatures:fea_revoke"))
+        acceptance.refresh_from_db()
+        self.assertFalse(acceptance.is_valid)
+        with self.assertRaises(SignatureError):
+            cie.create_request(self.document.current_version, self.doctor)
+        with self.assertRaises(PermissionError):
+            acceptance.delete()
+        self.client.logout()
+        public = self.client.get(reverse("signatures:fea_characteristics"))
+        self.assertContains(public, "Tecnologie utilizzate")
+        self.assertNotContains(public, "Rossi")

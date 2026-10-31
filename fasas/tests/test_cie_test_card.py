@@ -22,7 +22,7 @@ from fasas.signatures.models import Signature, SignatureRequest
 from fasas.signatures.providers import verify_pdf
 
 from .base import _BACKUP, _MEDIA, FasasTestCase
-from .cie_helpers import DeviceClient
+from .cie_helpers import DeviceClient, record_acceptance
 from .test_cie_signer_pkcs11 import ON_POSTGRES, SIGNER_DIR, SKIP_PG, ScriptedUI
 from .test_documents import sample_pdf
 
@@ -95,6 +95,7 @@ class TestCardSignerTests(LiveServerTestCase):
         self.doctor = User(username="doc", role=Role.DOCTOR, first_name="Laura", last_name="Bianchi")
         self.doctor.set_password("x")
         self.doctor.save()
+        record_acceptance(self.doctor)
         guest = Guest.objects.create(community=Community.default(), fiscal_code="RSSMRA80A01F205X", first_name="Mario",
                                      last_name="Rossi", birth_date="1980-01-01", admission_date="2026-01-01")
         self.document = create_document(guest, Document.Category.MEDICAL_REPORT, "Relazione", user=self.doctor,
@@ -159,7 +160,7 @@ class TestCardSignerTests(LiveServerTestCase):
         service.run(once=True)
         request.refresh_from_db()
         self.assertEqual((request.status, request.error_code), ("failed", "pin_blocked"))
-        self.assertEqual(SignatureRequest.objects.get().pin_attempts_left, 0)
+        self.assertEqual(SignatureRequest.objects.get(purpose="document").pin_attempts_left, 0)
 
     def test_device_api_test_card_status_is_honest(self):
         device = DeviceClient(self.client_class())

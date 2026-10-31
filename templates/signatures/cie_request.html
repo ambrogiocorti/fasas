@@ -3,8 +3,8 @@
 {% block content %}
 {% if guest %}{% include "guests/_header.html" with compact=True %}{% endif %}
 <div class="page-head">
-  <div><h1>{% icon "id-card" %} Firma con CIE{% if document %} – {{ document.title }}{% else %} – prova di funzionamento{% endif %}</h1>
-    <span class="subtitle">{% if test %}Documento di prova senza dati sanitari{% else %}Versione {{ req.version.number }} bloccata durante la firma{% endif %}{% if req.attempt > 1 %} · tentativo {{ req.attempt }}{% endif %}</span></div>
+  <div><h1>{% icon "id-card" %} Firma con CIE{% if document %} – {{ document.title }}{% elif acceptance %} – accettazione delle condizioni{% else %} – prova di funzionamento{% endif %}</h1>
+    <span class="subtitle">{% if acceptance %}Leggi le condizioni nell'anteprima: firmandole con la CIE le accetti e ti identifichi{% elif test %}Documento di prova senza dati sanitari{% else %}Versione {{ req.version.number }} bloccata durante la firma{% endif %}{% if req.attempt > 1 %} · tentativo {{ req.attempt }}{% endif %}</span></div>
   <div class="actions">{% if document %}<a class="btn" href="{{ document.get_absolute_url }}">{% icon "arrow-left" %}Torna al documento</a>{% else %}<a class="btn" href="{% url 'signatures:credential' %}#cie">{% icon "arrow-left" %}Impostazioni firma</a>{% endif %}</div>
 </div>
 <div class="sign-layout">

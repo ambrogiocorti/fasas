@@ -30,7 +30,7 @@ from fasas.signatures.models import LegalLevel, Signature, SignatureRequest
 from fasas.signatures.providers import verify_pdf
 
 from .base import _BACKUP, _MEDIA
-from .cie_helpers import TestPKI
+from .cie_helpers import TestPKI, record_acceptance
 from .test_documents import sample_pdf
 
 SIGNER_DIR = Path(__file__).resolve().parents[2] / "signer"
@@ -140,6 +140,7 @@ class SignerPkcs11Tests(LiveServerTestCase):
                            fiscal_code=CF)
         self.doctor.set_password("x")
         self.doctor.save()
+        record_acceptance(self.doctor)
         guest = Guest.objects.create(community=Community.default(), fiscal_code="RSSMRA80A01F205X", first_name="Mario",
                                      last_name="Rossi", birth_date="1980-01-01", admission_date="2026-01-01")
         self.document = create_document(guest, Document.Category.MEDICAL_REPORT, "Relazione", user=self.doctor,

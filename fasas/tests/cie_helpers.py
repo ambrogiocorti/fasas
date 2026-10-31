@@ -139,3 +139,18 @@ class DeviceClient:
         value = card.sign(prepared["to_be_signed"]) if mechanism == "sha256" else card.sign_digest_info(
             prepared["digest_info"])
         return self.post(f"richieste/{request_id}/firma/", {"nonce": data["nonce"], "signature": value})
+
+
+def record_acceptance(user):
+    """Accettazione delle condizioni della FEA già registrata (per i test che provano la firma dei documenti)."""
+    from django.utils import timezone
+
+    from fasas.signatures.models import FEAAcceptance, SignatureRequest
+
+    now = timezone.now()
+    request = SignatureRequest.objects.create(user=user, purpose=SignatureRequest.Purpose.ACCEPTANCE, status="signed",
+                                              version_sha256="0" * 64, verify_code="PROV-A000", nonce_hash="-",
+                                              expires_at=now, completed_at=now)
+    return FEAAcceptance.objects.create(user=user, request=request, terms_version="test", terms_sha256="0" * 64,
+                                        signed_storage="", signed_sha256="0" * 64, certificate="",
+                                        certificate_subject="test", certificate_serial="0", retain_until=now.date())

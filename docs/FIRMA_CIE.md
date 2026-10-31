@@ -17,11 +17,25 @@ nuova versione del documento, verificabile dentro e fuori dal FASAS.
   Avanzata, disciplinata all'interno del DPCM 22/02/2013, articolo 61.»*
 - **Non è mai una firma qualificata (FEQ)**: il FASAS la registra sempre come «Firma elettronica avanzata»
   (`legal_level = fea`) e così la mostra nel documento e nelle impostazioni.
-- **Da validare prima dell'uso reale.** Gli articoli 55–61 del DPCM 22/02/2013 fissano requisiti per le soluzioni
-  di FEA (identificazione del firmatario, informativa, conservazione delle evidenze, ambito d'uso). Il consulente
-  legale / DPO deve confermare per quali documenti della comunità la FEA con CIE è sufficiente e quali
-  adempimenti documentare. Dove serve la FEQ (equivalente alla firma autografa) si usa la firma remota del
+- **Attenzione all'art. 61.** Secondo le fonti consultate, l'art. 61 comma 2 del DPCM riconosce la CIE come
+  firma avanzata per i servizi delle pubbliche amministrazioni (artt. 64 e 65 del Codice dell'amministrazione
+  digitale). Per i documenti interni di una comunità privata la firma con CIE vale come FEA se la soluzione rispetta
+  i requisiti dell'art. 56 e chi la offre (di norma la comunità) rispetta gli obblighi dell'art. 57. Da confermare
+  con il consulente legale sul testo in Gazzetta Ufficiale (GU n. 117 del 21/05/2013).
+- **Da validare prima dell'uso reale.** Il consulente legale / DPO deve confermare per quali documenti della comunità
+  la FEA con CIE è sufficiente. Dove serve la FEQ (equivalente alla firma autografa) si usa la firma remota del
   prestatore qualificato ([FIRMA_DIGITALE.md](FIRMA_DIGITALE.md)).
+
+### Obblighi di chi offre la FEA (art. 57) e cosa fa il FASAS
+
+| Obbligo | Nel FASAS | Resta da fare alla comunità |
+|---|---|---|
+| Identificare con certezza il firmatario | certificato della CIE verificato fino alle CA della CIE; codice fiscale uguale al profilo | — |
+| Informarlo su condizioni e limiti d'uso; attivazione solo dopo la sua accettazione | prima della prima firma il firmatario legge e **firma con la CIE** la dichiarazione di accettazione; senza accettazione valida la firma dei documenti è bloccata | far approvare il testo dal legale e indicarlo in `FASAS_FEA_TERMS_FILE` (finché manca, il testo è marcato «bozza») |
+| Conservare almeno 20 anni la dichiarazione e il documento di riconoscimento | dichiarazione firmata cifrata e certificato della CIE, con data di fine conservazione; non cancellabile, solo revocabile; inclusa nei backup | — |
+| Darne copia gratuita al firmatario | «Scarica la tua copia» in *Firma digitale*; registro per l'amministratore | — |
+| Rendere note le caratteristiche del sistema e delle tecnologie | pagina pubblica `/firma/caratteristiche-firma-cie/` (nessun accesso richiesto) | collegarla dal sito della comunità |
+| Assicurazione di responsabilità civile di almeno 500.000 € (comma 2) | — | stipularla (chi la richiede e per quale soggetto: da verificare con il legale) |
 
 | Modalità nel FASAS | Valore giuridico | Dove resta la chiave |
 |---|---|---|

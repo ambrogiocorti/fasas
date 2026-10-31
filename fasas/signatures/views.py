@@ -15,13 +15,15 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 from django.views.defaults import page_not_found
 
+from fasas.audit.models import AuditLog
+from fasas.audit.services import log_event
 from fasas.core.encryption import DecryptionError, decrypt, encrypt, read_encrypted
 from fasas.documents.models import DocumentVersion
 from fasas.documents.services import read_version
 
-from . import cie, external
+from . import cie, external, fea_terms
 from .forms import CIESignForm, CredentialForm, RemoteCredentialForm, SendOTPForm, SignForm
-from .models import SignatureRequest, SignerDevice, SigningCredential
+from .models import FEAAcceptance, SignatureRequest, SignerDevice, SigningCredential
 from .providers import SignatureError, signature_level, verify_pdf
 from .services import register_pkcs12, register_remote, request_otp, sign_version
 
@@ -98,6 +100,8 @@ def credential_view(request):
         "devices": devices, "pairing": pairing, "server_url": request.build_absolute_uri("/"),
         "pairing_minutes": settings.FASAS_CIE_PAIRING_MINUTES,
         "tests": SignatureRequest.objects.filter(user=user, purpose=SignatureRequest.Purpose.TEST)[:5] if can_cie else [],
+        "acceptance": cie.valid_acceptance(user) if can_cie else None,
+        "acceptance_required": settings.FASAS_FEA_REQUIRE_ACCEPTANCE, "terms_draft": fea_terms.is_draft(),
     })
 
 
@@ -262,11 +266,12 @@ def cie_sign_view(request, pk):
 @permission_required("signatures.sign_with_cie", raise_exception=True)
 @own_request
 def cie_request_view(request, signature_request):
-    test = signature_request.purpose == SignatureRequest.Purpose.TEST
+    test = signature_request.purpose != SignatureRequest.Purpose.DOCUMENT  # prova o accettazione: nessun ospite
     preview_url = (reverse("signatures:cie_test_file", args=[signature_request.pk]) if test
                    else reverse("documents:view", args=[signature_request.version_id]))
     return render(request, "signatures/cie_request.html", {
         "req": signature_request, "steps": STEPS, "test": test, "preview_url": preview_url,
+        "acceptance": signature_request.purpose == SignatureRequest.Purpose.ACCEPTANCE,
         "guest": None if test else signature_request.version.document.guest,
         "document": None if test else signature_request.version.document,
         "status_url": reverse("signatures:cie_status", args=[signature_request.pk]),
@@ -293,6 +298,9 @@ def status_payload(signature_request):
         if signature_request.signature_id:
             payload["result_url"] = signature_request.version.document.get_absolute_url()
             payload["version"] = signature_request.signature.signed_version.number
+        elif signature_request.purpose == SignatureRequest.Purpose.ACCEPTANCE:
+            acceptance = getattr(signature_request, "fea_acceptance", None)
+            payload["result_url"] = reverse("signatures:fea_file", args=[acceptance.pk]) if acceptance else None
         else:
             payload["result_url"] = reverse("signatures:cie_test_file", args=[signature_request.pk]) + "?firmato=1"
         payload["verification"] = {k: signature_request.verification.get(k) for k in
@@ -317,7 +325,7 @@ def cie_cancel(request, signature_request):
         messages.error(request, str(exc))
     else:
         messages.info(request, "Firma annullata: il documento è di nuovo modificabile.")
-    if signature_request.purpose == SignatureRequest.Purpose.TEST:
+    if signature_request.purpose != SignatureRequest.Purpose.DOCUMENT:
         return redirect("signatures:credential")
     return redirect(signature_request.version.document.get_absolute_url())
 
@@ -350,9 +358,11 @@ def cie_test(request):
 @own_request
 def cie_test_file(request, signature_request):
     """PDF della prova (nessun dato sanitario): l'originale per l'anteprima o, a firma riuscita, quello firmato."""
-    if signature_request.purpose != SignatureRequest.Purpose.TEST:
+    if signature_request.purpose == SignatureRequest.Purpose.DOCUMENT:
         raise Http404
     signed = signature_request.status == SignatureRequest.Status.SIGNED
+    if signature_request.purpose == SignatureRequest.Purpose.ACCEPTANCE and signed:
+        raise Http404  # la copia firmata si scarica dal registro delle accettazioni
     if not signature_request.result_storage or (request.GET.get("firmato") and not signed):
         raise Http404
     data = read_encrypted(signature_request.result_storage)
@@ -363,3 +373,57 @@ def cie_test_file(request, signature_request):
     response["Cache-Control"] = "no-store"
     response["X-Content-Type-Options"] = "nosniff"
     return response
+
+
+# --- Accettazione delle condizioni della FEA (DPCM 22/02/2013, art. 57) --------------------------------------
+
+@require_POST
+@permission_required("signatures.sign_with_cie", raise_exception=True)
+def fea_accept(request):
+    try:
+        signature_request = cie.create_acceptance_request(request.user)
+    except SignatureError as exc:
+        messages.error(request, str(exc))
+        return redirect(f"{reverse('signatures:credential')}#cie")
+    return redirect("signatures:cie_request", request_id=signature_request.pk)
+
+
+@require_POST
+@permission_required("signatures.sign_with_cie", raise_exception=True)
+def fea_revoke(request):
+    acceptance = cie.valid_acceptance(request.user)
+    if acceptance is not None:
+        cie.revoke_acceptance(acceptance, request.user)
+        messages.success(request, "Accettazione revocata: non puoi più firmare con la CIE finché non la firmi di nuovo. "
+                                  "Le firme già apposte restano valide.")
+    return redirect(f"{reverse('signatures:credential')}#cie")
+
+
+def fea_file(request, pk):
+    """Copia della dichiarazione firmata: per il firmatario sempre e gratuitamente, e per il registro."""
+    acceptance = get_object_or_404(FEAAcceptance, pk=pk)
+    if acceptance.user_id != request.user.pk and not request.user.has_perm("signatures.view_feaacceptance"):
+        raise PermissionDenied
+    log_event(AuditLog.Action.DOWNLOAD, acceptance)
+    response = HttpResponse(read_encrypted(acceptance.signed_storage), content_type="application/pdf")
+    name = f"accettazione_FEA_{acceptance.user.username}_{timezone.localtime(acceptance.accepted_at):%Y%m%d}.pdf"
+    response["Content-Disposition"] = content_disposition_header(True, name)
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+@permission_required("signatures.view_feaacceptance", raise_exception=True)
+def fea_registry(request):
+    return render(request, "signatures/fea_registry.html", {
+        "acceptances": FEAAcceptance.objects.select_related("user").all()[:500], "terms_draft": fea_terms.is_draft(),
+        "retention_years": settings.FASAS_FEA_RETENTION_YEARS,
+    })
+
+
+def fea_characteristics(request):
+    """Pagina pubblica (senza accesso): caratteristiche del sistema di FEA, da rendere note (art. 57, lett. e-f)."""
+    version, _ = fea_terms.terms()
+    return render(request, "signatures/fea_characteristics.html", {
+        "community": cie._community(), "terms_version": version, "terms_draft": fea_terms.is_draft(),
+        "timestamp": bool(settings.FASAS_SIGNATURE_TSA_URL) and settings.FASAS_CIE_TIMESTAMP,
+    })

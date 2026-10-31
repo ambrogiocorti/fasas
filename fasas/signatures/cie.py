@@ -214,6 +214,9 @@ def create_request(version, user, reason="", previous=None):
     if not external.trust_roots():
         raise SignatureError("Firma con CIE non ancora attivabile: l'amministratore deve configurare le CA della CIE "
                              "(FASAS_CIE_TRUST_ROOTS).", "trust_not_configured")
+    if settings.FASAS_FEA_REQUIRE_ACCEPTANCE and valid_acceptance(user) is None:
+        raise SignatureError("Prima della prima firma con CIE devi accettare le condizioni della firma elettronica "
+                             "avanzata, firmandole con la tua CIE (Impostazioni › Firma digitale).", "acceptance_required")
     existing = SignatureRequest.objects.filter(version=version, status__in=SignatureRequest.ACTIVE).first()
     if existing is not None:
         expire_if_needed(existing)
@@ -241,6 +244,45 @@ def create_test_request(user):
     request.result_storage = store_encrypted(pdf, "signing/tests")  # originale; a firma riuscita, il firmato
     request.save()
     return request
+
+
+def valid_acceptance(user):
+    from .models import FEAAcceptance
+
+    return FEAAcceptance.objects.filter(user=user, revoked_at__isnull=True).first()
+
+
+def create_acceptance_request(user):
+    """Dichiarazione di accettazione delle condizioni della FEA, da firmare con la CIE (identifica il firmatario)."""
+    from .fea_terms import acceptance_pdf
+
+    if not can_sign(user):
+        raise SignatureError("Non hai il permesso di firmare con la CIE.", "forbidden")
+    if not external.trust_roots():
+        raise SignatureError("Firma con CIE non ancora attivabile: l'amministratore deve configurare le CA della CIE "
+                             "(FASAS_CIE_TRUST_ROOTS).", "trust_not_configured")
+    if not user.fiscal_code:
+        raise SignatureError("Nel tuo profilo manca il codice fiscale: chiedilo all'amministratore.", "missing_fiscal_code")
+    pdf = acceptance_pdf(user)
+    request = _base_request(user, reason="Accettazione delle condizioni della firma elettronica avanzata con CIE",
+                            location=str(_community()), purpose=SignatureRequest.Purpose.ACCEPTANCE,
+                            version_sha256=hashlib.sha256(pdf).hexdigest())
+    request.result_storage = store_encrypted(pdf, "signing/acceptances")
+    request.save()
+    return request
+
+
+def revoke_acceptance(acceptance, by, reason=""):
+    acceptance.revoked_at, acceptance.revoked_reason = timezone.now(), (reason or "Revocata dal firmatario")[:255]
+    acceptance.save(update_fields=["revoked_at", "revoked_reason"])
+    log_event(AuditLog.Action.PERMISSION, acceptance, user=by,
+              changes={"accettazione_FEA": ["valida", "revocata"]}, reason=acceptance.revoked_reason)
+
+
+def _community():
+    from fasas.core.models import Community
+
+    return Community.default()
 
 
 def _close(request, status, code="", message=""):
@@ -291,8 +333,9 @@ def retry_request(request, user):
         if following.is_active:
             return following
         raise SignatureError("Per questa richiesta è già stato fatto un nuovo tentativo.", "bad_state")
-    if request.purpose == SignatureRequest.Purpose.TEST:
-        new = create_test_request(user)
+    if request.purpose in (SignatureRequest.Purpose.TEST, SignatureRequest.Purpose.ACCEPTANCE):
+        new = (create_test_request if request.purpose == SignatureRequest.Purpose.TEST
+               else create_acceptance_request)(user)
         new.previous, new.attempt = request, request.attempt + 1
         new.save(update_fields=["previous", "attempt"])
         return new
@@ -321,6 +364,8 @@ def describe(request):
     """Ciò che il Signer mostra prima di chiedere il PIN: titolo, versione, impronta e codice di controllo."""
     if request.purpose == SignatureRequest.Purpose.TEST:
         title, version = "Documento di prova (nessun dato sanitario)", None
+    elif request.purpose == SignatureRequest.Purpose.ACCEPTANCE:
+        title, version = "Accettazione delle condizioni della firma con CIE", None
     else:
         title, version = request.version.document.title, request.version.number
     return {
@@ -417,7 +462,7 @@ def fail(request_id, code, message):
 def _source_pdf(request):
     from fasas.documents.services import read_version
 
-    if request.purpose == SignatureRequest.Purpose.TEST:
+    if request.purpose in (SignatureRequest.Purpose.TEST, SignatureRequest.Purpose.ACCEPTANCE):
         data = read_encrypted(request.result_storage)
     else:
         data = read_version(request.version, audit=False)
@@ -440,7 +485,7 @@ def submit_certificate(request_id, device, nonce, certificate_b64):
         cert = external.load_certificate(external.unb64(certificate_b64, "Certificato"))
         info = external.check_certificate_for_user(cert, request.user)
         chain_note = ""
-        if request.purpose == SignatureRequest.Purpose.DOCUMENT:
+        if request.purpose in (SignatureRequest.Purpose.DOCUMENT, SignatureRequest.Purpose.ACCEPTANCE):
             external.validate_certificate_chain(cert)
         else:
             try:
@@ -510,6 +555,27 @@ def submit_signature(request_id, device, nonce, signature_b64):
         raise SignatureError("Archiviazione del documento firmato non riuscita.", "archive_failed") from exc
 
 
+def _archive_acceptance(request, signed, level):
+    from .fea_terms import terms, terms_sha256
+    from .models import FEAAcceptance
+
+    version, text = terms()
+    now = timezone.now()
+    FEAAcceptance.objects.filter(user=request.user, revoked_at__isnull=True).update(
+        revoked_at=now, revoked_reason="Sostituita da una nuova accettazione")
+    acceptance = FEAAcceptance.objects.create(
+        user=request.user, request=request, accepted_at=now, terms_version=version, terms_sha256=terms_sha256(text),
+        signed_storage=store_encrypted(signed, "signing/acceptances"), signed_sha256=hashlib.sha256(signed).hexdigest(),
+        certificate=request.certificate, certificate_subject=request.certificate_subject,
+        certificate_serial=request.certificate_serial, is_test_card=request.is_test_card,
+        retain_until=(now + datetime.timedelta(days=round(365.25 * settings.FASAS_FEA_RETENTION_YEARS))).date(),
+    )
+    log_event(AuditLog.Action.SIGN, acceptance, user=request.user,
+              changes={"accettazione_FEA": [None, version], "certificato": [None, request.certificate_subject],
+                       "formato": [None, f"PAdES-{level}"]}, reason=request.reason)
+    return acceptance
+
+
 def _archive(request_id, signed, verification):
     from fasas.documents.services import add_version
 
@@ -522,6 +588,8 @@ def _archive(request_id, signed, verification):
         if request.purpose == SignatureRequest.Purpose.TEST:
             delete_stored(request.result_storage)
             request.result_storage = store_encrypted(signed, "signing/tests")
+        elif request.purpose == SignatureRequest.Purpose.ACCEPTANCE:
+            _archive_acceptance(request, signed, level)
         else:
             version = request.version
             # Carta di prova (solo installazioni di prova): firma vera ma senza valore legale, e lo si dichiara

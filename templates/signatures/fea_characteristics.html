@@ -1,0 +1,36 @@
+{% load static %}<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Caratteristiche della firma elettronica avanzata con CIE · {{ community }}</title>
+  <link rel="stylesheet" href="{% static 'css/fasas.css' %}">
+</head>
+<body>
+<main class="content" style="max-width: 860px; margin: 0 auto">
+  <div class="card">
+    <h1>Firma elettronica avanzata con la Carta d'Identità Elettronica</h1>
+    <p class="muted">{{ community }} · informazioni rese note ai sensi del DPCM 22/02/2013, art. 57, comma 1, lettere e) ed f).</p>
+    {% if terms_draft %}<p><strong>Bozza</strong>: testo da far approvare al consulente legale della struttura prima dell'uso.</p>{% endif %}
+    <h2>Chi può firmare e dove vale</h2>
+    <p>Il personale autorizzato di {{ community }} firma i documenti del fascicolo socio-assistenziale e sanitario gestiti con FASAS Digitale. La firma vale nei rapporti tra il firmatario e {{ community }}. Non è una firma elettronica qualificata.</p>
+    <h2>Come il sistema garantisce i requisiti della firma avanzata (art. 56)</h2>
+    <ul>
+      <li><strong>Identificazione del firmatario</strong>: certificato della CIE, emessa dallo Stato dopo l'identificazione in Comune; il codice fiscale del certificato deve coincidere con quello del profilo dell'utente. Il certificato è verificato fino alle autorità di certificazione della CIE.</li>
+      <li><strong>Connessione univoca e controllo esclusivo</strong>: la chiave privata è nel chip della CIE e non ne esce; si usa solo con la carta e il suo PIN, digitato dal firmatario su FASAS Signer. Il PIN non viene mai trasmesso né salvato.</li>
+      <li><strong>Documento mostrato prima della firma</strong>: anteprima del PDF e codice di controllo uguale sul computer e sul dispositivo di firma; la versione resta bloccata durante la firma.</li>
+      <li><strong>Integrità</strong>: firma PAdES nel PDF; qualsiasi modifica successiva è rilevabile con un comune software di verifica{% if timestamp %}; marca temporale di una TSA esterna{% endif %}.</li>
+      <li><strong>Accettazione delle condizioni</strong>: prima della prima firma il firmatario firma con la CIE la dichiarazione di accettazione (versione in uso: {{ terms_version }}), conservata almeno vent'anni insieme al certificato; il firmatario ne riceve copia gratuitamente in ogni momento.</li>
+    </ul>
+    <h2>Tecnologie utilizzate (art. 57, lettera f)</h2>
+    <ul>
+      <li>Carta d'Identità Elettronica 3.0 e Software CIE del Ministero dell'Interno (PKCS#11) su computer, oppure app FASAS Signer su telefono con NFC (protocollo IAS della CIE).</li>
+      <li>Firma RSA con SHA-256 secondo PKCS#1 v1.5 calcolata dalla carta; busta CMS/PAdES (ETSI EN 319 142) costruita dal server FASAS.</li>
+      <li>Comunicazioni cifrate (HTTPS); registro delle operazioni con catena di impronte e punti di controllo marcati temporalmente.</li>
+    </ul>
+    <h2>Richieste e revoca</h2>
+    <p>Copia della propria dichiarazione: dalla pagina «Firma digitale» di FASAS o chiedendola all'amministrazione di {{ community }}{% if community.email %} ({{ community.email }}){% endif %}. La revoca dell'accettazione si fa dalla stessa pagina; le firme già apposte restano valide.</p>
+  </div>
+</main>
+</body>
+</html>
