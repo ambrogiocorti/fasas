@@ -58,10 +58,10 @@ dell'acquisto.
 | Chiavetta USB 16–32 GB | se non ne avete una libera | 5–10 € |
 | Disco esterno USB 1 TB | se non ne avete uno libero | 50–70 € |
 | Cavo di rete cat. 6 (2–10 m) | se il router è lontano | 5–10 € |
-| Gruppo di continuità 600–850 VA | facoltativo, consigliato | 60–100 € |
+| Gruppo di continuità «line-interactive» con AVR e porta USB, 650–900 VA (es. Eaton 5E Gen2 900 USB, versione con prese Schuko «5E900UD»; con più garanzie su Linux Eaton Ellipse PRO 650 DIN) | facoltativo, consigliato | 80–110 € (fino a circa 220 €) |
 
-**Totale**: 0 € se avete già tutto; **circa 60–90 €** se avete già un PC; **circa 220–410 €** comprando anche
-mini-PC e gruppo di continuità.
+**Totale**: 0 € se avete già tutto; **circa 60–90 €** se avete già un PC; **circa 240–380 €** comprando anche
+mini-PC ricondizionato e gruppo di continuità.
 
 Software e servizi, tutti **0 €**: Ubuntu Server, Docker Engine, Caddy, PostgreSQL, certificati Let's Encrypt,
 DuckDNS, Backblaze B2 fino a 10 GB, app di autenticazione, FASAS Digitale.
