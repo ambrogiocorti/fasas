@@ -30,7 +30,7 @@ jobs:
         run: gradle --no-daemon :signer-core:test
       - name: APK di prova
         run: gradle --no-daemon :app:assembleDebug
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: fasas-signer-android-prova
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
