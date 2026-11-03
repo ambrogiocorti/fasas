@@ -304,10 +304,11 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "fasas@localhost")
 # Spenta di default: senza FASAS_API_ENABLED=1 gli indirizzi /api/v1/ rispondono 404 (una porta in meno su internet).
 # Non riguarda l'API dei dispositivi di firma (/api/firma/v1/), che segue FASAS_CIE_ENABLED.
 FASAS_API_ENABLED = env_bool("FASAS_API_ENABLED", False)
+FASAS_API_TOKEN_DAYS = int(os.environ.get("FASAS_API_TOKEN_DAYS", "30"))  # dopo, il token scade e si rientra
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.TokenAuthentication",
+        "fasas.api.authentication.ExpiringTokenAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",

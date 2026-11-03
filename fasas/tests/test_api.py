@@ -8,7 +8,7 @@ from rest_framework.test import APIClient
 from fasas.audit.models import AuditLog
 from fasas.clinical.models import ParameterType, TherapyAdministration
 
-from .base import FasasTestCase
+from .base import PASSWORD, FasasTestCase
 
 
 class ApiSwitchTests(FasasTestCase):
@@ -66,3 +66,55 @@ class ApiTests(FasasTestCase):
         response = APIClient().post("/api/v1/token/", {"username": "oper", "password": PASSWORD})
         self.assertEqual(response.status_code, 200)
         self.assertIn("token", response.json())
+
+
+@override_settings(FASAS_API_ENABLED=True, FASAS_2FA_REQUIRED_ROLES=[])
+class TokenLifecycleTests(FasasTestCase):
+    """Report di analisi, P1: token con scadenza, rotazione e revoca."""
+
+    def get_token(self, username="oper"):
+        response = APIClient().post("/api/v1/token/", {"username": username, "password": PASSWORD})
+        self.assertEqual(response.status_code, 200, response.content)
+        return response.json()["token"]
+
+    def call(self, key):
+        api = APIClient()
+        api.credentials(HTTP_AUTHORIZATION=f"Token {key}")
+        status = api.get("/api/v1/turno-corrente/").status_code
+        return 401 if status in (401, 403) else status  # rifiutato (DRF risponde 403 con la sessione tra i metodi)
+
+    def test_rotation_on_each_login(self):
+        first = self.get_token()
+        second = self.get_token()
+        self.assertNotEqual(first, second)
+        self.assertEqual(self.call(first), 401)
+        self.assertEqual(self.call(second), 200)
+
+    def test_expiry(self):
+        key = self.get_token()
+        Token.objects.filter(key=key).update(created=timezone.now() - datetime.timedelta(days=31))
+        self.assertEqual(self.call(key), 401)  # rifiutato a ogni chiamata, finché non si rientra
+
+    def test_password_change_deactivation_and_2fa_reset_revoke(self):
+        from fasas.accounts import twofactor
+
+        key = self.get_token()
+        self.operator.set_password("Nuova-Password-2026!")
+        self.operator.save()
+        self.assertEqual(self.call(key), 401)
+        self.operator.set_password(PASSWORD)
+        self.operator.save()
+        key = self.get_token()
+        twofactor.disable(self.operator, by=self.admin)
+        self.assertEqual(self.call(key), 401)
+        key = self.get_token()
+        self.operator.is_active = False
+        self.operator.save()
+        self.assertFalse(Token.objects.filter(key=key).exists())
+
+    def test_explicit_revoke(self):
+        key = self.get_token()
+        api = APIClient()
+        api.credentials(HTTP_AUTHORIZATION=f"Token {key}")
+        self.assertEqual(api.post("/api/v1/token/revoca/").status_code, 200)
+        self.assertEqual(self.call(key), 401)

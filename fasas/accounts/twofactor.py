@@ -200,6 +200,7 @@ def enroll(user, secret, code):
 
 def disable(user, by):
     """Toglie la verifica (reimpostazione da parte dell'amministratore o disattivazione volontaria)."""
+    from fasas.api.authentication import revoke_tokens
     from fasas.audit.models import AuditLog
     from fasas.audit.services import log_event
 
@@ -208,6 +209,7 @@ def disable(user, by):
     with transaction.atomic():
         removed, _ = TwoFactorDevice.objects.filter(user=user).delete()
         RecoveryCode.objects.filter(user=user).delete()
+        revoke_tokens(user)  # anche i token dell'app: il telefono potrebbe essere quello perso
         if removed:
             log_event(AuditLog.Action.PERMISSION, user, user=by,
                       changes={"verifica_in_due_passaggi": ["attiva", "reimpostata" if by != user else "disattivata"]})

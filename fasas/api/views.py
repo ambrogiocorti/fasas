@@ -1,7 +1,9 @@
 """API REST: base per la futura app mobile degli operatori. Stesse regole di permessi e blocco del web."""
+import datetime
+
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import mixins, serializers, viewsets
-from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
@@ -11,6 +13,7 @@ from rest_framework.response import Response
 from fasas.accounts import twofactor
 from fasas.accounts.models import AccessLog
 from fasas.accounts.services import is_locked_out, record_access
+from fasas.api.authentication import issue_token, revoke_tokens
 from fasas.audit.context import set_current_user
 from fasas.clinical.models import ClinicalEvent, ParameterReading, Therapy, TherapyAdministration
 from fasas.clinical.services import AdministrationError, register_administration, scheduled_doses
@@ -146,5 +149,14 @@ class TokenView(ObtainAuthToken):
         if need == "verify" and not twofactor.verify(user, request.data.get("otp", "")):
             record_access(request, AccessLog.Event.OTP_FAILED, user.get_username(), user)
             raise PermissionDenied("Codice di verifica («otp») mancante, errato o già usato.")
-        token, _ = Token.objects.get_or_create(user=user)
-        return Response({"token": token.key})
+        token = issue_token(user)  # rotazione: il token precedente non vale più
+        return Response({"token": token.key, "scade_il": (token.created + datetime.timedelta(
+            days=settings.FASAS_API_TOKEN_DAYS)).isoformat()})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def token_revoke(request):
+    """Uscita dall'app o dispositivo perso: il token smette subito di valere."""
+    revoke_tokens(request.user)
+    return Response({"revocato": True})

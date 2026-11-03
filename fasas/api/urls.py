@@ -19,4 +19,5 @@ urlpatterns = [
     path("v1/", include(router.urls)),
     path("v1/turno-corrente/", views.current_shift, name="current_shift"),
     path("v1/token/", views.TokenView.as_view(), name="token"),
+    path("v1/token/revoca/", views.token_revoke, name="token_revoke"),
 ]
