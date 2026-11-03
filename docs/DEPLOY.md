@@ -1,13 +1,13 @@
-# Installazione in produzione
+# Installazione tradizionale (senza Docker)
 
-> Modo più semplice e consigliato: **Docker** ([CONTAINER.md](CONTAINER.md)), con database, job e HTTPS già
-> configurati; su un PC in struttura, passo passo e senza costi: [INSTALLAZIONE_IN_STRUTTURA.md](INSTALLAZIONE_IN_STRUTTURA.md).
-> Questa pagina descrive l'installazione tradizionale su un server Linux.
+> **La guida da seguire è [INSTALLAZIONE_IN_STRUTTURA.md](INSTALLAZIONE_IN_STRUTTURA.md)**: PC in struttura con
+> Docker, database, job e HTTPS già configurati, senza costi. Questa pagina è un riferimento tecnico per chi deve
+> installare il FASAS su un server Linux senza Docker o con un database gestito esterno.
 
 Architettura consigliata per una comunità (10–100 ospiti):
 
 ```
-Operatori (browser / tablet) ──HTTPS──► nginx ──► gunicorn (Django) ──TLS──► Supabase PostgreSQL (regione UE)
+Operatori (browser / tablet) ──HTTPS──► nginx ──► gunicorn (Django) ──► PostgreSQL (stesso server o gestito in UE)
                                                      │
                                       Celery worker + beat ◄── Redis
                                                      │
@@ -16,7 +16,15 @@ Operatori (browser / tablet) ──HTTPS──► nginx ──► gunicorn (Djan
 
 Un piccolo server Linux (2 vCPU, 4 GB RAM) è sufficiente. In alternativa a Celery i job possono girare da cron.
 
-## 1. Database su Supabase
+## 1. Database
+
+**Normale**: PostgreSQL sullo stesso server (`sudo apt install postgresql`), utente e database `fasas`,
+`DATABASE_URL=postgresql://fasas:PASSWORD@localhost:5432/fasas` nel `.env`. Per i backup con `pg_dump` il client
+è già installato con il server.
+
+**In alternativa, database gestito (es. Supabase)**: è un fornitore in più che riceve i dati sanitari in chiaro
+nel database (responsabile del trattamento, contratto art. 28, regione UE) e i piani gratuiti si sospendono per
+inattività: valutarlo con il DPO. Se si sceglie:
 
 1. Creare un progetto Supabase in una **regione UE** (es. Francoforte) e firmare il DPA (accordo sul trattamento dei dati).
 2. In *Project Settings → Database* copiare la stringa di connessione in modalità **Session** (porta 5432) o la

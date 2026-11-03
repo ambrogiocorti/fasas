@@ -95,6 +95,11 @@ Definiti in `fasas/core/jobs.py`, eseguiti da Celery beat (`config/celery.py`) o
 | Promemoria terapie e validazioni | interruttori in `SystemConfig`, validazione del medico su `DrugInteraction` e `Protocol` |
 | Accettazione della FEA | `signatures/fea_terms.py`, `FEAAcceptance`, scopo `acceptance` delle richieste di firma con CIE |
 | Configurazione per richiesta | `core.models.config_scope` (configurazione e comunità lette una volta per richiesta e per job) |
+| Controlli unici sulle somministrazioni | `clinical.services.check_administration` / `register_administration` usati da pagina web, API e sincronizzazione senza rete; `SystemConfig.sos_limit_policy` |
+| Scale di valutazione | `assessments` (`scales.py` voci e fasce, `ScaleSetting`, `Assessment`, `services.due_list`, job `assessments`) |
+| Lesioni e medicazioni | `wounds` (`Wound`, `WoundCheck` con foto in `documents`, `DressingPlan`, `Dressing`, `services.due_list`, `clean_photo`, job `wounds`) |
+| Report configurabili | `reports.ReportTemplate` (sezioni e colonne), `generators.section_data`, programmazione ogni N giorni |
+| Ciclo di vita dei token API | `api/authentication.py` (`ExpiringTokenAuthentication`, rotazione e revoca), `ApiSwitchMiddleware` |
 
 ## Schema del database
 
@@ -223,8 +228,9 @@ e, per le registrazioni di turno, `shift_date`, `shift`, `voided_at`, `voided_by
 | `backups_backuprecord` | Backup | finished_at, kind, status, filename, size, sha256, db_format, includes_media, verified_at |
 ## API REST
 
-Autenticazione con sessione o token (`POST /api/v1/token/` con `username` e `password`; stesso blocco
-anti-forzatura del login). Stessi permessi e regole di blocco dell'interfaccia web.
+**Spenta per default** (`FASAS_API_ENABLED=0`: `/api/v1/` risponde 404). Autenticazione con sessione o token
+(`POST /api/v1/token/` con `username` e `password`; stesso blocco anti-forzatura del login; il token scade dopo
+`FASAS_API_TOKEN_DAYS` giorni, cambia a ogni accesso e si revoca con `POST /api/v1/token/revoca/`). Stessi permessi e regole di blocco dell'interfaccia web.
 
 | Endpoint | Metodi |
 |---|---|

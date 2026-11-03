@@ -73,6 +73,14 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
 - Lesioni aperte nel PAI (pagina e PDF) e storico completo nella cartella esportata. Guida:
   docs/VALUTAZIONI_E_LESIONI.md.
 
+### Test e documentazione
+- Test delle schermate di uso quotidiano e di amministrazione: viste coperte dal 66% al 91% (quelle del turno sopra
+  l'83%); test dei comandi `backup_create`, `backup_verify` e `backup_restore` con ripristino completo.
+- `backup_restore` segnala con un messaggio chiaro un file inesistente.
+- Schede di una pagina per operatore, coordinatore, medico e amministrativo (docs/guide/).
+- README senza sezioni ripetute; una sola guida d'installazione (in struttura, con Docker); Supabase fuori dal
+  percorso principale (`.env.example` e docs/DEPLOY.md); roadmap aggiornata con Backblaze B2 e le nuove funzioni.
+
 ### Correzioni
 - Un backup in formato JSON (installazioni con SQLite) su PostgreSQL ora è rifiutato con un messaggio chiaro: prima
   il ripristino si fermava a metà sul blocco dell'audit in sola aggiunta. Test su PostgreSQL di nuovo verdi.
