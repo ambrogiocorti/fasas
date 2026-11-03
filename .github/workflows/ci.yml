@@ -132,7 +132,8 @@ jobs:
           DEV=$(sudo losetup -f --show /tmp/disco-continuita.img)
           sudo ./scripts/disco_continuita.sh --prepara "$DEV" --si
           sudo grep -q '^FASAS_CONTINUITY_DIR=/continuita$' .env
-          sudo docker compose up -d --wait
+          sudo docker compose up -d
+          for i in $(seq 1 60); do sudo docker compose exec -T worker true 2>/dev/null && break; sleep 2; done
           sudo docker compose exec -T worker python manage.py fasas_jobs continuity
           sudo ./scripts/disco_continuita.sh --stato
           sudo find /srv/fasas-continuita/database -name 'fasas-continua-*.fbk' | grep -q .
