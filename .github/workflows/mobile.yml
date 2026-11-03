@@ -1,11 +1,8 @@
 name: App FASAS Signer
 
-# Compila le app per telefono quando cambiano. Il repository è pubblico: i minuti di GitHub Actions sono gratuiti.
+# App congelate finché la firma con CIE resta spenta (pilota): si compilano solo a mano, da GitHub
+# (Actions › App FASAS Signer › Run workflow), per esempio prima del collaudo con una CIE reale.
 on:
-  push:
-    paths:
-      - "mobile/**"
-      - ".github/workflows/mobile.yml"
   workflow_dispatch:
 
 jobs:

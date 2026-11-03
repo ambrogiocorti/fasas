@@ -337,7 +337,8 @@ class CIESignatureTests(FasasTestCase):
     def test_settings_page_and_admin_devices(self):
         self.login(self.doctor)
         page = self.client.get(reverse("signatures:credential"))
-        for text in ("Firma con CIE", "Firma elettronica avanzata", "Firma elettronica qualificata",
+        # la firma remota qualificata compare solo con il servizio del prestatore configurato (test_pilota)
+        for text in ("Firma con CIE", "Firma elettronica avanzata",
                      "Firma elettronica non qualificata", "Approvazioni interne", "PC ambulatorio"):
             self.assertContains(page, text)
         self.client.post(reverse("signatures:credential"), {"action": "cie-pair"})

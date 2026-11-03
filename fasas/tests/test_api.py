@@ -1,3 +1,4 @@
+from django.test import override_settings
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
@@ -7,6 +8,17 @@ from fasas.clinical.models import ParameterType, TherapyAdministration
 from .base import FasasTestCase
 
 
+class ApiSwitchTests(FasasTestCase):
+    def test_api_is_off_by_default(self):
+        token = Token.objects.create(user=self.operator)
+        api = APIClient()
+        api.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        for path in ("/api/v1/ospiti/", "/api/v1/turno-corrente/"):
+            self.assertEqual(api.get(path).status_code, 404)
+        self.assertEqual(APIClient().post("/api/v1/token/", {"username": "x", "password": "y"}).status_code, 404)
+
+
+@override_settings(FASAS_API_ENABLED=True)
 class ApiTests(FasasTestCase):
     def client_for(self, user):
         client = APIClient()

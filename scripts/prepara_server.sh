@@ -178,6 +178,10 @@ FASAS_PUSH_SHOW_DETAILS=0
 FASAS_PROTOCOLS_REQUIRE_VALIDATION=1
 FASAS_FEA_REQUIRE_ACCEPTANCE=1
 FASAS_AUDIT_TIMESTAMP=1
+# Firma con CIE spenta finché non ci sono parere legale, polizza e prova con CIE vere (docs/ADEMPIMENTI_PRIMA_DELL_AVVIO.md)
+FASAS_CIE_ENABLED=0
+# API REST per app esterne: spenta, nessuna app la usa
+FASAS_API_ENABLED=0
 
 # Copia fuori sede dei backup su Backblaze B2 (piano gratuito 10 GB: conservazione ridotta, guida passo 13)
 FASAS_OFFSITE_ENDPOINT={e["OFFSITE_ENDPOINT"]}

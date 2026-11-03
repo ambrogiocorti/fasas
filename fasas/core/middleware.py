@@ -94,3 +94,19 @@ class LoginRequiredMiddleware:
                 and request.path not in self.EXEMPT_PATHS):
             return redirect(f"{reverse(settings.LOGIN_URL)}?next={request.path}")
         return self.get_response(request)
+
+
+class ApiSwitchMiddleware:
+    """API REST /api/v1/ spenta di default (FASAS_API_ENABLED): risponde 404 come se non esistesse."""
+
+    PREFIX = "/api/v1/"
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path.startswith(self.PREFIX) and not settings.FASAS_API_ENABLED:
+            from django.http import HttpResponseNotFound
+
+            return HttpResponseNotFound("API non attiva su questo server.", content_type="text/plain; charset=utf-8")
+        return self.get_response(request)

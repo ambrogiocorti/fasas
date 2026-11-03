@@ -28,6 +28,13 @@ call .venv\Scripts\activate.bat
 python -m pip install --quiet --disable-pip-version-check -r requirements.txt
 if not exist .env (>.env echo DJANGO_DEBUG=1)
 python manage.py migrate --verbosity 0
+rem chiavi pubbliche e password note: si ferma se trova ospiti veri
+python manage.py fasas_controllo_prova
+if errorlevel 1 (
+  echo [!] Avvio di prova fermato.
+  pause
+  exit /b 1
+)
 python manage.py fasas_demo --skip-if-exists
 
 echo.

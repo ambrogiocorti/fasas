@@ -97,6 +97,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "fasas.core.middleware.ApiSwitchMiddleware",
     "fasas.core.middleware.AllowedNetworksMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -279,11 +280,16 @@ FASAS_VAPID_SUBJECT = os.environ.get("FASAS_VAPID_SUBJECT", "mailto:amministrazi
 FASAS_PUSH_SHOW_DETAILS = env_bool("FASAS_PUSH_SHOW_DETAILS", False)  # titolo e messaggio completi sul telefono
 FASAS_PUSH_ASYNC = env_bool("FASAS_PUSH_ASYNC", True)
 
+# Vero quando si usano le chiavi fisse di sviluppo, scritte qui sotto e quindi pubbliche: ogni pagina lo segnala
+# e l'avvio di prova rifiuta i dati veri (docs/INSTALLAZIONE_IN_STRUTTURA.md per l'uso reale).
+FASAS_DEV_KEYS_IN_USE = False
 if DEBUG and not FASAS_ENCRYPTION_KEYS:
     # Chiave fissa SOLO per sviluppo: in produzione la mancanza della chiave è un errore.
     FASAS_ENCRYPTION_KEYS = ["ZGV2LW9ubHktZmFzYXMta2V5LWNoYW5nZS1tZS0wMDA="]
+    FASAS_DEV_KEYS_IN_USE = True
 if DEBUG and not FASAS_BACKUP_KEY:
     FASAS_BACKUP_KEY = "ZGV2LW9ubHktYmFja3VwLWtleS1jaGFuZ2UtbWUtMDA="
+    FASAS_DEV_KEYS_IN_USE = True
 
 # --- Email (notifiche) -----------------------------------------------------
 EMAIL_BACKEND = os.environ.get("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
@@ -295,6 +301,9 @@ EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "fasas@localhost")
 
 # --- API REST (base per la futura app mobile) ------------------------------
+# Spenta di default: senza FASAS_API_ENABLED=1 gli indirizzi /api/v1/ rispondono 404 (una porta in meno su internet).
+# Non riguarda l'API dei dispositivi di firma (/api/firma/v1/), che segue FASAS_CIE_ENABLED.
+FASAS_API_ENABLED = env_bool("FASAS_API_ENABLED", False)
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",

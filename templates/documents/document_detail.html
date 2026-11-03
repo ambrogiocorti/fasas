@@ -42,7 +42,7 @@
           <a class="btn btn-sm" href="{% url 'documents:download' v.pk %}">{% icon "download" %}Scarica</a>
           {% if v.is_pdf %}<a class="btn btn-sm" href="{% url 'documents:verify' v.pk %}">Verifica firme</a>{% endif %}
           {% if v.is_pdf and perms.signatures.sign_document and not guest.is_archived and not signing %}<a class="btn btn-sm btn-primary" href="{% url 'documents:sign' v.pk %}">Firma</a>{% endif %}
-          {% if forloop.first and v.is_pdf and perms.signatures.sign_with_cie and not guest.is_archived and not signing %}<a class="btn btn-sm btn-primary" href="{% url 'documents:sign_cie' v.pk %}">{% icon "id-card" %}Firma con CIE</a>{% endif %}
+          {% if forloop.first and v.is_pdf and perms.signatures.sign_with_cie and cie_enabled and not guest.is_archived and not signing %}<a class="btn btn-sm btn-primary" href="{% url 'documents:sign_cie' v.pk %}">{% icon "id-card" %}Firma con CIE</a>{% endif %}
         </td></tr>
     {% endfor %}
     </tbody>

@@ -18,6 +18,8 @@ source .venv/bin/activate
 python -m pip install --quiet --disable-pip-version-check -r requirements.txt
 [ -f .env ] || echo "DJANGO_DEBUG=1" > .env
 python manage.py migrate --verbosity 0
+# chiavi pubbliche e password note: si ferma se trova ospiti veri
+python manage.py fasas_controllo_prova || { echo "[!] Avvio di prova fermato."; exit 1; }
 python manage.py fasas_demo --skip-if-exists
 echo
 echo "Apri http://127.0.0.1:8000"

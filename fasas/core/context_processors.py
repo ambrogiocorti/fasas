@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils import timezone
 
 from .menu import build_menu, role_of
@@ -5,8 +6,13 @@ from .shifts import Shift, resolve_shift
 
 
 def fasas(request):
+    flags = {
+        "dev_keys_in_use": settings.FASAS_DEV_KEYS_IN_USE,  # installazione di prova: chiavi pubbliche
+        "cie_enabled": settings.FASAS_CIE_ENABLED,
+        "remote_signature_enabled": bool(settings.FASAS_CSC_SERVICE_URL),
+    }
     if not getattr(request, "user", None) or not request.user.is_authenticated:
-        return {}
+        return flags
     from fasas.notifications.services import unread_for
 
     config = request.fasas_config
@@ -16,6 +22,7 @@ def fasas(request):
         theme = "dark" if (shift == Shift.NIGHT and config.night_theme_auto) else "light"
     unread = unread_for(request.user).count()
     return {
+        **flags,
         "current_shift": {"day": day, "code": shift, "label": Shift(shift).label},
         "community": config.community,
         "fasas_config": config,

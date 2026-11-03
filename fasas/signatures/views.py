@@ -44,7 +44,7 @@ def credential_view(request):
     if not can_configure_signature(user):
         raise PermissionDenied
     can_certificate = user.has_perm("signatures.sign_document")
-    can_cie = user.has_perm("signatures.sign_with_cie")
+    can_cie = user.has_perm("signatures.sign_with_cie") and cie.is_enabled()  # spenta: niente abbinamenti né prove
     credential = SigningCredential.objects.filter(user=user).first()
     form = CredentialForm(request.POST or None, request.FILES or None, prefix="p12")
     remote_form = RemoteCredentialForm(request.POST or None, prefix="remote",

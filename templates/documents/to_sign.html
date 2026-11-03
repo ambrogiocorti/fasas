@@ -22,7 +22,7 @@
         <td>v{{ p.version.number }} · {{ p.version.uploaded_at|date:"d/m/Y" }}</td>
         <td class="num nowrap"><a class="btn btn-sm" href="{% url 'documents:view' p.version.pk %}" target="_blank" rel="noopener">Apri</a>
           {% if perms.signatures.sign_document %}<a class="btn btn-sm btn-primary" href="{% url 'documents:sign' p.version.pk %}">{% icon "pen" %}Firma</a>{% endif %}
-          {% if perms.signatures.sign_with_cie %}<a class="btn btn-sm btn-primary" href="{% url 'documents:sign_cie' p.version.pk %}">{% icon "id-card" %}Firma con CIE</a>{% endif %}</td></tr>
+          {% if perms.signatures.sign_with_cie and cie_enabled %}<a class="btn btn-sm btn-primary" href="{% url 'documents:sign_cie' p.version.pk %}">{% icon "id-card" %}Firma con CIE</a>{% endif %}</td></tr>
     {% empty %}<tr><td colspan="5" class="empty">Nessun documento in attesa di firma.</td></tr>{% endfor %}
     </tbody>
   </table>

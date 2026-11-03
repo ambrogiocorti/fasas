@@ -153,6 +153,7 @@ class TwoFactorLoginTests(FasasTestCase):
         self.assertRedirects(self.login_password("doc"), "/", fetch_redirect_response=False)
 
 
+@override_settings(FASAS_API_ENABLED=True)
 class TwoFactorApiTests(FasasTestCase):
     def test_token_requires_the_code(self):
         api = APIClient()
