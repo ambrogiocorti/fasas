@@ -94,3 +94,77 @@ class DemoDataGuardTests(FasasTestCase):
         with override_settings(DEBUG=False), self.assertRaises(CommandError):
             call_command("fasas_demo", "--skip-if-exists", stdout=io.StringIO())
         self.assertFalse(User.objects.filter(username="medico").exists())
+
+
+class UserManagementScreenTests(FasasTestCase):
+    def test_list_create_update_password(self):
+        from django.urls import reverse
+
+        self.login(self.admin)
+        url = reverse("accounts:user_list")
+        self.assertContains(self.client.get(url, {"q": "oper", "role": "operator"}), "Oper")
+        create = reverse("accounts:user_create")
+        self.assertEqual(self.client.get(create).status_code, 200)
+        data = {"username": "nuova", "first_name": "Nadia", "last_name": "Nuova", "fiscal_code": "nvonda90a41f205x",
+                "role": "operator", "is_active": "on"}
+        self.assertContains(self.client.post(create, {**data, "password1": "Lunga-Password-2026!",
+                                                      "password2": "Diversa-Password-2026!"}), "non coincidono")
+        self.assertEqual(self.client.post(create, {**data, "password1": "123", "password2": "123"}).status_code, 200)
+        self.assertFalse(User.objects.filter(username="nuova").exists())  # password troppo debole
+        self.client.post(create, {**data, "password1": "Lunga-Password-2026!", "password2": "Lunga-Password-2026!"})
+        user = User.objects.get(username="nuova")
+        self.assertEqual(user.fiscal_code, "NVONDA90A41F205X")
+        self.assertTrue(user.check_password("Lunga-Password-2026!"))
+        update = reverse("accounts:user_update", args=[user.pk])
+        self.assertEqual(self.client.get(update).status_code, 200)
+        self.client.post(update, {**data, "role": "coordinator", "is_active": "on"})
+        user.refresh_from_db()
+        self.assertEqual(user.role, "coordinator")
+        own = reverse("accounts:user_update", args=[self.admin.pk])
+        response = self.client.post(own, {"username": "admin", "first_name": "Admin", "last_name": "Test",
+                                          "role": "admin"})
+        self.assertContains(response, "Non puoi disattivare il tuo stesso utente")
+        password = reverse("accounts:user_set_password", args=[user.pk])
+        self.assertEqual(self.client.get(password).status_code, 200)
+        self.client.post(password, {"new_password1": "Altra-Password-2026!", "new_password2": "Altra-Password-2026!"})
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("Altra-Password-2026!"))
+        self.login(self.operator)
+        self.assertRedirects(self.client.get(password), reverse("core:dashboard"), fetch_redirect_response=False)
+        self.assertRedirects(self.client.get(reverse("accounts:user_permissions", args=[user.pk])),
+                             reverse("core:dashboard"), fetch_redirect_response=False)
+
+    def test_permission_page_allow_and_back_to_role(self):
+        from django.urls import reverse
+
+        self.login(self.admin)
+        url = reverse("accounts:user_permissions", args=[self.operator.pk])
+        self.assertContains(self.client.get(url), "Eventi")
+        perm = Permission.objects.get(codename="delete_clinicalevent")
+        self.client.post(url, {f"perm_{perm.pk}": "deny"})
+        self.client.post(url, {f"perm_{perm.pk}": "allow"})
+        self.assertTrue(UserPermissionOverride.objects.get(user=self.operator, permission=perm).allow)
+        self.client.post(url, {})
+        self.assertFalse(UserPermissionOverride.objects.filter(user=self.operator).exists())
+
+    def test_access_log_filters_profile_theme_password(self):
+        from django.urls import reverse
+
+        AccessLog.objects.create(username="oper", event="login_failed", ip_address="10.0.0.5")
+        self.login(self.admin)
+        url = reverse("accounts:access_log")
+        self.assertContains(self.client.get(url, {"username": "oper", "event": "login_failed", "ip": "10.0",
+                                                  "date_from": "2000-01-01", "date_to": "2999-01-01"}), "10.0.0.5")
+        self.login(self.operator)
+        profile = reverse("accounts:profile")
+        self.assertEqual(self.client.get(profile).status_code, 200)
+        self.client.post(profile, {"first_name": "Olga", "last_name": "Test", "email": "", "phone": "", "theme": "dark"})
+        self.operator.refresh_from_db()
+        self.assertEqual((self.operator.first_name, self.operator.theme), ("Olga", "dark"))
+        response = self.client.post(reverse("accounts:set_theme"), {"theme": "light", "next": "https://altro.example/"})
+        self.assertRedirects(response, reverse("core:dashboard"), fetch_redirect_response=False)
+        self.operator.refresh_from_db()
+        self.assertEqual(self.operator.theme, "light")
+        response = self.client.post(reverse("accounts:password_change"), {
+            "old_password": PASSWORD, "new_password1": "Nuova-Password-2026!", "new_password2": "Nuova-Password-2026!"})
+        self.assertRedirects(response, profile, fetch_redirect_response=False)

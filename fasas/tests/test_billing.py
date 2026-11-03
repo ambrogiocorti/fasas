@@ -176,3 +176,76 @@ class BillingTests(FasasTestCase):
         self.assertRedirects(response, statement.get_absolute_url())
         statement.refresh_from_db()
         self.assertEqual(statement.status, "paid")
+
+    def test_web_correction_reopen_fees_and_statement_actions(self):
+        self.login(self.clerk)
+        mese = f"{self.first:%Y-%m}"
+        url = reverse("billing:correction", args=[self.guest.pk])
+        self.assertEqual(self.client.get(url, {"giorno": self.day(5).isoformat(), "stato": "F"}).status_code, 200)
+        response = self.client.post(url, {"date": self.day(5).isoformat(), "status": "F",
+                                          "reason": "Rientro in famiglia non registrato"})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.days_of()[5], "F")
+        self.client.post(reverse("billing:close_month"), {"mese": mese})  # senza conferma: non chiude
+        self.assertFalse(AttendanceMonth.objects.filter(month=self.first).exists())
+        self.client.post(reverse("billing:close_month"), {"mese": mese, "confirm": "on"})
+        self.assertContains(self.client.post(url, {"date": self.day(6).isoformat(), "status": "F", "reason": "x"}),
+                            "chius")
+        self.client.post(reverse("billing:reopen_month"), {"mese": mese})  # senza motivo
+        self.assertTrue(AttendanceMonth.objects.get(month=self.first).is_closed)
+        self.client.post(reverse("billing:reopen_month"), {"mese": mese, "reason": "Correzione ATS"})
+        self.assertFalse(AttendanceMonth.objects.get(month=self.first).is_closed)
+        excel = self.client.get(reverse("billing:attendance_excel"), {"mese": mese})
+        self.assertTrue(excel["Content-Disposition"].startswith("attachment"))
+
+        create = reverse("billing:fee_create", args=[self.guest.pk])
+        self.assertEqual(self.client.get(create).status_code, 200)
+        data = {"description": "Quota sociale", "payer": "municipality", "payer_name": "Comune di Prova",
+                "daily_rate": "40.00", "hospital_percent": 100, "family_percent": 100, "absent_percent": 100,
+                "max_absence_days": 0, "valid_from": self.guest.admission_date.isoformat()}
+        self.assertContains(self.client.post(create, {**data, "valid_to": "2000-01-01"}), "La fine precede")
+        self.assertRedirects(self.client.post(create, data), reverse("billing:fees"), fetch_redirect_response=False)
+        line = GuestFeeLine.objects.get()
+        self.client.post(reverse("billing:fee_update", args=[line.pk]), {**data, "daily_rate": "45.00"})
+        line.refresh_from_db()
+        self.assertEqual(line.daily_rate, Decimal("45.00"))
+        self.assertContains(self.client.get(reverse("billing:fees")), "Comune di Prova")
+
+        self.client.post(reverse("billing:generate"), {"mese": mese})  # mese riaperto: genera comunque le bozze
+        self.client.post(reverse("billing:close_month"), {"mese": mese, "confirm": "on"})
+        self.client.post(reverse("billing:generate"), {"mese": mese})
+        statement = FeeStatement.objects.get()
+        self.assertContains(self.client.get(reverse("billing:statements"), {"mese": mese, "stato": "draft"}),
+                            "Comune di Prova")
+        pdf = self.client.get(reverse("billing:statement_pdf", args=[statement.pk]))
+        self.assertTrue(pdf.content.startswith(b"%PDF"))
+        self.client.post(reverse("billing:statement_issue", args=[statement.pk]))
+        statement.refresh_from_db()
+        self.assertEqual(statement.status, "issued")
+        self.client.post(reverse("billing:statement_issue", args=[statement.pk]))  # già emesso: errore
+        workbook = self.client.get(reverse("billing:statements_excel"), {"mese": mese})
+        self.assertTrue(workbook["Content-Disposition"].startswith("attachment"))
+        self.client.post(reverse("billing:statement_cancel", args=[statement.pk]))  # senza motivo
+        statement.refresh_from_db()
+        self.assertEqual(statement.status, "issued")
+        self.client.post(reverse("billing:statement_cancel", args=[statement.pk]), {"reason": "Errore di tariffa"})
+        statement.refresh_from_db()
+        self.assertEqual(statement.status, "cancelled")
+        self.assertEqual(self.client.get(reverse("billing:settings")).status_code, 200)
+
+    def test_generate_without_closed_month_and_payment_permission(self):
+        self.login(self.clerk)
+        mese = f"{self.first:%Y-%m}"
+        self.client.post(reverse("billing:generate"), {"mese": mese})
+        self.assertFalse(FeeStatement.objects.exists())
+        self.fee()
+        month = services.close_month(self.first, self.clerk)
+        statement = services.issue_statement(services.generate_statements(month, self.clerk)[0][0], self.clerk)
+        self.login(self.coordinator)
+        self.assertEqual(self.client.post(statement.get_absolute_url(), {"amount": "1"}).status_code, 403)
+        services.cancel_statement(statement, self.clerk, "Errore di tariffa")
+        self.login(self.clerk)
+        response = self.client.post(statement.get_absolute_url(), {
+            "date": statement.issue_date.isoformat(), "amount": str(statement.total), "method": "transfer"})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(statement.payments.exists())  # prospetto annullato: nessun incasso

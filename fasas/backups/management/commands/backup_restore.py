@@ -23,6 +23,8 @@ class Command(BaseCommand):
         path = Path(options["file"])
         if not path.is_absolute():
             path = settings.FASAS_BACKUP_DIR / path
+        if not path.is_file():
+            raise CommandError(f"File di backup non trovato: {path}")
         try:
             manifest = restore_backup(path, restore_media=not options["no_media"])
         except BackupError as exc:

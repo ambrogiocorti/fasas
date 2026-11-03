@@ -134,3 +134,108 @@ class StaffingTests(FasasTestCase):
         self.login(self.operator)
         self.assertContains(self.client.get(reverse("core:dashboard")), "I miei prossimi turni")
         self.assertContains(self.client.get(reverse("staffing:my")), "Chiedi ferie o permesso")
+
+
+def _form_data(form):
+    """Valori iniziali di un modulo come li invierebbe il browser (per i formset delle impostazioni)."""
+    data = {}
+    for name, field in form.fields.items():
+        value = form.initial.get(name, field.initial)
+        if hasattr(value, "pk"):
+            value = value.pk
+        if isinstance(field.widget, __import__("django").forms.CheckboxInput):
+            if value:
+                data[form.add_prefix(name)] = "on"
+        elif value is not None:
+            data[form.add_prefix(name)] = value
+    return data
+
+
+class StaffingScreenTests(FasasTestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.oper2 = cls.make_user("oper2", Role.OPERATOR)
+
+    def setUp(self):
+        self.next_month = shift_month(month_start(), 1)
+        self.mese = f"{self.next_month:%Y-%m}"
+
+    def test_painter_rejects_bad_payload_repeat_and_excel(self):
+        self.login(self.coordinator)
+        self.assertEqual(self.client.post(reverse("staffing:save"), {"changes": "non json"}).status_code, 400)
+        self.assertEqual(self.client.post(reverse("staffing:save"), {"changes": "{}"}).status_code, 400)
+        response = self.client.post(reverse("staffing:save"), {"mese": self.mese, "changes": json.dumps(
+            [{"user": self.operator.pk, "day": "2000-01-01", "code": "ZZ"}])})
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(RotaEntry.objects.exists())
+        self.client.post(reverse("staffing:repeat"), {"mese": self.mese, "weeks": "4"})
+        services.set_entry(self.operator, self.next_month, "M", notify=False)
+        self.get_rota = self.client.get(reverse("staffing:rota"), {"mese": self.mese})
+        self.assertEqual(self.get_rota.status_code, 200)
+        excel = self.client.get(reverse("staffing:excel"), {"mese": self.mese})
+        self.assertEqual(excel["Content-Type"],
+                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        from io import BytesIO
+
+        from openpyxl import load_workbook
+
+        sheet = load_workbook(BytesIO(excel.content)).active
+        self.assertIn("Turni del personale", sheet["A1"].value)
+
+    def test_my_rota_requests_and_answers(self):
+        day = timezone.localdate() + datetime.timedelta(days=4)
+        services.set_entry(self.operator, day, "M", notify=False)
+        services.set_entry(self.oper2, day, "P", notify=False)
+        services.publish(month_start(day), self.coordinator)
+        self.login(self.operator)
+        url = reverse("staffing:my")
+        self.assertEqual(self.client.get(url).status_code, 200)
+        start = timezone.localdate() + datetime.timedelta(days=20)
+        response = self.client.post(url, {"leave-kind": "F", "leave-start": start.isoformat(),
+                                          "leave-end": (start + datetime.timedelta(days=2)).isoformat(),
+                                          "leave-note": "Vacanza"})
+        self.assertRedirects(response, url, fetch_redirect_response=False)
+        from fasas.staffing.models import LeaveRequest
+
+        leave = LeaveRequest.objects.get()
+        self.client.post(reverse("staffing:cancel_leave", args=[leave.pk]))
+        leave.refresh_from_db()
+        self.assertEqual(leave.status, "cancelled")
+        self.client.post(url, {"change-kind": "swap", "change-date": day.isoformat(), "change-colleague": self.oper2.pk,
+                               "change-note": "Visita"})
+        change = ShiftChange.objects.get()
+        self.client.post(url, {"change-kind": "swap", "change-date": day.isoformat(),
+                               "change-colleague": self.oper2.pk})  # seconda proposta per lo stesso giorno
+        self.login(self.oper2)
+        self.assertContains(self.client.get(url), "Visita")
+        self.client.post(reverse("staffing:respond_change", args=[change.pk]), {"accept": "1"})
+        change.refresh_from_db()
+        self.assertEqual(change.status, "accepted")
+        self.client.post(reverse("staffing:respond_change", args=[change.pk]), {"accept": "1"})  # già risposto
+        self.login(self.coordinator)
+        self.assertContains(self.client.get(reverse("staffing:requests")), "oper2".capitalize())
+        self.client.post(reverse("staffing:decide_change", args=[change.pk]), {"approve": "1"})
+        change.refresh_from_db()
+        self.assertEqual(change.status, "approved")
+        self.client.post(reverse("staffing:decide_change", args=[change.pk]), {"approve": "1"})  # già deciso
+        self.client.post(reverse("staffing:decide_leave", args=[leave.pk]), {"approve": "1"})  # ritirata: errore
+
+    def test_settings(self):
+        self.login(self.coordinator)
+        url = reverse("staffing:settings")
+        page = self.client.get(url)
+        self.assertEqual(page.status_code, 200)
+        data = _form_data(page.context["form"])
+        formset = page.context["formset"]
+        data.update({key: value for key, value in formset.management_form.initial.items()
+                     for key in [f"{formset.prefix}-{key}"]})
+        for form in formset.forms:
+            data.update(_form_data(form))
+            data[form.add_prefix("id")] = form.instance.pk
+        data["rules-min_morning"] = 2
+        response = self.client.post(url, data)
+        self.assertRedirects(response, url, fetch_redirect_response=False)
+        self.assertEqual(RotaSettings.get().min_morning, 2)
+        self.login(self.operator)
+        self.assertEqual(self.client.get(url).status_code, 403)
