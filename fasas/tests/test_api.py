@@ -1,4 +1,7 @@
+import datetime
+
 from django.test import override_settings
+from django.utils import timezone
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
@@ -40,7 +43,8 @@ class ApiTests(FasasTestCase):
         entry = AuditLog.objects.filter(content_type__model="parameterreading").latest("id")
         self.assertEqual(entry.user, self.operator)
         response = api.post("/api/v1/somministrazioni/", {
-            "therapy": therapy.pk, "scheduled_date": "2026-01-01", "scheduled_time": "08:00", "status": "given"})
+            "therapy": therapy.pk, "scheduled_date": (timezone.localdate() - datetime.timedelta(days=1)).isoformat(),
+            "scheduled_time": "08:00", "status": "given"})
         self.assertEqual(response.status_code, 201, response.content)
         self.assertEqual(TherapyAdministration.objects.get().created_by, self.operator)
 

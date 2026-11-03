@@ -3,12 +3,20 @@ from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import FormView
 
 from fasas.audit.context import audit_context
 
 from .locking import creation_decision, edit_decision
 
+
+def safe_next(request, target):
+    """Indirizzo di ritorno solo se interno al FASAS: niente rimandi a siti esterni né link «javascript:»."""
+    if target and url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()},
+                                                  require_https=request.is_secure()):
+        return target
+    return ""
 
 class PermRequiredMixin(PermissionRequiredMixin):
     raise_exception = True
@@ -43,7 +51,7 @@ class FormPageMixin:
         return self.page_title
 
     def get_cancel_url(self):
-        return self.request.GET.get("next") or getattr(self, "cancel_url", None)
+        return safe_next(self.request, self.request.GET.get("next")) or getattr(self, "cancel_url", None)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -21,6 +21,7 @@ from fasas.core.views_mixins import (
     RecordCreateMixin,
     VoidForm,
     VoidRecordView,
+    safe_next,
 )
 from fasas.guests.models import Guest
 from fasas.guests.services import guests_in_care
@@ -38,6 +39,10 @@ from .forms import (
     TherapyStatusForm,
 )
 from .models import ClinicalEvent, ParameterReading, ParameterType, Restraint, Therapy, TherapyAdministration
+
+
+def _safe_next(request):
+    return safe_next(request, request.POST.get("next"))
 
 
 def _guest(pk):
@@ -234,18 +239,16 @@ def administer(request, therapy_pk):
     status = request.POST.get("status", TherapyAdministration.Status.GIVEN)
     if status not in TherapyAdministration.Status.values:
         status = TherapyAdministration.Status.GIVEN
-    decision = creation_decision(therapy.guest, timezone.now(), request.user)
-    if not decision.allowed:
-        messages.error(request, decision.message)
-    elif TherapyAdministration.objects.filter(therapy=therapy, scheduled_date=day, scheduled_time=t).exists():
-        messages.warning(request, "Questa dose risulta già registrata.")
-    else:
+    try:  # tutti i controlli (terapia, orario, turno della dose, doppioni) sono nel servizio, uguali per ogni canale
         services.register_administration(
             therapy, request.user, status=status, scheduled_date=day, scheduled_time=t,
             notes=request.POST.get("notes", "")[:500],
         )
+    except services.AdministrationError as exc:
+        (messages.warning if exc.conflict else messages.error)(request, exc.message)
+    else:
         messages.success(request, f"{therapy.drug} – {therapy.guest}: {TherapyAdministration.Status(status).label}.")
-    return redirect(request.POST.get("next") or reverse("clinical:board"))
+    return redirect(_safe_next(request) or reverse("clinical:board"))
 
 
 @permission_required("clinical.add_therapyadministration", raise_exception=True)
@@ -254,16 +257,17 @@ def sos_administer(request, guest_pk):
     form = SOSAdministrationForm(request.POST or None, guest=guest,
                                  initial={"therapy": request.GET.get("therapy"), "occurred_at": timezone.localtime()})
     if request.method == "POST" and form.is_valid():
-        occurred_at = form.cleaned_data["occurred_at"]
-        decision = creation_decision(guest, occurred_at, request.user)
-        if not decision.allowed:
-            form.add_error(None, decision.message)
-        else:
+        try:
             adm = services.register_administration(
-                form.cleaned_data["therapy"], request.user, occurred_at=occurred_at,
+                form.cleaned_data["therapy"], request.user, occurred_at=form.cleaned_data["occurred_at"],
                 notes=form.cleaned_data["notes"], dose_given=form.cleaned_data["dose_given"],
-                sos_reason=form.cleaned_data["sos_reason"],
+                sos_reason=form.cleaned_data["sos_reason"], confirm_limits=form.cleaned_data["confirm_limits"],
+                limit_reason=form.cleaned_data["limit_reason"],
             )
+        except services.AdministrationError as exc:
+            form.limit_warnings = exc.limits
+            form.add_error(None, exc.message)
+        else:
             if adm.validation_status == TherapyAdministration.Validation.PENDING:
                 messages.warning(request, "Somministrazione SOS registrata: in attesa di validazione.")
             else:

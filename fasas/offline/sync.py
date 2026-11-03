@@ -20,7 +20,7 @@ from django.utils.dateparse import parse_datetime
 
 from fasas.audit.context import audit_context
 from fasas.clinical.models import ClinicalEvent, ParameterReading, ParameterType, Therapy, TherapyAdministration
-from fasas.clinical.services import register_administration, sos_limits_warnings
+from fasas.clinical.services import AdministrationError, register_administration
 from fasas.core.shifts import resolve_shift
 from fasas.daily.models import DiaryEntry
 from fasas.daily.services import is_shift_closed
@@ -80,15 +80,12 @@ def _administration(user, data, when):
     status = data.get("status") or TherapyAdministration.Status.GIVEN
     if status not in TherapyAdministration.Status.values:
         raise Rejected("esito non valido")
-    existing = TherapyAdministration.objects.filter(therapy=therapy, scheduled_date=day, scheduled_time=at).first()
-    if existing:
-        raise Rejected(f"dose già registrata da {existing.created_by or 'altro operatore'} alle "
-                       f"{timezone.localtime(existing.occurred_at):%H:%M} ({existing.get_status_display().lower()})",
-                       OfflineRecord.Status.CONFLICT)
-    if therapy.status != Therapy.Status.ACTIVE:
-        raise Rejected("la terapia è stata sospesa o terminata nel frattempo")
-    adm = register_administration(therapy, user, status=status, scheduled_date=day, scheduled_time=at,
-                                  occurred_at=when, notes=_text(data, "notes", 500))
+    try:  # stessi controlli della pagina web: terapia attiva, orario prescritto, turno, doppioni
+        adm = register_administration(therapy, user, status=status, scheduled_date=day, scheduled_time=at,
+                                      occurred_at=when, notes=_text(data, "notes", 500), allow_closed_shift=True)
+    except AdministrationError as exc:
+        raise Rejected(exc.message[:1].lower() + exc.message[1:],
+                       OfflineRecord.Status.CONFLICT if exc.conflict else OfflineRecord.Status.REJECTED) from None
     return therapy.guest, adm, ""
 
 
@@ -99,10 +96,17 @@ def _sos(user, data, when):
     reason = _text(data, "reason", 1000)
     if not reason:
         raise Rejected("manca il motivo della somministrazione SOS")
-    warnings = sos_limits_warnings(therapy, when)
-    adm = register_administration(therapy, user, occurred_at=when, notes=_text(data, "notes", 500),
-                                  dose_given=_text(data, "dose", 60), sos_reason=reason)
-    return therapy.guest, adm, " ".join(warnings)
+    try:
+        # Senza rete l'operatore non ha potuto vedere i limiti: con la regola «avviso» si registra segnalandolo
+        # (medico e coordinatore avvisati); con la regola «blocco» resta da verificare al coordinatore.
+        adm = register_administration(therapy, user, occurred_at=when, notes=_text(data, "notes", 500),
+                                      dose_given=_text(data, "dose", 60), sos_reason=reason, confirm_limits=True,
+                                      limit_reason="registrata senza rete: limiti non visibili all'operatore",
+                                      allow_closed_shift=True)
+    except AdministrationError as exc:
+        status = OfflineRecord.Status.CONFLICT if (exc.conflict or exc.limits) else OfflineRecord.Status.REJECTED
+        raise Rejected(exc.message[:1].lower() + exc.message[1:], status) from None
+    return therapy.guest, adm, adm.sos_limit_note
 
 
 def _parameter(user, data, when):

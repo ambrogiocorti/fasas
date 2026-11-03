@@ -48,11 +48,16 @@ class RecordSerializer(serializers.ModelSerializer):
 
 
 class AdministrationSerializer(RecordSerializer):
+    # SOS oltre i limiti della prescrizione: conferma e motivo, come nella pagina web (regola della struttura)
+    confirm_limits = serializers.BooleanField(write_only=True, required=False, default=False)
+    limit_reason = serializers.CharField(write_only=True, required=False, allow_blank=True, default="")
+
     class Meta:
         model = TherapyAdministration
         fields = ["id", "guest", "therapy", "scheduled_date", "scheduled_time", "occurred_at", "status", "dose_given",
-                  "notes", "is_sos", "sos_reason", "validation_status", "shift_date", "shift", "created_by"]
-        read_only_fields = ["guest", "is_sos", "validation_status"]
+                  "notes", "is_sos", "sos_reason", "validation_status", "shift_date", "shift", "created_by",
+                  "sos_limit_override", "sos_limit_note", "confirm_limits", "limit_reason"]
+        read_only_fields = ["guest", "is_sos", "validation_status", "sos_limit_override", "sos_limit_note"]
 
     def validate(self, attrs):
         therapy = attrs["therapy"]

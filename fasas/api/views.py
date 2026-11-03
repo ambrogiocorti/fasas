@@ -13,7 +13,7 @@ from fasas.accounts.models import AccessLog
 from fasas.accounts.services import is_locked_out, record_access
 from fasas.audit.context import set_current_user
 from fasas.clinical.models import ClinicalEvent, ParameterReading, Therapy, TherapyAdministration
-from fasas.clinical.services import register_administration, scheduled_doses
+from fasas.clinical.services import AdministrationError, register_administration, scheduled_doses
 from fasas.core.middleware import client_ip
 from fasas.core.shifts import Shift, resolve_shift
 from fasas.daily.models import DiaryEntry, EvacuationRecord
@@ -66,17 +66,16 @@ class AdministrationViewSet(RecordViewSet):
 
     def perform_create(self, serializer):
         data = serializer.validated_data
-        therapy = data["therapy"]
-        if data.get("scheduled_time") and TherapyAdministration.objects.filter(
-            therapy=therapy, scheduled_date=data.get("scheduled_date"), scheduled_time=data["scheduled_time"]
-        ).exists():
-            raise serializers.ValidationError("Dose già registrata.")
-        serializer.instance = register_administration(
-            therapy, self.request.user, status=data.get("status", TherapyAdministration.Status.GIVEN),
-            scheduled_date=data.get("scheduled_date"), scheduled_time=data.get("scheduled_time"),
-            occurred_at=data.get("occurred_at"), notes=data.get("notes", ""), dose_given=data.get("dose_given", ""),
-            sos_reason=data.get("sos_reason", ""),
-        )
+        try:  # stessi controlli della pagina web e del lavoro senza rete
+            serializer.instance = register_administration(
+                data["therapy"], self.request.user, status=data.get("status", TherapyAdministration.Status.GIVEN),
+                scheduled_date=data.get("scheduled_date"), scheduled_time=data.get("scheduled_time"),
+                occurred_at=data.get("occurred_at"), notes=data.get("notes", ""), dose_given=data.get("dose_given", ""),
+                sos_reason=data.get("sos_reason", ""), confirm_limits=data.get("confirm_limits", False),
+                limit_reason=data.get("limit_reason", ""),
+            )
+        except AdministrationError as exc:
+            raise serializers.ValidationError({"detail": exc.message, "limiti_sos": exc.limits}) from None
 
 
 class ParameterViewSet(RecordViewSet):

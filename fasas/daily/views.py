@@ -12,7 +12,7 @@ from django.views.generic import CreateView, UpdateView
 from fasas.core.locking import creation_decision
 from fasas.core.models import SystemConfig
 from fasas.core.shifts import SHIFT_ORDER, Shift, resolve_shift, shift_bounds
-from fasas.core.views_mixins import LockedUpdateMixin, PermRequiredMixin, RecordCreateMixin, VoidRecordView
+from fasas.core.views_mixins import LockedUpdateMixin, PermRequiredMixin, RecordCreateMixin, VoidRecordView, safe_next
 from fasas.guests.models import Guest
 from fasas.guests.services import guests_in_care
 
@@ -154,7 +154,7 @@ def evacuation_quick(request, guest_pk):
     else:
         EvacuationRecord.objects.create(guest=guest, outcome=outcome, notes=request.POST.get("notes", "")[:255])
         messages.success(request, f"{guest}: evacuazione {'SI' if outcome else 'NO'} registrata.")
-    return redirect(request.POST.get("next") or reverse("daily:evacuations"))
+    return redirect(safe_next(request, request.POST.get("next")) or reverse("daily:evacuations"))
 
 
 class EvacuationCreateView(PermRequiredMixin, RecordCreateMixin, CreateView):

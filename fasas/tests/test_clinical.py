@@ -129,7 +129,8 @@ class AdministrationTests(FasasTestCase):
         drug = self.make_drug(min_stock=5)
         therapy = self.make_therapy(drug=drug)
         load_lot(drug, "C1", timezone.localdate() + datetime.timedelta(days=100), 5, self.coordinator)
-        register_administration(therapy, self.operator)
+        register_administration(therapy, self.operator, scheduled_date=timezone.localdate() - datetime.timedelta(days=1),
+                                scheduled_time=datetime.time(8, 0))
         self.assertTrue(Notification.objects.filter(kind="stock_low", recipient=self.coordinator).exists())
 
     def test_sos_requires_validation_when_given_by_operator(self):

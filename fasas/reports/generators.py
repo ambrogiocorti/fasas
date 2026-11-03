@@ -65,6 +65,8 @@ def medications(start, end, guest=None):
         validation = a.get_validation_status_display() if a.is_sos else ""
         if a.validated_by:
             validation += f" ({a.validated_by})"
+        if a.sos_limit_override:
+            validation += f" – OLTRE I LIMITI: {a.sos_limit_note}"
         rows.append([_t(a.occurred_at), str(a.guest), str(a.therapy.drug), a.dose_given, scheduled,
                      a.get_status_display(), a.sos_reason or a.notes, validation, _who(a.created_by)])
     return ReportData("Farmaci somministrati", ["Data/ora", "Ospite", "Farmaco", "Dose", "Programmata", "Esito",

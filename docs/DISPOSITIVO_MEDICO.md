@@ -27,7 +27,7 @@ terapeutiche può farlo (regola 11, classe IIa o superiore).
 | Promemoria «allergia registrata» | confronta il farmaco con le allergie registrate dalla struttura | interruttore, acceso | come sopra |
 | Promemoria interazioni | usa **solo** le regole inserite e **validate dal medico della struttura** (non una banca dati del fornitore) | interruttore, **spento per default** | con regole della struttura il fornitore resta fuori dal perimetro? oppure serve una banca dati con marcatura CE? |
 | Protocolli automatici (febbre, glicemia, evacuazioni, crisi, SOS) | avvisa quando un valore registrato supera una soglia | si attivano **solo dopo la validazione del medico**; ogni modifica di soglie o azioni richiede una nuova validazione | soglie della struttura e lista di azioni da spuntare: rientrano nella regola 11? |
-| Limiti dei farmaci SOS | blocca una somministrazione oltre il limite scritto nella prescrizione | sempre attiva | è la trascrizione di un limite prescritto o un calcolo? |
+| Limiti dei farmaci SOS | confronta la somministrazione con il massimo nelle 24 ore e l'intervallo minimo scritti nella prescrizione | sempre attiva; oltre il limite la struttura sceglie se **chiedere conferma motivata** (medico e coordinatore avvisati) o **bloccare** salvo medico/coordinatore. Stessa regola su pagina web, telefono senza rete e API | è la trascrizione di un limite prescritto o un calcolo? |
 | Firma, notifiche, turni, presenze, rette | funzioni organizzative e amministrative | sempre attive | conferma che sono fuori dall'MDR |
 
 ## Come si configura
@@ -37,6 +37,10 @@ terapeutiche può farlo (regola 11, classe IIa o superiore).
 - **Interazioni farmacologiche**: le inserisce il coordinatore o il medico; entrano nei promemoria solo dopo
   «Valida» del medico. Modificarne una la toglie finché non viene validata di nuovo.
 - **Protocolli automatici**: «Valida» del medico; `FASAS_PROTOCOLS_REQUIRE_VALIDATION=0` toglie l'obbligo (sconsigliato).
+- **Limiti dei farmaci SOS**: in *Configurazione generale*, «limiti dei farmaci SOS»; la scelta spetta al responsabile
+  clinico della struttura, non al software (predefinito: conferma con motivazione).
+- **Somministrazioni programmate**: il FASAS registra solo dosi di terapie attive, negli orari e nei giorni prescritti,
+  non future e non già registrate, con lo stesso controllo su tutti i canali; non decide dosi né orari.
 - Ogni promemoria mostra la frase: *«Promemoria calcolati confrontando i dati registrati dalla struttura (…): non
   sostituiscono la valutazione del medico.»*
 

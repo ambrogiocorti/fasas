@@ -98,6 +98,8 @@ DPCM 22/02/2013 (art. 57) e la prova reale con le CIE su Android e iPhone (non a
 Le funzioni che **registrano, archiviano e mostrano** i dati sono quelle più chiaramente fuori dal regolamento. I
 promemoria che confrontano i dati (stesso farmaco, allergie, interazioni) sono quelli da far valutare.
 
+- **Limiti dei farmaci SOS**: il responsabile clinico sceglie in *Configurazione generale* se, oltre il limite della
+  prescrizione, si procede con conferma motivata o si blocca (salvo medico e coordinatore).
 - **Per il pilota**: interazioni spente (lo sono già per default); decidere con il medico se tenere accesi i
   promemoria su allergie e farmaci doppi, sapendo che sono la parte da valutare; protocolli attivi solo dopo la
   validazione del medico (già obbligatoria).

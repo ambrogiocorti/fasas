@@ -159,16 +159,109 @@ def scheduled_doses(day, shift, guests=None):
     return doses
 
 
+class AdministrationError(Exception):
+    """Somministrazione non ammessa. «limits» = limiti SOS superati: si può ripetere con conferma e motivazione."""
+
+    def __init__(self, message, *, conflict=False, limits=None):
+        super().__init__(message)
+        self.message = message
+        self.conflict = conflict  # un'altra registrazione esiste già (es. dose registrata da un collega)
+        self.limits = limits or []
+
+
+# Tolleranza sull'ora indicata: orologi di telefoni e PC non sono mai perfettamente allineati
+FUTURE_TOLERANCE = datetime.timedelta(minutes=10)
+
+
+def check_administration(therapy, user, *, scheduled_date=None, scheduled_time=None, occurred_at=None,
+                         sos_reason="", confirm_limits=False, limit_reason="", now=None, allow_closed_shift=False):
+    """
+    Controlli comuni a ogni canale (pagina web, telefono senza rete, API): restituisce gli avvisi dei limiti SOS
+    superati e confermati; solleva AdministrationError se la somministrazione non si può registrare.
+    Non decide politiche terapeutiche: i limiti SOS sono quelli della prescrizione e la regola per superarli
+    è quella scelta dalla struttura (SystemConfig.sos_limit_policy).
+    allow_closed_shift: solo per le registrazioni fatte senza rete durante il turno e arrivate dopo la chiusura,
+    che il lavoro senza rete accetta come «tardive» e segnala al coordinatore.
+    """
+    from fasas.core.locking import creation_decision
+    from fasas.core.models import SystemConfig
+
+    now = now or timezone.now()
+    occurred_at = occurred_at or now
+    guest = therapy.guest
+    if guest.is_archived:
+        raise AdministrationError("La cartella dell'ospite è archiviata: non si registrano somministrazioni.")
+    if therapy.status != Therapy.Status.ACTIVE:
+        raise AdministrationError(f"La terapia è {therapy.get_status_display().lower()}: la somministrazione non si registra.")
+    if occurred_at > now + FUTURE_TOLERANCE:
+        raise AdministrationError("L'ora della somministrazione è nel futuro.")
+    if not allow_closed_shift:
+        decision = creation_decision(guest, occurred_at, user)
+        if not decision.allowed:
+            raise AdministrationError(decision.message)
+
+    if not therapy.is_sos:
+        if scheduled_date is None or scheduled_time is None:
+            raise AdministrationError("Indicare la dose programmata (giorno e orario).")
+        if scheduled_date > timezone.localtime(now).date():
+            raise AdministrationError("La dose è di un giorno futuro.")
+        if scheduled_time not in therapy.parsed_times():
+            raise AdministrationError(f"Le {scheduled_time:%H:%M} non sono tra gli orari prescritti per {therapy.drug}.")
+        if not therapy.is_active_on(scheduled_date):
+            raise AdministrationError(f"Il {scheduled_date:%d/%m/%Y} la terapia non prevede dosi (periodo o frequenza).")
+        slot = timezone.make_aware(datetime.datetime.combine(scheduled_date, scheduled_time))
+        slot_decision = creation_decision(guest, slot, user)
+        if not slot_decision.allowed and not allow_closed_shift:
+            raise AdministrationError(f"Dose delle {scheduled_time:%H:%M} del {scheduled_date:%d/%m}: {slot_decision.message}")
+        existing = TherapyAdministration.objects.filter(
+            therapy=therapy, scheduled_date=scheduled_date, scheduled_time=scheduled_time).select_related("created_by").first()
+        if existing:
+            raise AdministrationError(
+                f"Dose già registrata da {existing.created_by or 'un altro operatore'} alle "
+                f"{timezone.localtime(existing.occurred_at):%H:%M} ({existing.get_status_display().lower()}).",
+                conflict=True)
+        return []
+
+    day = timezone.localtime(occurred_at).date()
+    if day < therapy.start_date or (therapy.end_date and day > therapy.end_date):
+        raise AdministrationError("La data è fuori dal periodo della prescrizione SOS.")
+    if not (sos_reason or "").strip():
+        raise AdministrationError("Indicare il motivo della somministrazione SOS.")
+    limits = sos_limits_warnings(therapy, occurred_at)
+    if not limits:
+        return []
+    policy = SystemConfig.get().sos_limit_policy
+    if policy == SystemConfig.SosLimitPolicy.BLOCK and not user.has_perm("clinical.validate_sos"):
+        raise AdministrationError(
+            "Limiti del farmaco SOS superati: " + " ".join(limits) + " La struttura blocca la somministrazione: "
+            "serve il medico o il coordinatore.", limits=limits)
+    if not confirm_limits or not (limit_reason or "").strip():
+        raise AdministrationError(
+            "Limiti del farmaco SOS superati: " + " ".join(limits) + " Per procedere confermare e scrivere il motivo.",
+            limits=limits)
+    return limits
+
+
 @transaction.atomic
 def register_administration(therapy, user, status=TherapyAdministration.Status.GIVEN, scheduled_date=None,
-                            scheduled_time=None, occurred_at=None, notes="", dose_given="", sos_reason=""):
+                            scheduled_time=None, occurred_at=None, notes="", dose_given="", sos_reason="",
+                            confirm_limits=False, limit_reason="", allow_closed_shift=False):
+    from django.db import IntegrityError
+
     from fasas.pharmacy.services import unload_for_administration
 
     occurred_at = occurred_at or timezone.now()
+    # la terapia bloccata fino alla fine della transazione: due registrazioni contemporanee non si sovrappongono
+    therapy = Therapy.objects.select_for_update().select_related("guest", "drug").get(pk=therapy.pk)
+    limits = check_administration(therapy, user, scheduled_date=scheduled_date, scheduled_time=scheduled_time,
+                                  occurred_at=occurred_at, sos_reason=sos_reason, confirm_limits=confirm_limits,
+                                  limit_reason=limit_reason, allow_closed_shift=allow_closed_shift)
     administration = TherapyAdministration(
-        guest=therapy.guest, therapy=therapy, scheduled_date=scheduled_date, scheduled_time=scheduled_time,
+        guest=therapy.guest, therapy=therapy, scheduled_date=scheduled_date if not therapy.is_sos else None,
+        scheduled_time=scheduled_time if not therapy.is_sos else None,
         status=status, occurred_at=occurred_at, notes=notes, dose_given=dose_given or therapy.dose_display,
         is_sos=therapy.is_sos, sos_reason=sos_reason,
+        sos_limit_override=bool(limits), sos_limit_note=(" ".join(limits) + f" Motivo: {limit_reason.strip()}") if limits else "",
     )
     if therapy.is_sos:
         needs_validation = therapy.sos_requires_validation and not user.has_perm("clinical.validate_sos")
@@ -179,7 +272,11 @@ def register_administration(therapy, user, status=TherapyAdministration.Status.G
             administration.validation_status = TherapyAdministration.Validation.VALIDATED
             administration.validated_by = user
             administration.validated_at = timezone.now()
-    administration.save()
+    try:
+        with transaction.atomic():
+            administration.save()
+    except IntegrityError:
+        raise AdministrationError("Dose già registrata da un altro operatore in questo momento.", conflict=True) from None
 
     if status == TherapyAdministration.Status.GIVEN:
         unload_for_administration(administration, therapy.stock_units_per_dose, user)
@@ -213,6 +310,14 @@ def _after_sos(administration):
     from fasas.notifications.services import notify
     from fasas.protocols.engine import on_sos_administration
 
+    if administration.sos_limit_override:
+        notify(
+            "sos_validation",
+            f"SOS oltre i limiti della prescrizione: {administration.guest}",
+            f"{administration.therapy}: {administration.sos_limit_note}",
+            link=reverse("clinical:guest_administrations", args=[administration.guest_id]),
+            guest=administration.guest, level="warning", dedup_key=f"sos-limit-{administration.pk}",
+        )
     if administration.validation_status == TherapyAdministration.Validation.PENDING:
         notify(
             "sos_validation",

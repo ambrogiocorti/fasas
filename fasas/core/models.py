@@ -77,6 +77,10 @@ class SystemConfig(models.Model):
         DAILY = "A", "Modalità A – registrazione giornaliera SI/NO"
         ON_EVENT = "B", "Modalità B – registrazione solo quando avviene"
 
+    class SosLimitPolicy(models.TextChoices):
+        WARN = "warn", "Avviso: si procede solo con conferma e motivazione; il medico e il coordinatore sono avvisati"
+        BLOCK = "block", "Blocco: oltre il limite registra solo chi valida gli SOS (medico o coordinatore), con motivazione"
+
     class EditLockPolicy(models.TextChoices):
         WITHIN_WINDOW = "window", "Modificabile solo entro la finestra (poi bloccato)"
         AFTER_WINDOW_REASON = "reason", "Dopo la finestra modificabile con motivazione"
@@ -137,6 +141,10 @@ class SystemConfig(models.Model):
         "promemoria: stesso farmaco o principio attivo già in terapia", default=True)
     therapy_check_allergies = models.BooleanField(
         "promemoria: farmaco che contiene una sostanza registrata tra le allergie dell'ospite", default=True)
+    sos_limit_policy = models.CharField(
+        "limiti dei farmaci SOS (massimo nelle 24 ore, intervallo minimo)", max_length=10,
+        choices=SosLimitPolicy.choices, default=SosLimitPolicy.WARN,
+        help_text="Da decidere con il responsabile clinico della struttura: vale per web, telefono senza rete e API.")
     therapy_check_interactions = models.BooleanField(
         "promemoria: interazioni dalla tabella validata dal medico della struttura", default=False,
         help_text="Attivare solo dopo il parere sul regolamento dei dispositivi medici (docs/DISPOSITIVO_MEDICO.md).")

@@ -157,6 +157,8 @@ class TherapyAdministration(ShiftRecordModel):
     )
     validated_at = models.DateTimeField(null=True, blank=True)
     validation_notes = models.TextField("note validazione", blank=True)
+    sos_limit_override = models.BooleanField("SOS oltre i limiti della prescrizione", default=False)
+    sos_limit_note = models.TextField("limiti superati e motivazione", blank=True)
 
     class Meta(ShiftRecordModel.Meta):
         verbose_name = "somministrazione"

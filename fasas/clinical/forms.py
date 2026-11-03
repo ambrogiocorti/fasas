@@ -94,7 +94,10 @@ class SOSAdministrationForm(forms.Form):
     sos_reason = forms.CharField(label="Motivo della somministrazione", widget=forms.Textarea(attrs={"rows": 3}))
     dose_given = forms.CharField(label="Dose somministrata", required=False)
     notes = forms.CharField(label="Note", required=False, widget=forms.Textarea(attrs={"rows": 2}))
-    confirm_limits = forms.BooleanField(label="Confermo nonostante gli avvisi", required=False)
+    confirm_limits = forms.BooleanField(label="Confermo nonostante i limiti della prescrizione", required=False)
+    limit_reason = forms.CharField(label="Motivo per superare i limiti", required=False,
+                                   widget=forms.Textarea(attrs={"rows": 2}),
+                                   help_text="Obbligatorio solo se i limiti della prescrizione sono superati.")
 
     def __init__(self, *args, guest=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -110,8 +113,6 @@ class SOSAdministrationForm(forms.Form):
             from .services import sos_limits_warnings
 
             self.limit_warnings = sos_limits_warnings(therapy, cleaned.get("occurred_at"))
-            if self.limit_warnings and not cleaned.get("confirm_limits"):
-                raise forms.ValidationError("Attenzione ai limiti di somministrazione SOS: confermare per procedere.")
         return cleaned
 
 
