@@ -126,6 +126,17 @@ jobs:
           sudo python3 .github/ci/prova_prepara_server.py . '[["Attivo il firewall", "n"], ["Riavvio automatico", "n"]]'
           sudo sha256sum .env | diff - /tmp/env-prima
           sudo docker compose exec -T web python manage.py fasas_chiavi verifica
+      - name: Disco di continuità (disco virtuale al posto dell'SSD USB)
+        run: |
+          truncate -s 4G /tmp/disco-continuita.img
+          DEV=$(sudo losetup -f --show /tmp/disco-continuita.img)
+          sudo ./scripts/disco_continuita.sh --prepara "$DEV" --si
+          sudo grep -q '^FASAS_CONTINUITY_DIR=/continuita$' .env
+          sudo docker compose up -d --wait
+          sudo docker compose exec -T worker python manage.py fasas_jobs continuity
+          sudo ./scripts/disco_continuita.sh --stato
+          sudo find /srv/fasas-continuita/database -name 'fasas-continua-*.fbk' | grep -q .
+          sudo docker compose exec -T web python manage.py fasas_ripristina_continuita --elenca | grep -q fasas-continua-
       - name: Log in caso di errore
         if: failure()
         run: sudo docker compose logs --tail 100

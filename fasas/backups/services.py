@@ -95,6 +95,38 @@ def _media_tar(workdir):
     return target
 
 
+def build_archive(workdir, created_at, include_media=True):
+    """Archivio tar.gz in chiaro con manifest e impronte (database, file, punti di controllo dell'audit)."""
+    audit_entries = AuditLog.objects.count()
+    db_file, db_format = _dump_database(workdir)
+    parts = [db_file]
+    if include_media:
+        parts.append(_media_tar(workdir))
+    checkpoints = workdir / "audit-punti-di-controllo.csv"
+    checkpoints.write_text(export_lines(), encoding="utf-8")
+    parts.append(checkpoints)
+    manifest = {
+        "application": "FASAS Digitale",
+        "version": __version__,
+        "created_at": created_at.isoformat(),
+        "db_format": db_format,
+        "db_vendor": connection.vendor,
+        "audit_entries_before_dump": audit_entries,
+        # numeri interni dei tipi di oggetto: il ripristino JSON li riporta uguali (vedi _align_content_types)
+        "content_types": list(ContentType.objects.order_by("pk").values_list("pk", "app_label", "model")),
+        "files": {p.name: {"sha256": _sha256_file(p), "size": p.stat().st_size} for p in parts},
+    }
+    archive = workdir / "backup.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        data = json.dumps(manifest, indent=2).encode()
+        info = tarfile.TarInfo("manifest.json")
+        info.size = len(data)
+        tar.addfile(info, io.BytesIO(data))
+        for part in parts:
+            tar.add(part, arcname=part.name)
+    return archive, db_format
+
+
 def create_backup(kind=BackupRecord.Kind.AUTO, user=None, include_media=True):
     backup_dir = Path(settings.FASAS_BACKUP_DIR)
     backup_dir.mkdir(parents=True, exist_ok=True)
@@ -104,34 +136,7 @@ def create_backup(kind=BackupRecord.Kind.AUTO, user=None, include_media=True):
     filename = f"fasas-backup-{stamp}-{record.pk}.fbk"
     try:
         with tempfile.TemporaryDirectory(prefix="fasas-backup-") as tmp:
-            workdir = Path(tmp)
-            audit_entries = AuditLog.objects.count()
-            db_file, db_format = _dump_database(workdir)
-            parts = [db_file]
-            if include_media:
-                parts.append(_media_tar(workdir))
-            checkpoints = workdir / "audit-punti-di-controllo.csv"
-            checkpoints.write_text(export_lines(), encoding="utf-8")
-            parts.append(checkpoints)
-            manifest = {
-                "application": "FASAS Digitale",
-                "version": __version__,
-                "created_at": record.created_at.isoformat(),
-                "db_format": db_format,
-                "db_vendor": connection.vendor,
-                "audit_entries_before_dump": audit_entries,
-                # numeri interni dei tipi di oggetto: il ripristino JSON li riporta uguali (vedi _align_content_types)
-                "content_types": list(ContentType.objects.order_by("pk").values_list("pk", "app_label", "model")),
-                "files": {p.name: {"sha256": _sha256_file(p), "size": p.stat().st_size} for p in parts},
-            }
-            archive = workdir / "backup.tar.gz"
-            with tarfile.open(archive, "w:gz") as tar:
-                data = json.dumps(manifest, indent=2).encode()
-                info = tarfile.TarInfo("manifest.json")
-                info.size = len(data)
-                tar.addfile(info, io.BytesIO(data))
-                for part in parts:
-                    tar.add(part, arcname=part.name)
+            archive, db_format = build_archive(Path(tmp), record.created_at, include_media)
             target = backup_dir / filename
             with open(archive, "rb") as src, open(target, "wb") as dst:
                 encrypt_stream(src, dst)

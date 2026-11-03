@@ -22,6 +22,7 @@ JOBS = {
     "reports": ("fasas.reports.services.run_due_schedules", "Generazione report programmati"),
     "report_retention": ("fasas.reports.services.purge_expired_reports", "Eliminazione report oltre la conservazione"),
     "backup": ("fasas.backups.services.scheduled_backup", "Backup cifrato giornaliero e verifica"),
+    "continuity": ("fasas.backups.continuity.continuous_copy", "Copia continua sul disco esterno (ogni 5 minuti)"),
     "audit_verify": ("fasas.audit.services.scheduled_chain_verification", "Verifica integrità audit log"),
     "restore_test": ("fasas.backups.restore_test.scheduled_restore_test", "Prova di ripristino con verbale (trimestrale)"),
     "imports_cleanup": ("fasas.imports.documents.cleanup_stale", "Cancellazione dei file di importazioni non confermate"),
@@ -37,7 +38,7 @@ def run_job(name):
     job_started(name)
     try:
         with config_scope(), audit_context(user=None, ip="", reason="", source=f"job:{name}"):
-            if name in ("backup", "restore_test"):  # gestiscono da sé le transazioni: niente transazione lunga
+            if name in ("backup", "restore_test", "continuity"):  # gestiscono da sé le transazioni: niente transazione lunga
                 result = func()
             else:
                 with transaction.atomic():

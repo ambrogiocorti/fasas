@@ -27,7 +27,7 @@ NOTIFY_AT = {1, 10, 100, 1000}
 JOB_INTERVALS = {
     "close_shifts": 15, "protocols": 30, "appointments": 60, "stock": 12 * 60, "documents": 24 * 60,
     "pai_reviews": 24 * 60, "assessments": 24 * 60, "wounds": 24 * 60, "reports": 24 * 60,
-    "report_retention": 24 * 60, "backup": 24 * 60,
+    "report_retention": 24 * 60, "backup": 24 * 60, "continuity": 5,
     "audit_verify": 24 * 60, "imports_cleanup": 24 * 60, "cie_cleanup": 10, "restore_test": 95 * 24 * 60,
 }
 
@@ -178,6 +178,17 @@ def checks():
         ok = copied is not None and copied.offsite_at > now - datetime.timedelta(hours=26)
         results.append(("backup_fuori_sede", "ok" if ok else "warning",
                         "copia delle ultime 26 ore presente" if ok else "nessuna copia fuori sede nelle ultime 26 ore"))
+
+    from fasas.backups import continuity
+
+    if continuity.is_configured():
+        last = continuity.last_copy()
+        if last is None:
+            results.append(("copia_continua", "warning", "disco di continuità non collegato o nessuna copia"))
+        elif last < now - datetime.timedelta(minutes=20):
+            results.append(("copia_continua", "warning", f"ultima copia {timezone.localtime(last):%d/%m %H:%M}"))
+        else:
+            results.append(("copia_continua", "ok", f"ultima copia {timezone.localtime(last):%H:%M}"))
 
     checkpoint = AuditCheckpoint.objects.first()
     if checkpoint is None or checkpoint.created_at < now - datetime.timedelta(hours=26):

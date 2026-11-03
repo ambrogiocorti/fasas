@@ -182,8 +182,11 @@ def evacuation_documentation(guest, today=None):
     today = today or timezone.localdate()
     days, last = days_since_last_evacuation(guest, today)
     reference = today - datetime.timedelta(days=days)
-    negatives = set(EvacuationRecord.objects.filter(guest=guest, outcome=False, shift_date__gt=reference)
-                    .values_list("shift_date", flat=True))
+    # giorni di calendario, come il conteggio dall'ultima evacuazione (non la giornata di turno: un «non avvenuta»
+    # registrato dopo mezzanotte vale per il giorno appena iniziato)
+    since = timezone.make_aware(datetime.datetime.combine(reference + datetime.timedelta(days=1), datetime.time.min))
+    negatives = {timezone.localtime(moment).date() for moment in EvacuationRecord.objects.filter(
+        guest=guest, outcome=False, occurred_at__gte=since).values_list("occurred_at", flat=True)}
     return days, last, evacuation_days(reference, today, negatives, list(guest.admission_events.all()))
 
 
@@ -209,9 +212,10 @@ def evacuation_overview(guests, today=None):
     # «non avvenuta» e movimenti di tutti gli ospiti con una lettura ciascuno
     since = min((ref for ref, _ in references.values()), default=today)
     negatives, events = {}, {}
-    for guest_id, day in EvacuationRecord.objects.filter(guest__in=guests, outcome=False, shift_date__gt=since) \
-            .values_list("guest_id", "shift_date"):
-        negatives.setdefault(guest_id, set()).add(day)
+    start = timezone.make_aware(datetime.datetime.combine(since + datetime.timedelta(days=1), datetime.time.min))
+    for guest_id, moment in EvacuationRecord.objects.filter(guest__in=guests, outcome=False, occurred_at__gte=start) \
+            .values_list("guest_id", "occurred_at"):
+        negatives.setdefault(guest_id, set()).add(timezone.localtime(moment).date())  # giorno di calendario
     from fasas.guests.models import AdmissionEvent
 
     for event in AdmissionEvent.objects.filter(guest__in=guests):

@@ -42,6 +42,7 @@ Internet ──► router della struttura ──(solo porte 80 e 443)──► P
 | 10 | **Locale chiuso per il server** | ventilato, vicino al router, con presa elettrica | Non in corridoio né in sala comune |
 | 11 | **Gestore di password** | gratuito: Bitwarden (piano free) o KeePassXC | Per password e frasi segrete dei passi 4, 5, 7, 11 e 13 |
 | 12 | **Account gratuiti** a nome della struttura | DuckDNS (passo 7), Backblaze B2 (passo 13), servizio di controllo (passo 16) | Usare un indirizzo email della struttura, non personale, e attivare la verifica in due passaggi anche lì |
+| 13 | **SSD esterno USB per la copia continua** | 500 GB–1 TB, USB 3 | Resta **sempre collegato** al server: copia ogni 5 minuti (passo 14b). Diverso dal disco B |
 
 Facoltativo ma consigliato: **gruppo di continuità (UPS)** per il server e il router, così un calo di corrente
 non spegne nulla.
@@ -57,11 +58,12 @@ dell'acquisto.
 | *oppure* mini-PC nuovo (es. Intel N100, 16 GB, SSD 512 GB) | come sopra | 150–220 € |
 | Chiavetta USB 16–32 GB | se non ne avete una libera | 5–10 € |
 | Disco esterno USB 1 TB | se non ne avete uno libero | 50–70 € |
+| SSD esterno USB 500 GB–1 TB per la copia continua (sempre collegato) | consigliato | 50–90 € |
 | Cavo di rete cat. 6 (2–10 m) | se il router è lontano | 5–10 € |
 | Gruppo di continuità «line-interactive» con AVR e porta USB, 650–900 VA (es. Eaton 5E Gen2 900 USB, versione con prese Schuko «5E900UD»; con più garanzie su Linux Eaton Ellipse PRO 650 DIN) | facoltativo, consigliato | 80–110 € (fino a circa 220 €) |
 
 **Totale**: 0 € se avete già tutto; **circa 60–90 €** se avete già un PC; **circa 240–380 €** comprando anche
-mini-PC ricondizionato e gruppo di continuità.
+mini-PC ricondizionato e gruppo di continuità; **circa 290–470 €** con anche l'SSD della copia continua (consigliato).
 
 Software e servizi, tutti **0 €**: Ubuntu Server, Docker Engine, Caddy, PostgreSQL, certificati Let's Encrypt,
 DuckDNS, Backblaze B2 fino a 10 GB, app di autenticazione, FASAS Digitale.
@@ -253,6 +255,22 @@ Nel pannello del router:
 
 L'aggiornamento dell'IP quando cambia lo installa lo script al passo 9 (controllo ogni 5 minuti).
 
+### Passo 7b. Il FASAS in struttura anche quando cade internet
+
+Senza questo passo, se cade la linea internet anche i tablet in struttura non trovano più il FASAS (cercano il
+nome su internet) e passano alla modalità senza rete. Con il **DNS locale** del router il nome porta direttamente
+al server dentro la struttura: il FASAS resta utilizzabile normalmente in reparto anche senza internet.
+
+1. Nel pannello del router, sezione DNS («DNS locale», «Host name mapping», «Nomi host statici»), associare il
+   nome del passo 7 (es. `casarosa-fasas.duckdns.org`) all'indirizzo fisso del server (es. `192.168.1.50`).
+2. Se il router non ha questa funzione: sui PC fissi della struttura aggiungere al file `hosts` la riga
+   `192.168.1.50 casarosa-fasas.duckdns.org` (vedi «Problemi frequenti»); per i tablet valutare con chi gestisce
+   la rete un router che la offra, perché sui tablet il file `hosts` non si può modificare.
+3. **Prova** (dopo il passo 9): staccare il cavo della linea internet dal router per un paio di minuti e aprire
+   il FASAS da un tablet collegato al Wi-Fi della struttura: deve aprirsi con il lucchetto. Riattaccare il cavo.
+
+Da fuori struttura, ovviamente, senza la linea internet il FASAS non è raggiungibile.
+
 ---
 
 ## Parte D – FASAS
@@ -439,6 +457,55 @@ cd /opt/fasas && sudo ./scripts/copia_backup_usb.sh /dev/sdb1
 3. Scollegare il disco e portarlo **in un altro luogo** (sede amministrativa, cassaforte della direzione): mai
    nella stessa stanza del server. Annotare data e firma su un registro.
 
+### Passo 14b. Disco di continuità: copia ogni 5 minuti
+
+Il backup della notte, da solo, fa perdere tutto ciò che è stato registrato dopo, se il disco del server si
+guasta. Un **SSD esterno sempre collegato** al server (oggetto 13 della lista) riceve ogni 5 minuti una copia
+cifrata del database e i file nuovi: con un guasto si perdono al massimo pochi minuti di registrazioni.
+È un disco diverso da quello mensile del passo 14, che resta scollegato in un altro luogo.
+
+1. Collegare l'SSD a una porta USB del server e trovarne il nome (es. `/dev/sdc`, il **disco**, non `sdc1`):
+
+```bash
+cd /opt/fasas && sudo ./scripts/disco_continuita.sh --elenca
+```
+
+2. Prepararlo, **una volta sola** (cancella il contenuto del disco: lo script chiede di scrivere CANCELLA):
+
+```bash
+cd /opt/fasas && sudo ./scripts/disco_continuita.sh --prepara /dev/sdc
+```
+
+```bash
+cd /opt/fasas && sudo docker compose up -d
+```
+
+3. Dopo 5 minuti controllare: deve dire «disco collegato» e mostrare l'ora dell'ultima copia.
+
+```bash
+cd /opt/fasas && sudo ./scripts/disco_continuita.sh --stato
+```
+
+   Anche *Impostazioni › Stato del sistema ed errori* mostra la riga «copia continua».
+
+Se il disco viene scollegato o si guasta, il FASAS continua a funzionare ma l'amministratore riceve un avviso
+critico e la riga «copia continua» diventa gialla. Dopo averlo ricollegato:
+
+```bash
+cd /opt/fasas && sudo ./scripts/disco_continuita.sh --rimonta
+```
+
+**Se si guasta il server**: su un PC nuovo si fa l'installazione (passi 4–10) con il file `.env` della busta
+delle chiavi, si collega l'SSD, si ripete il passo 14b **senza** `--prepara` (basta `--rimonta`) e si ripristina
+l'ultima copia:
+
+```bash
+cd /opt/fasas && sudo docker compose run --rm web python manage.py fasas_ripristina_continuita --confirm
+```
+
+L'SSD sta nello stesso locale del server: non protegge da furto, incendio o virus che cifra i dischi collegati.
+Per questi restano la copia fuori sede (passo 13) e quella mensile (passo 14).
+
 ---
 
 ## Parte F – Sicurezza, controllo e manutenzione
@@ -481,7 +548,8 @@ il primo giorno di gennaio, aprile, luglio e ottobre.
 |---|---|---|
 | Ogni giorno | niente: backup, verifiche e aggiornamenti sono automatici. Leggere le notifiche del FASAS | — |
 | Ogni settimana | *Impostazioni › Stato del sistema ed errori*: controlli tutti verdi | 2 min |
-| Ogni mese | copia su disco USB (passo 14); in Backblaze lo spazio usato resta sotto 9 GB | 10 min |
+| Ogni mese | copia su disco USB (passo 14); in Backblaze lo spazio usato resta sotto 9 GB; `disco_continuita.sh --stato` | 10 min |
+| Ogni 6 mesi | prova del gruppo di continuità: staccare la spina e misurare quanto restano accesi server e router; prova di un turno con la modalità senza rete e il foglio di emergenza (docs/PIANO_DI_CONTINUITA.md) | 1 ora |
 | Ogni 3 mesi | stampare e firmare il verbale della prova di ripristino automatica | 5 min |
 | Ogni anno | provare la busta delle chiavi (sotto); togliere gli utenti di chi non lavora più; controllare la batteria del gruppo di continuità; spolverare il server; controllare che il router abbia l'ultimo aggiornamento | 1 ora |
 

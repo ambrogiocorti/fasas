@@ -217,6 +217,10 @@ FASAS_ENCRYPTION_KEYS = [k.strip() for k in env_secret("FASAS_ENCRYPTION_KEYS").
 FASAS_BACKUP_KEY = env_secret("FASAS_BACKUP_KEY")
 FASAS_BACKUP_DIR = Path(os.environ.get("FASAS_BACKUP_DIR", BASE_DIR / "backups"))
 # Copia fuori sede su object storage compatibile S3 in UE, con blocco delle modifiche (docs/BACKUP.md)
+# Disco di continuità: SSD esterno sempre collegato, copia cifrata ogni 5 minuti (docs/BACKUP.md)
+FASAS_CONTINUITY_DIR = os.environ.get("FASAS_CONTINUITY_DIR", "")
+FASAS_CONTINUITY_KEEP_HOURS = int(os.environ.get("FASAS_CONTINUITY_KEEP_HOURS", "24"))
+FASAS_CONTINUITY_KEEP_DAYS = int(os.environ.get("FASAS_CONTINUITY_KEEP_DAYS", "7"))
 FASAS_OFFSITE_ENDPOINT = os.environ.get("FASAS_OFFSITE_ENDPOINT", "")  # es. https://s3.<regione>.<fornitore>
 FASAS_OFFSITE_REGION = os.environ.get("FASAS_OFFSITE_REGION", "")
 FASAS_OFFSITE_BUCKET = os.environ.get("FASAS_OFFSITE_BUCKET", "")

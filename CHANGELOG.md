@@ -81,7 +81,20 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
 - README senza sezioni ripetute; una sola guida d'installazione (in struttura, con Docker); Supabase fuori dal
   percorso principale (`.env.example` e docs/DEPLOY.md); roadmap aggiornata con Backblaze B2 e le nuove funzioni.
 
+### Continuità
+- Disco di continuità: un SSD esterno sempre collegato riceve ogni 5 minuti una copia cifrata del database e i file
+  nuovi; con un guasto del server si perdono al massimo pochi minuti di registrazioni. Se il disco manca la copia
+  si ferma senza scrivere sul disco interno, l'amministratore riceve un avviso e `/salute/` lo segnala.
+  Preparazione con `scripts/disco_continuita.sh` (provato nella CI con un disco virtuale), ripristino con
+  `manage.py fasas_ripristina_continuita`.
+- Guida: FASAS raggiungibile in struttura anche senza linea internet (DNS locale del router, passo 7b) e prova
+  semestrale del gruppo di continuità e del lavoro senza rete.
+- Piano di continuità per l'ATS (docs/PIANO_DI_CONTINUITA.md): chi fa cosa per ogni tipo di interruzione,
+  ritorno alla normalità, prove e registro delle interruzioni.
+
 ### Correzioni
+- Evacuazioni: un «non avvenuta» registrato dopo mezzanotte ora vale per il giorno appena iniziato (prima veniva
+  attribuito alla notte del giorno precedente e il conteggio dei giorni non documentati sbagliava di uno).
 - Un backup in formato JSON (installazioni con SQLite) su PostgreSQL ora è rifiutato con un messaggio chiaro: prima
   il ripristino si fermava a metà sul blocco dell'audit in sola aggiunta. Test su PostgreSQL di nuovo verdi.
 

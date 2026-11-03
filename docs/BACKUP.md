@@ -15,6 +15,21 @@ ne lascia il verbale.
 Con cron al posto di Celery: `python manage.py fasas_jobs audit_verify backup` ogni notte e
 `python manage.py backup_prova_ripristino` ogni tre mesi.
 
+## Copia continua sul disco di continuità (ogni 5 minuti)
+
+Un SSD esterno sempre collegato al server riceve ogni 5 minuti una copia del database nello stesso formato
+cifrato dei backup (solo database) e i file nuovi o cambiati (già cifrati). Si attiva con
+`scripts/disco_continuita.sh --prepara`, che formatta il disco, lo monta a ogni avvio, scrive il file marcatore
+`.fasas-continuita` e imposta `FASAS_CONTINUITY_DIR` nel `.env`.
+
+- Conservazione: tutte le copie delle ultime 24 ore, poi una per ora per 7 giorni (`FASAS_CONTINUITY_KEEP_HOURS`,
+  `FASAS_CONTINUITY_KEEP_DAYS`).
+- Disco scollegato: la cartella resta senza marcatore, la copia si ferma senza scrivere sul disco interno,
+  l'amministratore riceve un avviso critico (al massimo uno all'ora) e `/salute/` segnala «copia_continua».
+- Ripristino: `manage.py fasas_ripristina_continuita --elenca` mostra le copie; `--confirm` ripristina l'ultima
+  (o quella indicata con `--file`) e i file.
+- Non sostituisce la copia fuori sede: l'SSD è nello stesso locale del server.
+
 ## Copia fuori sede (object storage compatibile S3, in UE)
 
 1. Scegliere un fornitore con data center in UE che supporti **Object Lock** (contratto art. 28; il fornitore

@@ -16,6 +16,8 @@ x-app: &app
     FASAS_TRUSTED_PROXY_COUNT: "1"
   volumes:
     - fasas-data:/data
+    # disco di continuità (SSD esterno sempre collegato): preparato con scripts/disco_continuita.sh
+    - ${FASAS_CONTINUITY_HOST_DIR:-/srv/fasas-continuita}:/continuita
   restart: unless-stopped
   depends_on:
     db:
@@ -50,6 +52,7 @@ services:
     volumes:
       - fasas-data:/data
       - fasas-static:/static
+      - ${FASAS_CONTINUITY_HOST_DIR:-/srv/fasas-continuita}:/continuita
 
   worker:
     <<: *app
