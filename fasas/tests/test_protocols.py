@@ -1,13 +1,15 @@
 import datetime
 from decimal import Decimal
 
+from django.urls import reverse
 from django.utils import timezone
 
 from fasas.clinical.models import ClinicalEvent, ParameterReading, ParameterType
 from fasas.clinical.services import register_administration
 from fasas.daily.models import EvacuationRecord
+from fasas.protocols import engine
 from fasas.protocols.engine import run_periodic_checks
-from fasas.protocols.models import Protocol, ProtocolActivation
+from fasas.protocols.models import Protocol, ProtocolActionLog, ProtocolActivation
 
 from .base import FasasTestCase
 
@@ -113,9 +115,61 @@ class ProtocolValidationTests(FasasTestCase):
         self.login(self.coordinator)
         self.client.post(reverse("protocols:update", args=[protocol.pk]), {
             "name": protocol.name, "kind": protocol.kind, "description": protocol.description,
-            "params": '{"threshold": 38.0, "parameter": "temperatura"}', "actions": protocol.actions,
+            "p_fever_threshold": "38.0", "p_fever_parameter": "temperatura", "actions": protocol.actions,
             "severity": protocol.severity, "applies_to_all": "on", "active": "on"})
         protocol.refresh_from_db()
         self.assertEqual(protocol.params["threshold"], 38.0)
         self.assertFalse(protocol.is_validated)
         self.assertFalse(protocol.applies_to(self.guest))
+
+
+class GuidedProtocolEditorTests(FasasTestCase):
+    """Report di analisi, P1: parametri guidati con controlli di dominio, azioni confermate una volta sola."""
+
+    def form_data(self, **extra):
+        data = {"name": "Febbre alta", "kind": "fever", "description": "", "actions": "Avvisare il medico\nRinfrescare",
+                "severity": "warning", "applies_to_all": "on", "active": "on",
+                "p_fever_threshold": "38.5", "p_fever_parameter": "temperatura"}
+        data.update(extra)
+        return data
+
+    def test_typed_parameters_are_saved_without_json(self):
+        self.login(self.coordinator)
+        page = self.client.get(reverse("protocols:create") + "?kind=fever")
+        self.assertNotContains(page, "JSON")
+        self.assertContains(page, 'data-protocol-kind="glycemia"')
+        self.client.post(reverse("protocols:create"), self.form_data())
+        protocol = Protocol.objects.get(name="Febbre alta")
+        self.assertEqual(protocol.params, {"threshold": 38.5, "parameter": "temperatura"})
+
+    def test_out_of_range_and_inconsistent_values_are_refused(self):
+        self.login(self.coordinator)
+        response = self.client.post(reverse("protocols:create"), self.form_data(p_fever_threshold="45"))
+        self.assertContains(response, "minore o uguale a 41")
+        response = self.client.post(reverse("protocols:create"), self.form_data(
+            kind="glycemia", p_glycemia_min="140", p_glycemia_max="120", p_glycemia_parameter="glicemia"))
+        self.assertContains(response, "deve superare la minima")
+        self.assertFalse(Protocol.objects.filter(name="Febbre alta").exists())
+
+    def _activation(self):
+        protocol = Protocol.objects.create(name="Prova", kind="seizure", actions="Somministrare SOS\nAvvisare il medico",
+                                           params={"min_duration_minutes": 0}, validated_by="Medico",
+                                           validated_at=timezone.now())
+        return engine.activate(protocol, self.guest, "Crisi di prova")[0]
+
+    def test_only_listed_actions_once(self):
+        activation = self._activation()
+        self.login(self.operator)
+        url = reverse("protocols:action_done", args=[activation.pk])
+        self.client.post(url, {"action_label": "Azione inventata", "notes": ""})
+        self.assertFalse(ProtocolActionLog.objects.exists())
+        self.client.post(url, {"action_label": "Somministrare SOS", "notes": "ok"})
+        response = self.client.post(url, {"action_label": "Somministrare SOS", "notes": "di nuovo"}, follow=True)
+        self.assertContains(response, "già confermata")
+        self.assertEqual(ProtocolActionLog.objects.count(), 1)
+
+    def test_actions_of_the_moment_are_kept(self):
+        activation = self._activation()
+        Protocol.objects.filter(pk=activation.protocol_id).update(actions="Nuova azione")
+        activation.refresh_from_db()
+        self.assertEqual(activation.action_labels, ["Somministrare SOS", "Avvisare il medico"])

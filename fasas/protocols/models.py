@@ -89,6 +89,18 @@ class Protocol(TimeStampedModel):
     def action_list(self):
         return [line.strip() for line in self.actions.splitlines() if line.strip()]
 
+    def params_display(self):
+        """Parametri in parole, per chi deve validarli (niente JSON)."""
+        from .forms import PARAM_FIELDS
+
+        parts = []
+        for key, label, *_ in PARAM_FIELDS.get(self.kind, []):
+            value = self.param(key)
+            if isinstance(value, float):
+                value = f"{value:g}".replace(".", ",")
+            parts.append(f"{label}: {value}")
+        return " · ".join(parts)
+
     def param(self, key):
         value = (self.params or {}).get(key)
         if value is None:
@@ -126,6 +138,8 @@ class ProtocolActivation(models.Model):
                                     related_name="+")
     resolution_notes = models.TextField("esito / note di chiusura", blank=True)
     auto_resolved = models.BooleanField("risolto automaticamente", default=False)
+    # Azioni richieste al momento dell'attivazione: se il protocollo cambia dopo, restano quelle di allora
+    actions = models.JSONField("azioni richieste all'attivazione", default=list, blank=True)
 
     class Meta:
         verbose_name = "attivazione protocollo"
@@ -142,9 +156,13 @@ class ProtocolActivation(models.Model):
     def is_open(self):
         return self.status in self.OPEN_STATES
 
+    @property
+    def action_labels(self):
+        return list(self.actions) or self.protocol.action_list  # le attivazioni precedenti non hanno l'istantanea
+
     def actions_status(self):
         done = {log.action_label: log for log in self.action_logs.all()}
-        return [{"label": label, "log": done.get(label)} for label in self.protocol.action_list]
+        return [{"label": label, "log": done.get(label)} for label in self.action_labels]
 
 
 class ProtocolActionLog(models.Model):
@@ -158,6 +176,7 @@ class ProtocolActionLog(models.Model):
         verbose_name = "azione eseguita"
         verbose_name_plural = "azioni eseguite"
         ordering = ["done_at"]
+        constraints = [models.UniqueConstraint(fields=["activation", "action_label"], name="unique_protocol_action")]
 
     def __str__(self):
         return self.action_label

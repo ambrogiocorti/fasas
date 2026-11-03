@@ -391,3 +391,18 @@
     refresh();
   }
 })();
+
+// Protocolli: mostra solo i parametri del tipo scelto (senza JavaScript restano visibili tutti, con il tipo nel nome)
+(function () {
+  const kind = document.querySelector('select[name="kind"]');
+  const fields = document.querySelectorAll('[data-protocol-kind]');
+  if (!kind || !fields.length) return;
+  const sync = () => fields.forEach((el) => {
+    const box = el.closest('.field') || el.parentElement;
+    const on = el.dataset.protocolKind === kind.value;
+    box.hidden = !on;
+    el.disabled = !on;
+  });
+  kind.addEventListener('change', sync);
+  sync();
+})();

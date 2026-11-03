@@ -41,7 +41,8 @@ def activate(protocol, guest, summary, data=None):
         return open_activation, False
 
     activation = ProtocolActivation.objects.create(
-        protocol=protocol, guest=guest, trigger_summary=summary[:255], trigger_data=data or {}
+        protocol=protocol, guest=guest, trigger_summary=summary[:255], trigger_data=data or {},
+        actions=protocol.action_list,
     )
     actions = "\n".join(f"• {a}" for a in protocol.action_list)
     notify(
@@ -137,16 +138,17 @@ def on_evacuation(record):
 # --- Controlli periodici -----------------------------------------------------------------
 
 def check_evacuation(guest, today=None):
-    from fasas.daily.services import days_since_last_evacuation
+    from fasas.daily.services import describe_evacuation_days, evacuation_documentation
 
     activations = []
-    days, last = days_since_last_evacuation(guest, today)
+    days, last, counts = evacuation_documentation(guest, today)
     for protocol in _protocols(Protocol.Kind.EVACUATION, guest):
         threshold = int(protocol.param("days"))
         if days >= threshold:
             last_text = f"ultima il {timezone.localtime(last.occurred_at):%d/%m/%Y}" if last else "nessuna registrata"
-            activation, _ = activate(protocol, guest, f"Nessuna evacuazione da {days} giorni ({last_text})",
-                                     {"days": days})
+            detail = describe_evacuation_days(counts)
+            summary = f"Nessuna evacuazione registrata da {days} giorni ({last_text}){': ' + detail if detail else ''}"
+            activation, _ = activate(protocol, guest, summary, {"days": days, **counts})
             activations.append(activation)
     return activations
 

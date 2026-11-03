@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -40,7 +41,8 @@ class ProtocolUpdateView(PermRequiredMixin, FormPageMixin, UpdateView):
         return f"Protocollo: {self.object}"
 
     def form_valid(self, form):
-        if set(form.changed_data) & set(Protocol.CLINICAL_FIELDS) and form.instance.is_validated:
+        clinical_change = set(form.changed_data) & set(Protocol.CLINICAL_FIELDS) or form.params_changed
+        if clinical_change and form.instance.is_validated:
             form.instance.validated_by, form.instance.validated_by_user, form.instance.validated_at = "", None, None
             messages.warning(self.request, "Soglie o azioni cambiate: il protocollo va validato di nuovo dal medico "
                                            "e fino ad allora non si attiva.")
@@ -88,17 +90,24 @@ def activation_detail(request, pk):
 @require_POST
 @permission_required("protocols.change_protocolactivation", raise_exception=True)
 def action_done(request, pk):
-    activation = get_object_or_404(ProtocolActivation, pk=pk)
     form = ActionDoneForm(request.POST)
-    if activation.is_open and form.is_valid():
-        ProtocolActionLog.objects.create(
-            activation=activation, action_label=form.cleaned_data["action_label"][:255],
-            done_by=request.user, notes=form.cleaned_data["notes"],
-        )
-        if activation.status == ProtocolActivation.Status.OPEN:
-            activation.status = ProtocolActivation.Status.IN_PROGRESS
-            activation.save(update_fields=["status"])
-        messages.success(request, "Azione registrata.")
+    with transaction.atomic():
+        activation = get_object_or_404(ProtocolActivation.objects.select_for_update(), pk=pk)
+        label = form.cleaned_data["action_label"] if form.is_valid() else ""
+        done = activation.action_logs.filter(action_label=label).select_related("done_by").first()
+        if not activation.is_open:
+            messages.error(request, "Il protocollo è già chiuso.")
+        elif label not in activation.action_labels:
+            messages.error(request, "Azione non prevista da questo protocollo: non registrata.")
+        elif done:
+            messages.warning(request, f"Azione già confermata da {done.done_by} alle {timezone.localtime(done.done_at):%H:%M}.")
+        else:
+            ProtocolActionLog.objects.create(activation=activation, action_label=label, done_by=request.user,
+                                             notes=form.cleaned_data["notes"])
+            if activation.status == ProtocolActivation.Status.OPEN:
+                activation.status = ProtocolActivation.Status.IN_PROGRESS
+                activation.save(update_fields=["status"])
+            messages.success(request, "Azione registrata.")
     return redirect(activation.get_absolute_url())
 
 

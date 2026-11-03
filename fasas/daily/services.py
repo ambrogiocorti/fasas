@@ -122,6 +122,71 @@ def days_since_last_evacuation(guest, today=None):
     return (today - reference).days, last
 
 
+def _absence_days(events, first, last):
+    """Giorni tra first e last (inclusi) in cui l'ospite era ricoverato o in famiglia (movimenti dell'ospite)."""
+    from fasas.guests.models import AdmissionEvent
+
+    away, start = set(), None
+    for event in sorted(events, key=lambda e: (e.date, e.created_at)):
+        if event.kind in (AdmissionEvent.Kind.HOSPITALIZATION, AdmissionEvent.Kind.ABSENCE):
+            start = start or event.date
+        elif event.kind in (AdmissionEvent.Kind.RETURN, AdmissionEvent.Kind.ADMISSION) and start:
+            day = start
+            while day < event.date:  # il giorno del rientro l'ospite è di nuovo in struttura
+                away.add(day)
+                day += datetime.timedelta(days=1)
+            start = None
+    if start:
+        day = start
+        while day <= last:
+            away.add(day)
+            day += datetime.timedelta(days=1)
+    return {d for d in away if first <= d <= last}
+
+
+def evacuation_days(reference, today, negatives, events):
+    """
+    Dall'ultima evacuazione a ieri (giornate concluse), quanti giorni sono: «non avvenuta» (registrato NO),
+    «non documentata» (nessuna registrazione: può essere una dimenticanza) o di assenza dalla struttura.
+    """
+    first, last = reference + datetime.timedelta(days=1), today - datetime.timedelta(days=1)
+    counts = {"not_occurred": 0, "missing": 0, "absent": 0}
+    if first > last:
+        return counts
+    away = _absence_days(events, first, last)
+    day = first
+    while day <= last:
+        if day in away:
+            counts["absent"] += 1
+        elif day in negatives:
+            counts["not_occurred"] += 1
+        else:
+            counts["missing"] += 1
+        day += datetime.timedelta(days=1)
+    return counts
+
+
+def describe_evacuation_days(counts):
+    parts = []
+    if counts["not_occurred"]:
+        parts.append(f"{counts['not_occurred']} verificat{'o' if counts['not_occurred'] == 1 else 'i'} «non avvenuta»")
+    if counts["missing"]:
+        parts.append(f"{counts['missing']} non documentat{'o' if counts['missing'] == 1 else 'i'}")
+    if counts["absent"]:
+        parts.append(f"{counts['absent']} di assenza dalla struttura")
+    return ", ".join(parts)
+
+
+def evacuation_documentation(guest, today=None):
+    """Composizione dei giorni senza evacuazione di un ospite (per i protocolli e la cartella)."""
+    today = today or timezone.localdate()
+    days, last = days_since_last_evacuation(guest, today)
+    reference = today - datetime.timedelta(days=days)
+    negatives = set(EvacuationRecord.objects.filter(guest=guest, outcome=False, shift_date__gt=reference)
+                    .values_list("shift_date", flat=True))
+    return days, last, evacuation_days(reference, today, negatives, list(guest.admission_events.all()))
+
+
 def evacuation_overview(guests, today=None):
     """Giorni dall'ultima evacuazione per ogni ospite, con due sole letture del database (non una per ospite)."""
     from django.db.models import OuterRef, Subquery
@@ -134,14 +199,29 @@ def evacuation_overview(guests, today=None):
     last_ids = dict(Guest.objects.filter(pk__in=[g.pk for g in guests])
                     .annotate(last_id=Subquery(latest.values("pk")[:1])).values_list("pk", "last_id"))
     records = EvacuationRecord.objects.in_bulk([pk for pk in last_ids.values() if pk])
-    rows = []
+    references = {}
     for guest in guests:
         last = records.get(last_ids.get(guest.pk))
         if last is not None:
-            reference = timezone.localtime(last.occurred_at).date()
+            references[guest.pk] = (timezone.localtime(last.occurred_at).date(), last)
         else:
-            reference = max(guest.admission_date, timezone.localtime(guest.created_at).date())
-        rows.append({"guest": guest, "days": (today - reference).days, "last": last})
+            references[guest.pk] = (max(guest.admission_date, timezone.localtime(guest.created_at).date()), None)
+    # «non avvenuta» e movimenti di tutti gli ospiti con una lettura ciascuno
+    since = min((ref for ref, _ in references.values()), default=today)
+    negatives, events = {}, {}
+    for guest_id, day in EvacuationRecord.objects.filter(guest__in=guests, outcome=False, shift_date__gt=since) \
+            .values_list("guest_id", "shift_date"):
+        negatives.setdefault(guest_id, set()).add(day)
+    from fasas.guests.models import AdmissionEvent
+
+    for event in AdmissionEvent.objects.filter(guest__in=guests):
+        events.setdefault(event.guest_id, []).append(event)
+    rows = []
+    for guest in guests:
+        reference, last = references[guest.pk]
+        counts = evacuation_days(reference, today, negatives.get(guest.pk, set()), events.get(guest.pk, []))
+        rows.append({"guest": guest, "days": (today - reference).days, "last": last, "detail": counts,
+                     "detail_text": describe_evacuation_days(counts)})
     return sorted(rows, key=lambda r: -r["days"])
 
 

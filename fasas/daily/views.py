@@ -146,14 +146,11 @@ def evacuation_quick(request, guest_pk):
     guest = get_object_or_404(Guest, pk=guest_pk)
     outcome = request.POST.get("outcome") == "1"
     decision = creation_decision(guest, timezone.now(), request.user)
-    config = SystemConfig.get()
     if not decision.allowed:
         messages.error(request, decision.message)
-    elif not outcome and config.evacuation_mode == SystemConfig.EvacuationMode.ON_EVENT:
-        messages.info(request, "In modalità B si registrano solo le evacuazioni avvenute.")
     else:
         EvacuationRecord.objects.create(guest=guest, outcome=outcome, notes=request.POST.get("notes", "")[:255])
-        messages.success(request, f"{guest}: evacuazione {'SI' if outcome else 'NO'} registrata.")
+        messages.success(request, f"{guest}: {'evacuazione registrata' if outcome else 'verificato: evacuazione non avvenuta'}.")
     return redirect(safe_next(request, request.POST.get("next")) or reverse("daily:evacuations"))
 
 
@@ -165,13 +162,6 @@ class EvacuationCreateView(PermRequiredMixin, RecordCreateMixin, CreateView):
 
     def get_initial(self):
         return {"occurred_at": timezone.localtime(), "outcome": True}
-
-    def form_valid(self, form):
-        config = SystemConfig.get()
-        if not form.cleaned_data["outcome"] and config.evacuation_mode == SystemConfig.EvacuationMode.ON_EVENT:
-            form.add_error("outcome", "In modalità B si registrano solo le evacuazioni avvenute.")
-            return self.form_invalid(form)
-        return super().form_valid(form)
 
     def get_success_url(self):
         return reverse("daily:guest_daily", args=[self.get_guest().pk])

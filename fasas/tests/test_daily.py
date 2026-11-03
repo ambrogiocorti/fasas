@@ -43,15 +43,48 @@ class EvacuationTests(FasasTestCase):
         days, last = days_since_last_evacuation(self.guest)
         self.assertEqual(days, 2)
 
-    def test_mode_b_rejects_negative_records(self):
+    def test_mode_b_accepts_verified_negative_records(self):
+        """Report di analisi, P1: in modalità B il «non avvenuta» verificato si distingue dal dato mancante."""
         config = SystemConfig.get()
         config.evacuation_mode = SystemConfig.EvacuationMode.ON_EVENT
         config.save()
         self.login(self.operator)
         self.client.post(f"/giornaliero/evacuazioni/{self.guest.pk}/rapida/", {"outcome": "0"})
-        self.assertFalse(EvacuationRecord.objects.exists())
+        self.assertTrue(EvacuationRecord.objects.filter(outcome=False).exists())
         self.client.post(f"/giornaliero/evacuazioni/{self.guest.pk}/rapida/", {"outcome": "1"})
         self.assertTrue(EvacuationRecord.objects.filter(outcome=True).exists())
+
+    def test_days_without_evacuation_are_explained(self):
+        from fasas.daily.services import evacuation_documentation
+        from fasas.guests.models import AdmissionEvent
+
+        today = timezone.localdate()
+        EvacuationRecord.objects.create(guest=self.guest, outcome=True,
+                                        occurred_at=timezone.now() - datetime.timedelta(days=6))
+        EvacuationRecord.objects.create(guest=self.guest, outcome=False,
+                                        occurred_at=timezone.now() - datetime.timedelta(days=5))
+        AdmissionEvent.objects.create(guest=self.guest, kind="hospitalization", date=today - datetime.timedelta(days=3))
+        AdmissionEvent.objects.create(guest=self.guest, kind="return", date=today - datetime.timedelta(days=1))
+        days, last, counts = evacuation_documentation(self.guest)
+        self.assertEqual(days, 6)
+        # giornate concluse da 5 giorni fa a ieri: 1 «non avvenuta», 2 di ricovero, 2 senza registrazioni
+        self.assertEqual(counts, {"not_occurred": 1, "missing": 2, "absent": 2})
+        self.login(self.coordinator)
+        page = self.client.get("/giornaliero/evacuazioni/")
+        self.assertContains(page, "2 non documentati")
+        self.assertContains(page, "2 di assenza")
+
+    def test_protocol_message_separates_missing_data(self):
+        from fasas.protocols.engine import check_evacuation
+        from fasas.protocols.models import Protocol
+
+        Protocol.objects.filter(kind="evacuation").update(params={"days": 3})
+        EvacuationRecord.objects.create(guest=self.guest, outcome=True,
+                                        occurred_at=timezone.now() - datetime.timedelta(days=4))
+        activations = check_evacuation(self.guest)
+        self.assertTrue(activations)
+        self.assertIn("non documentati", activations[0].trigger_summary)
+        self.assertEqual(activations[0].trigger_data["missing"], 3)
 
 
 class ChecklistTests(FasasTestCase):
