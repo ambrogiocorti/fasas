@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from fasas.assessments.services import latest_by_scale
 from fasas.documents.services import DocumentLockedError
 from fasas.guests.models import Guest
 
@@ -46,6 +47,7 @@ def pai_detail(request, pk):
     return render(request, "pai/detail.html", {
         "pai": pai, "guest": pai.guest, "areas": areas, "active_tab": "pai",
         "history": pai.guest.pais.order_by("-version"),
+        "assessments": list(latest_by_scale(pai.guest).values()) if request.user.has_perm("assessments.view_assessment") else [],
     })
 
 

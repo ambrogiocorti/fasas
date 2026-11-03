@@ -23,6 +23,7 @@ app.conf.beat_schedule = {
     "allarmi-magazzino": {"task": "fasas.run_job", "schedule": crontab(hour="6,18", minute=10), "args": ("stock",)},
     "scadenze-documenti": {"task": "fasas.run_job", "schedule": crontab(hour=7, minute=10), "args": ("documents",)},
     "scadenze-pai": {"task": "fasas.run_job", "schedule": crontab(hour=7, minute=0), "args": ("pai_reviews",)},
+    "scadenze-valutazioni": {"task": "fasas.run_job", "schedule": crontab(hour=7, minute=5), "args": ("assessments",)},
     "report-programmati": {"task": "fasas.run_job", "schedule": crontab(hour=1, minute=15), "args": ("reports",)},
     "pulizia-report-scaduti": {"task": "fasas.run_job", "schedule": crontab(hour=1, minute=45), "args": ("report_retention",)},
     "backup-giornaliero": {"task": "fasas.run_job", "schedule": crontab(hour=2, minute=30), "args": ("backup",)},

@@ -26,7 +26,7 @@ NOTIFY_AT = {1, 10, 100, 1000}
 # Ogni quanto deve girare ciascun job (minuti): oltre il doppio più mezz'ora è «in ritardo».
 JOB_INTERVALS = {
     "close_shifts": 15, "protocols": 30, "appointments": 60, "stock": 12 * 60, "documents": 24 * 60,
-    "pai_reviews": 24 * 60, "reports": 24 * 60, "report_retention": 24 * 60, "backup": 24 * 60,
+    "pai_reviews": 24 * 60, "assessments": 24 * 60, "reports": 24 * 60, "report_retention": 24 * 60, "backup": 24 * 60,
     "audit_verify": 24 * 60, "imports_cleanup": 24 * 60, "cie_cleanup": 10, "restore_test": 95 * 24 * 60,
 }
 

@@ -14,6 +14,7 @@
     {% if perms.guests.view_clinicaltag %}<li><a href="{% url 'guests:tag_list' %}">Tag clinici</a></li>{% endif %}
     {% if perms.clinical.view_parametertype %}<li><a href="{% url 'clinical:parametertype_list' %}">Tipi di parametro sanitario</a></li>{% endif %}
     {% if perms.protocols.view_protocol %}<li><a href="{% url 'protocols:list' %}">Protocolli automatici</a></li>{% endif %}
+    {% if perms.assessments.change_scalesetting %}<li><a href="{% url 'assessments:settings' %}">Scale di valutazione in uso</a></li>{% endif %}
     {% if perms.daily.view_checklisttemplate %}<li><a href="{% url 'daily:checklisttemplate_list' %}">Checklist di turno</a> · <a href="{% url 'daily:checklistitem_list' %}">voci</a></li>{% endif %}
   </ul></div>
   <div class="card"><h2>Farmaci</h2><ul class="list-plain">

@@ -26,6 +26,44 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
   sicurezza fisica e continuità (docs/SICUREZZA_FISICA_E_CONTINUITA.md); DPIA e registro aggiornati per
   l'installazione in struttura.
 
+### Avvio di prova
+- `avvia.sh`/`avvia.bat` controllano che nel database di prova ci siano solo ospiti di fantasia; con le chiavi di
+  sviluppo una fascia rossa ricorda in ogni pagina di non inserire dati di persone reali.
+- API spenta per default (`FASAS_API_ENABLED`): `/api/v1/` risponde 404 finché non serve a un'app.
+- Firma remota qualificata (CSC) nascosta finché non è configurata; firma con CIE mostrata solo se attivata.
+- App Android e iOS congelate: la loro compilazione parte solo a mano.
+
+### Somministrazioni e farmaci SOS (stessi controlli da pagina web, API e telefono senza rete)
+- Una dose programmata va registrata per un giorno e un orario prescritti, di una terapia attiva, non nel futuro,
+  non in un turno chiuso e una sola volta (anche con due registrazioni contemporanee).
+- Farmaci SOS oltre il massimo nelle 24 ore o prima dell'intervallo minimo: la struttura sceglie in
+  *Configurazione generale* se chiedere una conferma motivata (medico e coordinatore avvisati) o bloccare salvo
+  medico e coordinatore. La conferma resta nella somministrazione, nella cartella e nei report.
+- Ritorno alla pagina di partenza solo verso indirizzi del FASAS.
+
+### Protocolli
+- Soglie e parametri dei protocolli con campi guidati e limiti (niente più testo JSON); ogni modifica richiede di
+  nuovo la validazione del medico.
+- L'elenco delle azioni è fissato al momento dell'attivazione: si può spuntare solo un'azione prevista e una volta.
+
+### Evacuazioni
+- Ogni giorno senza evacuazione è distinto in «verificato: non avvenuta», «non documentato» (nessuna registrazione)
+  e «assenza» (ricovero o rientro in famiglia); anche nel protocollo e nel suo riepilogo.
+
+### API
+- Token con scadenza (30 giorni per default), rinnovo che revoca il precedente, revoca dal telefono; revoca
+  automatica al cambio di password, alla disattivazione dell'utente e allo spegnimento della verifica in due passaggi.
+
+### Report
+- Modelli di report: più sezioni, colonne scelte e ordine; PDF, Excel o entrambi; programmazione anche ogni N giorni.
+
+### Scale di valutazione
+- Barthel, Braden, Norton (spenta per default), Tinetti, PAINAD e NRS: una domanda per voce con i punteggi della
+  scheda, somma e fascia; data della prossima rivalutazione secondo la frequenza scelta dalla struttura.
+- Pagina «Valutazioni da fare» e avviso al coordinatore per le valutazioni scadute o mai fatte (ogni mattina).
+- Valutazioni più recenti nella pagina e nel PDF del PAI e nella cartella completa esportata. Annullamento con
+  motivo, mai cancellazione.
+
 ### Correzioni
 - Un backup in formato JSON (installazioni con SQLite) su PostgreSQL ora è rifiutato con un messaggio chiaro: prima
   il ripristino si fermava a metà sul blocco dell'audit in sola aggiunta. Test su PostgreSQL di nuovo verdi.

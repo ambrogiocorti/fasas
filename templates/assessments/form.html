@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+{% include "guests/_header.html" with compact=True %}
+<div class="card" style="max-width: 900px">
+  <h1>{{ scale.name }}</h1>
+  <p class="muted">{{ scale.purpose }}. {{ scale.note }} Scegliere il punteggio di ogni voce secondo la scheda ufficiale della scala.</p>
+  <form method="post" novalidate>{% csrf_token %}
+    {% include "partials/form_fields.html" %}
+    <div class="form-actions"><button class="btn btn-primary">Registra valutazione</button><a class="btn" href="{{ cancel_url }}">Annulla</a></div>
+  </form>
+</div>
+{% endblock %}

@@ -184,6 +184,14 @@ def pai_pdf(pai):
     if pai.summary:
         doc.heading("Sintesi e bisogni rilevati", 2)
         doc.text(pai.summary)
+    from fasas.assessments.services import latest_by_scale
+
+    latest = list(latest_by_scale(guest).values())
+    if latest:
+        doc.heading("Valutazioni più recenti", 2)
+        doc.table(["Scala", "Data", "Punteggio", "Fascia"],
+                  [[a.get_scale_display(), timezone.localtime(a.occurred_at).date(), a.total, a.band] for a in latest],
+                  col_widths=[3, 1.5, 1.2, 3])
     goals = list(pai.goals.select_related("responsible"))
     for code, label in PAIGoal.Area.choices:
         area_goals = [g for g in goals if g.area == code]

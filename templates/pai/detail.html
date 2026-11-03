@@ -20,6 +20,14 @@
   </tbody></table>
   {% if pai.summary %}<p style="margin-top:.8rem">{{ pai.summary|linebreaksbr }}</p>{% endif %}
 </div>
+{% if assessments %}
+<div class="card table-wrap">
+  <div class="card-head"><h3>Valutazioni più recenti</h3><div class="actions"><a class="btn btn-sm" href="{% url 'assessments:guest' guest.pk %}">Scale di valutazione</a></div></div>
+  <table><thead><tr><th>Scala</th><th>Data</th><th class="num">Punteggio</th><th>Fascia</th></tr></thead>
+  <tbody>{% for a in assessments %}<tr><td><a href="{{ a.get_absolute_url }}">{{ a.get_scale_display }}</a></td><td>{{ a.occurred_at|date:"d/m/Y" }}</td><td class="num">{{ a.total }}</td>
+    <td><span class="pill {% if a.band_level == 'danger' %}pill-danger{% elif a.band_level == 'warn' %}pill-warn{% else %}pill-ok{% endif %}">{{ a.band }}</span></td></tr>{% endfor %}</tbody></table>
+</div>
+{% endif %}
 {% for code, label, goals in areas %}
   <div class="card table-wrap">
     <div class="card-head"><h3>{{ label }}</h3><div class="actions">{% if pai.is_editable and perms.pai.change_pai %}<a class="btn btn-sm" href="{% url 'pai:goal_create' pai.pk %}?area={{ code }}">{% icon "plus" %}Obiettivo</a>{% endif %}</div></div>

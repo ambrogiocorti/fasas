@@ -63,6 +63,8 @@ MENU = [
              active=("documents:to_sign", "documents:sign", "documents:sign_cie", "signatures:cie_request")),
         Item("Protocolli attivi", "flag", "protocols:activations", "protocols.view_protocolactivation",
              active=("protocols:activations", "protocols:activation_detail"), count="protocols"),
+        Item("Valutazioni da fare", "clipboard-check", "assessments:due", "assessments.add_assessment",
+             active=("assessments:due", "assessments:settings")),
     ]),
     Section("Struttura", [
         Item("Appuntamenti", "calendar", "appointments:list", "appointments.view_appointment", namespace="appointments"),

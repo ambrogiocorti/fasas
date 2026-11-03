@@ -6,7 +6,7 @@ from .models import Role
 
 MANAGED_APPS = [
     "core", "accounts", "audit", "guests", "documents", "signatures", "pharmacy", "clinical", "daily",
-    "protocols", "appointments", "pai", "notifications", "reports", "backups",
+    "protocols", "appointments", "pai", "notifications", "reports", "backups", "assessments",
 ]
 
 # Consultazione della cartella: serve a chi assiste l'ospite (operatore, coordinatore, medico).
@@ -21,6 +21,7 @@ VIEW_CARE = [
     "protocols.view_protocolactivation", "protocols.view_protocolactionlog",
     "pai.view_pai", "pai.view_paigoal",
     "notifications.view_notification",
+    "assessments.view_assessment",
 ]
 
 # Operatore (spec. §2): registrazioni giornaliere, farmaci somministrati, eventi, parametri, diario.
@@ -39,6 +40,8 @@ OPERATOR = VIEW_CARE + [
     "daily.close_shift",
     "protocols.change_protocolactivation", "protocols.add_protocolactionlog",
     "appointments.view_appointment", "appointments.change_appointment",
+    # Scale di valutazione (Barthel, Braden, PAINAD...): le compila chi assiste, come i parametri
+    "assessments.add_assessment",
     # Continuità senza rete: pacchetto del turno sul dispositivo e foglio di emergenza stampabile
     "offline.use_offline",
     # Calendario turni: consulta i propri turni, chiede ferie/permessi e cambi turno
@@ -69,6 +72,9 @@ COORDINATOR = OPERATOR + [
     "protocols.view_protocol", "protocols.add_protocol", "protocols.change_protocol",
     "appointments.add_appointment",
     "pai.add_pai", "pai.change_pai", "pai.approve_pai", "pai.add_paigoal", "pai.change_paigoal", "pai.delete_paigoal",
+    # Scale di valutazione: annulla con motivo, sceglie le scale in uso e la frequenza
+    "assessments.delete_assessment",
+    "assessments.view_scalesetting", "assessments.change_scalesetting",
     "reports.view_generatedreport", "reports.add_generatedreport",
     "reports.view_reportschedule", "reports.add_reportschedule", "reports.change_reportschedule",
     "reports.view_reporttemplate", "reports.add_reporttemplate", "reports.change_reporttemplate",
@@ -100,6 +106,7 @@ DOCTOR = VIEW_CARE + [
     "signatures.sign_document", "signatures.view_signingcredential",
     "signatures.add_signingcredential", "signatures.change_signingcredential",
     "signatures.sign_with_cie",
+    "assessments.add_assessment", "assessments.delete_assessment",
 ]
 
 # Amministratore (spec. §2): utenti, configurazione, protocolli, notifiche, audit log, backup.

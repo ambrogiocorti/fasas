@@ -17,6 +17,7 @@ JOBS = {
     "stock": ("fasas.pharmacy.services.stock_alerts", "Farmaci in esaurimento e in scadenza"),
     "documents": ("fasas.documents.services.expiry_alerts", "Documenti in scadenza"),
     "pai_reviews": ("fasas.pai.services.review_reminders", "Scadenze revisioni e verifiche PAI"),
+    "assessments": ("fasas.assessments.services.due_reminders", "Valutazioni (scale) da ripetere"),
     "reports": ("fasas.reports.services.run_due_schedules", "Generazione report programmati"),
     "report_retention": ("fasas.reports.services.purge_expired_reports", "Eliminazione report oltre la conservazione"),
     "backup": ("fasas.backups.services.scheduled_backup", "Backup cifrato giornaliero e verifica"),

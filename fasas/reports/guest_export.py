@@ -1,6 +1,6 @@
 """
 Esportazione della cartella completa dell'ospite in un unico PDF (sezione 22):
-anagrafica, dati sanitari, PAI, terapie, somministrazioni, parametri, eventi, contenzioni,
+anagrafica, dati sanitari, PAI, terapie, somministrazioni, parametri, scale di valutazione, eventi, contenzioni,
 diario, appuntamenti, protocolli e, in coda, i documenti allegati (PDF e immagini).
 """
 from io import BytesIO
@@ -29,6 +29,7 @@ def _image_page(data, title):
 
 
 def build_guest_folder(guest, user=None, include_documents=True, date_from=None):
+    from fasas.assessments.models import Assessment
     from fasas.clinical.models import ClinicalEvent, ParameterReading, Restraint, TherapyAdministration
     from fasas.daily.models import DailyRecord, DiaryEntry, EvacuationRecord
     from fasas.documents.services import read_version
@@ -101,11 +102,16 @@ def build_guest_folder(guest, user=None, include_documents=True, date_from=None)
                for a in since(TherapyAdministration.objects.filter(guest=guest)).select_related("therapy__drug", "created_by")
                .order_by("occurred_at")], [1.2, 1.8, 1, 1.8, 1.6, 1.2])
 
-    doc.heading("5. Parametri sanitari")
+    doc.heading("5. Parametri sanitari e scale di valutazione")
     doc.table(["Data/ora", "Parametro", "Valore", "Note", "Operatore"],
               [[r.occurred_at, r.parameter_type.name, r.display_value, r.notes, r.created_by]
                for r in since(ParameterReading.objects.filter(guest=guest)).select_related("parameter_type", "created_by")
                .order_by("occurred_at")], [1.2, 1.3, 1.1, 2.5, 1.2])
+    doc.heading("Scale di valutazione", 2)
+    doc.table(["Data/ora", "Scala", "Punteggio", "Fascia", "Da ripetere entro", "Note", "Operatore"],
+              [[a.occurred_at, a.get_scale_display(), a.total, a.band, a.next_due, a.notes, a.created_by]
+               for a in since(Assessment.objects.filter(guest=guest)).select_related("created_by").order_by("occurred_at")],
+              [1.1, 1.3, 0.8, 1.6, 1, 1.7, 1.1])
 
     doc.heading("6. Eventi sanitari e contenzioni")
     doc.table(["Data/ora", "Tipo", "Gravità", "Descrizione", "Interventi", "Operatore"],
