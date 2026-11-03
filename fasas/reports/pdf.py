@@ -192,6 +192,15 @@ def pai_pdf(pai):
         doc.table(["Scala", "Data", "Punteggio", "Fascia"],
                   [[a.get_scale_display(), timezone.localtime(a.occurred_at).date(), a.total, a.band] for a in latest],
                   col_widths=[3, 1.5, 1.2, 3])
+    from fasas.wounds.models import Wound
+
+    wounds = list(guest.wounds.filter(status=Wound.Status.OPEN))
+    if wounds:
+        doc.heading("Lesioni aperte", 2)
+        doc.table(["Lesione", "Osservata", "Categoria attuale", "Medicazione in corso"],
+                  [[str(w), timezone.localtime(w.occurred_at).date(), w.current_stage,
+                    (f"{w.active_plan.products} – ogni {w.active_plan.interval_days} gg" if w.active_plan else "")]
+                   for w in wounds], col_widths=[2.6, 1.3, 2.4, 3.4])
     goals = list(pai.goals.select_related("responsible"))
     for code, label in PAIGoal.Area.choices:
         area_goals = [g for g in goals if g.area == code]

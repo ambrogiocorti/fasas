@@ -1,6 +1,6 @@
 """
 Esportazione della cartella completa dell'ospite in un unico PDF (sezione 22):
-anagrafica, dati sanitari, PAI, terapie, somministrazioni, parametri, scale di valutazione, eventi, contenzioni,
+anagrafica, dati sanitari, PAI, terapie, somministrazioni, parametri, scale di valutazione, eventi, lesioni e medicazioni, contenzioni,
 diario, appuntamenti, protocolli e, in coda, i documenti allegati (PDF e immagini).
 """
 from io import BytesIO
@@ -33,6 +33,7 @@ def build_guest_folder(guest, user=None, include_documents=True, date_from=None)
     from fasas.clinical.models import ClinicalEvent, ParameterReading, Restraint, TherapyAdministration
     from fasas.daily.models import DailyRecord, DiaryEntry, EvacuationRecord
     from fasas.documents.services import read_version
+    from fasas.wounds.models import Dressing, DressingPlan, Wound, WoundCheck
 
     doc = Document(
         f"Cartella FASAS – {guest}",
@@ -113,7 +114,7 @@ def build_guest_folder(guest, user=None, include_documents=True, date_from=None)
                for a in since(Assessment.objects.filter(guest=guest)).select_related("created_by").order_by("occurred_at")],
               [1.1, 1.3, 0.8, 1.6, 1, 1.7, 1.1])
 
-    doc.heading("6. Eventi sanitari e contenzioni")
+    doc.heading("6. Eventi sanitari, contenzioni e lesioni")
     doc.table(["Data/ora", "Tipo", "Gravità", "Descrizione", "Interventi", "Operatore"],
               [[e.occurred_at, e.get_event_type_display(), e.get_severity_display(), e.description, e.actions_taken,
                 e.created_by] for e in since(ClinicalEvent.objects.filter(guest=guest)).select_related("created_by")
@@ -123,6 +124,28 @@ def build_guest_folder(guest, user=None, include_documents=True, date_from=None)
                 f"{r.authorizing_doctor_display} ({r.authorization_date:%d/%m/%Y})", r.responsible_operator]
                for r in since(Restraint.objects.filter(guest=guest)).select_related("responsible_operator", "authorized_by")],
               [1.1, 1.1, 1.3, 2.4, 1.8, 1.2])
+
+    doc.heading("Lesioni cutanee", 2)
+    wounds = list(since(Wound.objects.filter(guest=guest)).select_related("created_by").order_by("occurred_at"))
+    doc.table(["Osservata", "Lesione", "Insorgenza", "Categoria iniziale", "Esito", "Operatore"],
+              [[w.occurred_at, str(w), w.get_origin_display(), w.get_stage_display(),
+                f"{w.get_status_display()} {timezone.localtime(w.closed_at):%d/%m/%Y}" if w.closed_at else "aperta",
+                w.created_by] for w in wounds], [1.1, 2.2, 1.3, 1.6, 1.2, 1.1])
+    doc.table(["Data/ora", "Lesione", "Categoria", "Misure", "Fondo / essudato", "Note", "Operatore"],
+              [[c.occurred_at, str(c.wound), c.get_stage_display(), c.size_display,
+                " / ".join(x for x in [c.get_bed_display(), c.get_exudate_display()] if x),
+                ("[INFEZIONE] " if c.infection_signs else "") + c.notes, c.created_by]
+               for c in WoundCheck.objects.filter(wound__in=wounds).select_related("wound", "created_by")
+               .order_by("occurred_at")], [1.1, 1.6, 1.3, 0.9, 1.3, 1.6, 1])
+    doc.table(["Dal", "Al", "Lesione", "Medicazione", "Ogni (gg)", "Indicata da"],
+              [[p.start_date, p.ended_on or "in corso", str(p.wound), p.products, p.interval_days, p.indicated_by]
+               for p in DressingPlan.objects.filter(wound__in=wounds).select_related("wound").order_by("start_date")],
+              [0.9, 0.9, 1.6, 3, 0.7, 1.4])
+    doc.table(["Data/ora", "Lesione", "Prodotti", "Note", "Operatore"],
+              [[d.occurred_at, str(d.wound), d.products_display, d.notes,
+                d.created_by] for d in Dressing.objects.filter(wound__in=wounds).select_related("wound", "plan",
+                                                                                                 "created_by")
+               .order_by("occurred_at")], [1.1, 1.6, 2.4, 2, 1.1])
 
     doc.heading("7. Registro giornaliero ed evacuazioni")
     doc.table(["Data/ora", "Categoria", "Dettaglio", "Operatore"],

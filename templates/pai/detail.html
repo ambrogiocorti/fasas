@@ -28,6 +28,14 @@
     <td><span class="pill {% if a.band_level == 'danger' %}pill-danger{% elif a.band_level == 'warn' %}pill-warn{% else %}pill-ok{% endif %}">{{ a.band }}</span></td></tr>{% endfor %}</tbody></table>
 </div>
 {% endif %}
+{% if wounds %}
+<div class="card table-wrap">
+  <div class="card-head"><h3>Lesioni aperte</h3><div class="actions"><a class="btn btn-sm" href="{% url 'wounds:guest' guest.pk %}">Lesioni e medicazioni</a></div></div>
+  <table><thead><tr><th>Lesione</th><th>Osservata</th><th>Categoria attuale</th><th>Medicazione in corso</th></tr></thead>
+  <tbody>{% for w in wounds %}<tr><td><a href="{{ w.get_absolute_url }}">{{ w }}</a></td><td>{{ w.occurred_at|date:"d/m/Y" }}</td><td>{{ w.current_stage|default:"—" }}</td>
+    <td>{% with p=w.active_plan %}{% if p %}{{ p.products|truncatechars:80 }} · ogni {{ p.interval_days }} gg{% else %}—{% endif %}{% endwith %}</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endif %}
 {% for code, label, goals in areas %}
   <div class="card table-wrap">
     <div class="card-head"><h3>{{ label }}</h3><div class="actions">{% if pai.is_editable and perms.pai.change_pai %}<a class="btn btn-sm" href="{% url 'pai:goal_create' pai.pk %}?area={{ code }}">{% icon "plus" %}Obiettivo</a>{% endif %}</div></div>

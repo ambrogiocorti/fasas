@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Lesioni – {{ guest }}{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="page-head"><h2>Lesioni e medicazioni</h2>
+  <div class="actions">{% if perms.wounds.add_wound and not guest.is_archived %}<a class="btn btn-primary" href="{% url 'wounds:create' guest.pk %}">{% icon "plus" %}Nuova lesione</a>{% endif %}</div></div>
+<p class="muted">Categoria, misure e piano di medicazione sono quelli indicati dall'équipe: il FASAS li registra e ricorda le scadenze.</p>
+{% for w in open_wounds %}
+  <div class="card">
+    <div class="card-head"><h3><a href="{{ w.get_absolute_url }}">{{ w }}</a></h3>
+      <div class="actions">{% for r in w.due_rows %}<span class="pill {% if r.overdue %}pill-danger{% else %}pill-warn{% endif %}">{{ r.label }} {% if r.overdue %}in ritardo dal {{ r.due|date:"d/m" }}{% else %}oggi{% endif %}</span> {% endfor %}</div></div>
+    <table><tbody>
+      <tr><th>Osservata</th><td>{{ w.occurred_at|date:"d/m/Y" }} · {{ w.get_origin_display }}</td><th>Categoria attuale</th><td>{{ w.current_stage|default:"—" }}</td></tr>
+      {% with c=w.last_check p=w.active_plan %}
+      <tr><th>Ultima rilevazione</th><td>{% if c %}{{ c.occurred_at|date:"d/m/Y" }}{% if c.size_display %} · {{ c.size_display }}{% endif %}{% if c.bed %} · {{ c.get_bed_display }}{% endif %}{% else %}<span class="muted">nessuna</span>{% endif %}</td>
+        <th>Medicazione</th><td>{% if p %}{{ p.products|truncatechars:80 }} · ogni {{ p.interval_days }} gg{% else %}<span class="muted">nessun piano in corso</span>{% endif %}</td></tr>
+      {% endwith %}
+    </tbody></table>
+    <div class="form-actions">
+      {% if perms.wounds.add_dressing %}<a class="btn btn-sm btn-ok" href="{% url 'wounds:dressing' w.pk %}">{% icon "check" %}Medicazione eseguita</a>{% endif %}
+      {% if perms.wounds.add_woundcheck %}<a class="btn btn-sm" href="{% url 'wounds:check' w.pk %}">Rilevazione e foto</a>{% endif %}
+      <a class="btn btn-sm btn-ghost" href="{{ w.get_absolute_url }}">Dettaglio e storico</a>
+    </div>
+  </div>
+{% empty %}<div class="card"><p class="empty">Nessuna lesione aperta.</p></div>{% endfor %}
+{% if other_wounds %}
+<div class="card table-wrap"><h3>Lesioni chiuse o annullate</h3>
+  <table><thead><tr><th>Osservata</th><th>Lesione</th><th>Esito</th><th></th></tr></thead>
+  <tbody>{% for w in other_wounds %}
+    <tr{% if w.is_voided %} class="voided"{% endif %}><td>{{ w.occurred_at|date:"d/m/Y" }}</td><td>{{ w }}</td>
+      <td>{% if w.is_voided %}<span class="pill">annullata</span>{% else %}{{ w.get_status_display }} il {{ w.closed_at|date:"d/m/Y" }}{% endif %}</td>
+      <td class="num"><a class="btn btn-sm" href="{{ w.get_absolute_url }}">Dettaglio</a></td></tr>
+  {% endfor %}</tbody></table>
+</div>
+{% endif %}
+{% endblock %}

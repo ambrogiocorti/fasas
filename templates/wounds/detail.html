@@ -1,0 +1,55 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}{{ wound }} – {{ guest }}{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="page-head"><h2>{{ wound }}</h2>
+  {% if wound.is_voided %}<span class="pill">annullata</span>{% elif wound.is_open %}<span class="pill pill-warn">Aperta</span>{% else %}<span class="pill pill-ok">{{ wound.get_status_display }}</span>{% endif %}
+  <div class="actions">
+    {% if wound.is_open and not wound.is_voided %}
+      {% if perms.wounds.add_dressing %}<a class="btn btn-sm btn-ok" href="{% url 'wounds:dressing' wound.pk %}">{% icon "check" %}Medicazione eseguita</a>{% endif %}
+      {% if perms.wounds.add_woundcheck %}<a class="btn btn-sm" href="{% url 'wounds:check' wound.pk %}">Rilevazione e foto</a>{% endif %}
+      {% if perms.wounds.add_dressingplan %}<a class="btn btn-sm" href="{% url 'wounds:plan' wound.pk %}">{% if active_plan %}Cambia piano{% else %}Piano di medicazione{% endif %}</a>{% endif %}
+      {% if perms.wounds.change_wound %}<a class="btn btn-sm" href="{% url 'wounds:close' wound.pk %}">Chiudi (guarita)</a>{% endif %}
+      {% if perms.wounds.delete_wound %}<a class="btn btn-sm btn-ghost" href="{% url 'wounds:void' wound.pk %}">Annulla (errore)</a>{% endif %}
+    {% endif %}
+  </div>
+</div>
+{% for r in due_rows %}<div class="alert {% if r.overdue %}alert-danger{% else %}alert-warning{% endif %}">{% icon "clock" %}<div class="alert-body">{{ r.label }} {% if r.overdue %}in ritardo: prevista il {{ r.due|date:"d/m/Y" }}{% else %}da fare oggi{% endif %}.</div></div>{% endfor %}
+<div class="card"><table><tbody>
+  <tr><th>Tipo</th><td>{{ wound.get_kind_display }}</td><th>Sede</th><td>{{ wound.site_display }}</td></tr>
+  <tr><th>Osservata il</th><td>{{ wound.occurred_at|date:"d/m/Y H:i" }} da {{ wound.created_by|default:"—" }}</td><th>Insorgenza</th><td>{{ wound.get_origin_display }}</td></tr>
+  <tr><th>Categoria iniziale</th><td>{{ wound.get_stage_display|default:"—" }}</td><th>Categoria attuale</th><td>{{ wound.current_stage|default:"—" }}</td></tr>
+  <tr><th>Rivalutazione</th><td>{% if wound.check_interval_days %}ogni {{ wound.check_interval_days }} giorni{% else %}al bisogno{% endif %}</td><th>Descrizione</th><td>{{ wound.description|default:"—"|linebreaksbr }}</td></tr>
+  {% if wound.closed_at %}<tr><th>Chiusa</th><td>{{ wound.closed_at|date:"d/m/Y H:i" }} da {{ wound.closed_by }}</td><th>Nota</th><td>{{ wound.close_note|default:"—" }}</td></tr>{% endif %}
+  {% if wound.is_voided %}<tr><th>Annullata</th><td>{{ wound.voided_at|date:"d/m/Y H:i" }} da {{ wound.voided_by }}</td><th>Motivo</th><td>{{ wound.void_reason }}</td></tr>{% endif %}
+</tbody></table></div>
+
+<div class="card table-wrap"><h3>Rilevazioni</h3>
+  <table><thead><tr><th>Data</th><th>Categoria</th><th>Misure</th><th>Fondo</th><th>Essudato</th><th>Cute intorno</th><th>Dolore</th><th>Note</th><th>Foto</th><th>Operatore</th><th></th></tr></thead>
+  <tbody>{% for c in checks %}
+    <tr{% if c.is_voided %} class="voided"{% endif %}><td>{{ c.occurred_at|date:"d/m/Y H:i" }}</td><td>{{ c.get_stage_display|default:"—" }}</td><td>{{ c.size_display|default:"—" }}</td>
+      <td>{{ c.get_bed_display|default:"—" }}</td><td>{{ c.get_exudate_display|default:"—" }}</td><td>{{ c.get_periwound_display|default:"—" }}{% if c.odour %} · odore{% endif %}{% if c.infection_signs %} · <span class="pill pill-danger">segni di infezione</span>{% endif %}</td>
+      <td>{{ c.pain|default_if_none:"—" }}</td><td>{{ c.notes|default:""|truncatechars:80 }}{% if c.is_voided %} <span class="pill">annullata: {{ c.void_reason }}</span>{% endif %}</td>
+      <td>{% if c.photo and c.photo.current_version and perms.documents.view_document %}<a href="{% url 'documents:view' c.photo.current_version.pk %}" target="_blank" rel="noopener">Apri</a>{% else %}—{% endif %}</td>
+      <td>{{ c.created_by|default:"" }}</td>
+      <td class="num">{% if not c.is_voided and perms.wounds.delete_woundcheck %}<a class="btn btn-sm btn-ghost" href="{% url 'wounds:check_void' c.pk %}">Annulla</a>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="11" class="empty">Nessuna rilevazione.</td></tr>{% endfor %}</tbody></table>
+</div>
+
+<div class="card table-wrap"><h3>Piani di medicazione</h3>
+  <table><thead><tr><th>Dal</th><th>Al</th><th>Medicazione e prodotti</th><th>Modalità</th><th>Ogni</th><th>Indicata da</th><th>Registrata da</th></tr></thead>
+  <tbody>{% for p in plans %}
+    <tr><td>{{ p.start_date|date:"d/m/Y" }}</td><td>{% if p.active %}<span class="pill pill-ok">in corso</span>{% else %}{{ p.ended_on|date:"d/m/Y" }}{% endif %}</td>
+      <td>{{ p.products|linebreaksbr }}</td><td>{{ p.procedure|default:"—"|linebreaksbr }}</td><td>{{ p.interval_days }} gg</td><td>{{ p.indicated_by }}</td><td>{{ p.created_by|default:"" }}</td></tr>
+  {% empty %}<tr><td colspan="7" class="empty">Nessun piano di medicazione.</td></tr>{% endfor %}</tbody></table>
+</div>
+
+<div class="card table-wrap"><h3>Medicazioni eseguite</h3>
+  <table><thead><tr><th>Data</th><th>Prodotti</th><th>Note</th><th>Operatore</th><th></th></tr></thead>
+  <tbody>{% for d in dressings %}
+    <tr{% if d.is_voided %} class="voided"{% endif %}><td>{{ d.occurred_at|date:"d/m/Y H:i" }}</td><td>{{ d.products_display|default:"—"|truncatechars:100 }}</td>
+      <td>{{ d.notes|default:"" }}{% if d.is_voided %} <span class="pill">annullata: {{ d.void_reason }}</span>{% endif %}</td><td>{{ d.created_by|default:"" }}</td>
+      <td class="num">{% if not d.is_voided and perms.wounds.delete_dressing %}<a class="btn btn-sm btn-ghost" href="{% url 'wounds:dressing_void' d.pk %}">Annulla</a>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="5" class="empty">Nessuna medicazione registrata.</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endblock %}

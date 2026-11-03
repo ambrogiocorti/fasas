@@ -31,6 +31,7 @@ urlpatterns = [
     path("appuntamenti/", include("fasas.appointments.urls")),
     path("pai/", include("fasas.pai.urls")),
     path("valutazioni/", include("fasas.assessments.urls")),
+    path("lesioni/", include("fasas.wounds.urls")),
     path("notifiche/", include("fasas.notifications.urls")),
     path("report/", include("fasas.reports.urls")),
     path("backup/", include("fasas.backups.urls")),

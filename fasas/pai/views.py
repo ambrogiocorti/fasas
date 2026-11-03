@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 from fasas.assessments.services import latest_by_scale
 from fasas.documents.services import DocumentLockedError
 from fasas.guests.models import Guest
+from fasas.wounds.models import Wound
 
 from . import services
 from .forms import GoalVerificationForm, PAIForm, PAIGoalForm
@@ -48,6 +49,8 @@ def pai_detail(request, pk):
         "pai": pai, "guest": pai.guest, "areas": areas, "active_tab": "pai",
         "history": pai.guest.pais.order_by("-version"),
         "assessments": list(latest_by_scale(pai.guest).values()) if request.user.has_perm("assessments.view_assessment") else [],
+        "wounds": list(pai.guest.wounds.filter(status=Wound.Status.OPEN)) if request.user.has_perm("wounds.view_wound")
+        else [],
     })
 
 

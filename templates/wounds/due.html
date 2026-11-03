@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Medicazioni da fare{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Medicazioni e rivalutazioni da fare</h1></div>
+<p class="muted">Medicazioni dovute oggi o in ritardo secondo il piano in corso; rivalutazioni (misure, fondo, foto) secondo la frequenza di ogni lesione.</p>
+<div class="card table-wrap"><table>
+  <thead><tr><th>Ospite</th><th>Lesione</th><th>Cosa</th><th>Ultima</th><th>Prevista</th><th></th></tr></thead>
+  <tbody>{% for r in rows %}
+    <tr><td><a href="{% url 'wounds:guest' r.guest.pk %}"><strong>{{ r.guest }}</strong></a></td>
+      <td><a href="{{ r.wound.get_absolute_url }}">{{ r.wound }}</a></td>
+      <td>{{ r.label }}{% if r.what == 'dressing' and r.plan %}<br><small class="muted">{{ r.plan.products|truncatechars:70 }}</small>{% endif %}</td>
+      <td>{% if r.last %}{{ r.last.occurred_at|date:"d/m/Y" }}{% else %}<span class="muted">mai</span>{% endif %}</td>
+      <td><span class="pill {% if r.overdue %}pill-danger{% else %}pill-warn{% endif %}">{% if r.overdue %}in ritardo dal {{ r.due|date:"d/m/Y" }}{% else %}oggi{% endif %}</span></td>
+      <td class="num">
+        {% if r.what == 'dressing' and perms.wounds.add_dressing %}
+          <form method="post" action="{% url 'wounds:dressing_quick' r.wound.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm btn-ok">{% icon "check" %}Fatta adesso</button></form>
+          <a class="btn btn-sm" href="{% url 'wounds:dressing' r.wound.pk %}">Con note…</a>
+        {% elif r.what == 'check' and perms.wounds.add_woundcheck %}
+          <a class="btn btn-sm btn-primary" href="{% url 'wounds:check' r.wound.pk %}">Rivaluta</a>
+        {% endif %}
+      </td></tr>
+  {% empty %}<tr><td colspan="6" class="empty">Niente da fare oggi.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

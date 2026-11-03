@@ -26,6 +26,8 @@ class NotificationKind(models.TextChoices):
     ROTA_ANSWER = "rota_answer", "Risposte e proposte sui miei turni"
     SYSTEM_ERROR = "system_error", "Errore del sistema"
     ASSESSMENT_DUE = "assessment_due", "Valutazione da ripetere"
+    WOUND_NEW = "wound_new", "Nuova lesione segnalata"
+    DRESSING_DUE = "dressing_due", "Medicazione o rivalutazione di una lesione in ritardo"
 
 
 DEFAULT_ROLES = {
@@ -52,6 +54,8 @@ DEFAULT_ROLES = {
     NotificationKind.ROTA_ANSWER: [],
     NotificationKind.SYSTEM_ERROR: ["admin"],
     NotificationKind.ASSESSMENT_DUE: ["coordinator"],
+    NotificationKind.WOUND_NEW: ["coordinator", "doctor"],
+    NotificationKind.DRESSING_DUE: ["coordinator"],
 }
 
 # Tipi inviati di default anche come notifica push sui dispositivi iscritti (modificabile dall'amministratore).
@@ -81,6 +85,8 @@ REQUIRED_PERMISSION = {
     NotificationKind.REPORT: "reports.view_generatedreport",
     NotificationKind.OFFLINE_SYNC: "offline.view_offlinerecord",
     NotificationKind.ASSESSMENT_DUE: "assessments.view_assessment",
+    NotificationKind.WOUND_NEW: "wounds.view_wound",
+    NotificationKind.DRESSING_DUE: "wounds.view_wound",
     NotificationKind.ROTA_PUBLISHED: "staffing.view_rotamonth",
     NotificationKind.ROTA_CHANGED: "staffing.view_rotamonth",
     NotificationKind.ROTA_REQUEST: "staffing.change_leaverequest",

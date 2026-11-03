@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     "fasas.appointments",
     "fasas.pai",
     "fasas.assessments",
+    "fasas.wounds",
     "fasas.notifications",
     "fasas.reports",
     "fasas.backups",

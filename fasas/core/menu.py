@@ -42,6 +42,7 @@ MENU = [
         Item("Checklist turno", "clipboard-check", "daily:checklist", "daily.view_checklistcheck", active=("daily:checklist",)),
         Item("Registro giornaliero", "book", "daily:register", "daily.view_dailyrecord", active=("daily:register",)),
         Item("Evacuazioni", "timer", "daily:evacuations", "daily.view_evacuationrecord", active=("daily:evacuations",)),
+        Item("Medicazioni da fare", "heart", "wounds:due", "wounds.add_dressing", active=("wounds:due",)),
         Item("Chiusura turni", "lock", "daily:closures", "daily.view_shiftclosure",
              active=("daily:closures", "daily:close_shift", "daily:closure_detail")),
         Item("Senza rete", "wifi-off", "offline:records", "offline.use_offline", active=("offline:records",)),

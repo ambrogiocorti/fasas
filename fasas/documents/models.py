@@ -18,6 +18,7 @@ class Document(TimeStampedModel):
         PAI = "pai", "PAI"
         LEGAL = "legal", "Documento legale (nomina tutore, ADS)"
         RESTRAINT = "restraint", "Autorizzazione contenzione"
+        WOUND_PHOTO = "wound_photo", "Foto di lesione"
         OTHER = "other", "Altro"
 
     guest = models.ForeignKey("guests.Guest", on_delete=models.PROTECT, related_name="documents")

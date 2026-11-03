@@ -64,6 +64,15 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
 - Valutazioni più recenti nella pagina e nel PDF del PAI e nella cartella completa esportata. Annullamento con
   motivo, mai cancellazione.
 
+### Lesioni e medicazioni
+- Nuova scheda «Lesioni» nella cartella: sede, tipo, insorgenza, categoria NPIAP/EPUAP delle lesioni da pressione,
+  rilevazioni con misure, fondo, essudato, cute circostante, dolore, segni di infezione e foto.
+- Foto solo JPEG/PNG verificate, ridotte, senza posizione GPS e cifrate come i documenti.
+- Piano di medicazione indicato da infermiere o medico; pagina «Medicazioni da fare» con «Fatta adesso»; avvisi
+  per nuove lesioni (coordinatore e medico) e per medicazioni o rivalutazioni in ritardo (coordinatore).
+- Lesioni aperte nel PAI (pagina e PDF) e storico completo nella cartella esportata. Guida:
+  docs/VALUTAZIONI_E_LESIONI.md.
+
 ### Correzioni
 - Un backup in formato JSON (installazioni con SQLite) su PostgreSQL ora è rifiutato con un messaggio chiaro: prima
   il ripristino si fermava a metà sul blocco dell'audit in sola aggiunta. Test su PostgreSQL di nuovo verdi.

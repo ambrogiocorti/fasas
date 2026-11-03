@@ -40,6 +40,7 @@
   {% if perms.daily.view_dailyrecord %}<a href="{% url 'daily:guest_daily' guest.pk %}" class="{% if active_tab == 'daily' %}active{% endif %}">Registro</a>{% endif %}
   {% if perms.daily.view_diaryentry %}<a href="{% url 'daily:guest_diary' guest.pk %}" class="{% if active_tab == 'diary' %}active{% endif %}">Diario</a>{% endif %}
   {% if perms.pai.view_pai %}<a href="{% url 'pai:guest' guest.pk %}" class="{% if active_tab == 'pai' %}active{% endif %}">PAI</a>{% endif %}
+  {% if perms.wounds.view_wound %}<a href="{% url 'wounds:guest' guest.pk %}" class="{% if active_tab == 'wounds' %}active{% endif %}">Lesioni</a>{% endif %}
   {% if perms.assessments.view_assessment %}<a href="{% url 'assessments:guest' guest.pk %}" class="{% if active_tab == 'assessments' %}active{% endif %}">Valutazioni</a>{% endif %}
   {% if perms.documents.view_document %}<a href="{% url 'documents:guest_list' guest.pk %}" class="{% if active_tab == 'documents' %}active{% endif %}">Documenti</a>{% endif %}
   {% if perms.appointments.view_appointment %}<a href="{% url 'appointments:guest_list' guest.pk %}" class="{% if active_tab == 'appointments' %}active{% endif %}">Visite</a>{% endif %}
