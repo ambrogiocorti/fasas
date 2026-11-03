@@ -26,6 +26,14 @@ def revoke_tokens(user):
 
 
 class ExpiringTokenAuthentication(TokenAuthentication):
+    def authenticate(self, request):
+        from fasas.accounts import twofactor
+
+        result = super().authenticate(request)
+        if result is not None and not twofactor.remote_allowed(result[0], request):
+            raise AuthenticationFailed(twofactor.OUTSIDE_REFUSED)
+        return result
+
     def authenticate_credentials(self, key):
         user, token = super().authenticate_credentials(key)
         if token_expired(token):

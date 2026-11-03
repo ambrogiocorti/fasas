@@ -110,6 +110,7 @@ MIDDLEWARE = [
     "fasas.core.middleware.CommunityMiddleware",
     "fasas.core.middleware.SessionIdleTimeoutMiddleware",
     "fasas.audit.middleware.AuditContextMiddleware",
+    "fasas.core.middleware.RemoteAccessMiddleware",
     "fasas.core.middleware.LoginRequiredMiddleware",
 ]
 

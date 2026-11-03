@@ -76,6 +76,26 @@ class SessionIdleTimeoutMiddleware:
         return self.get_response(request)
 
 
+class RemoteAccessMiddleware:
+    """
+    Utente abilitato solo dalla struttura: se una sessione aperta in reparto arriva poi da fuori (es. il telefono
+    passa dal Wi-Fi ai dati mobili) si chiude subito.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from fasas.accounts import twofactor
+
+        user = request.user
+        if user.is_authenticated and not twofactor.remote_allowed(user, request):
+            logout(request)
+            messages.error(request, twofactor.OUTSIDE_REFUSED)
+            return redirect(settings.LOGIN_URL)
+        return self.get_response(request)
+
+
 class LoginRequiredMiddleware:
     """Ogni pagina richiede l'accesso, tranne login, statici e API (che autenticano da sé)."""
 

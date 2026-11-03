@@ -23,6 +23,9 @@
   della struttura. Segreto cifrato, ogni codice vale una volta, 10 codici di recupero (salvati come impronta),
   reimpostazione da parte dell'amministratore con audit. I codici sbagliati contano per il blocco; il token API
   richiede il codice. L'area tecnica (`/gestione-tecnica/`) non ha un accesso proprio.
+- **Accesso solo dalla struttura** per singolo utente (campo «Può entrare da fuori struttura»): da fuori rete
+  (`FASAS_2FA_TRUSTED_NETWORKS`) login, sessione e token API vengono rifiutati; alternativa alla VPN per chi non
+  usa il FASAS da casa.
 - **Blocco**: dopo `FASAS_LOGIN_MAX_FAILURES` tentativi falliti (default 5) l'utente è bloccato per `FASAS_LOGIN_LOCKOUT_MINUTES`; anche l'endpoint token dell'API applica il blocco.
 - **Inattività**: disconnessione automatica dopo i minuti configurati (default 30) – i terminali di reparto sono condivisi.
 - **Log accessi**: accesso, uscita, tentativo fallito, blocco, scadenza sessione con IP, user agent e dispositivo. Tabella in sola aggiunta.

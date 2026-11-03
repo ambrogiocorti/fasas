@@ -116,6 +116,15 @@ def from_trusted_network(request):
     return any(ip in net for net in networks)
 
 
+def remote_allowed(user, request):
+    """Falso se l'utente può entrare solo dalla struttura e la richiesta arriva da fuori."""
+    return getattr(user, "remote_access", True) or from_trusted_network(request)
+
+
+OUTSIDE_REFUSED = ("Il tuo utente può entrare solo dalla rete della struttura: usa un tablet o un computer "
+                   "di reparto, oppure chiedi all'amministratore di abilitare l'accesso da fuori.")
+
+
 def role_requires(user):
     return user.role in settings.FASAS_2FA_REQUIRED_ROLES or (user.is_superuser and bool(settings.FASAS_2FA_REQUIRED_ROLES))
 

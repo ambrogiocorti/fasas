@@ -1,7 +1,8 @@
 # Scheda operatore – una pagina
 
 **Entrare**: nome utente e password personali, mai prestati. Da fuori struttura serve anche il codice dell'app sul
-telefono (verifica in due passaggi). Dopo un periodo di inattività il FASAS esce da solo.
+telefono (verifica in due passaggi); se l'amministratore ha impostato il tuo utente «solo in struttura», il FASAS si
+apre solo dai tablet e dai PC di reparto. Dopo un periodo di inattività il FASAS esce da solo.
 
 **All'inizio del turno**: *Il mio turno* → «Prendo servizio». In alto si vede il turno in corso (mattina,
 pomeriggio, notte).

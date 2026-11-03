@@ -92,6 +92,12 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
 - Piano di continuità per l'ATS (docs/PIANO_DI_CONTINUITA.md): chi fa cosa per ogni tipo di interruzione,
   ritorno alla normalità, prove e registro delle interruzioni.
 
+### Accesso da fuori struttura per utente
+- Nuova impostazione dell'utente «Può entrare da fuori struttura»: se tolta, il FASAS si apre solo dalla rete
+  della struttura (tablet e PC di reparto, senza codice sul telefono); da fuori l'accesso è rifiutato, una
+  sessione che passa dal Wi-Fi ai dati mobili si chiude e l'API non accetta token. Alternativa semplice alla VPN
+  per chi non usa il FASAS da casa.
+
 ### Correzioni
 - Evacuazioni: un «non avvenuta» registrato dopo mezzanotte ora vale per il giorno appena iniziato (prima veniva
   attribuito alla notte del giorno precedente e il conteggio dei giorni non documentati sbagliava di uno).

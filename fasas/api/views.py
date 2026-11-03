@@ -143,6 +143,8 @@ class TokenView(ObtainAuthToken):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
+        if not twofactor.remote_allowed(user, request):
+            raise PermissionDenied(twofactor.OUTSIDE_REFUSED)
         need = twofactor.requirement(user, request)
         if need in ("setup", "refused"):
             raise PermissionDenied("Attiva prima la verifica in due passaggi dal sito del FASAS.")

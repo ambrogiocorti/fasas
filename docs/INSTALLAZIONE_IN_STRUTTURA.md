@@ -331,7 +331,9 @@ cd /opt/fasas && sudo docker compose exec web python manage.py createsuperuser
 4. In *Utenti* creare un account per ogni persona, con il ruolo giusto, e consegnare la password iniziale di
    persona: ognuno la cambia subito da *Impostazioni › Cambia password*. Amministratori, coordinatori e medici
    attivano la verifica in due passaggi **in struttura**; chi vorrà entrare da casa deve attivarla anch'esso in
-   struttura.
+   struttura. Per chi non ha bisogno di entrare da casa (o non ha uno smartphone per il codice) togliere la
+   spunta **«Può entrare da fuori struttura»**: userà il FASAS solo dai tablet e dai PC di reparto, senza codice,
+   e con la sua password nessuno potrà entrare da fuori.
 5. Il **medico** entra e valida i protocolli automatici (*Protocolli › Valida*) e, se usate, le interazioni
    farmacologiche: finché non li valida non sono attivi (docs/DISPOSITIVO_MEDICO.md).
 

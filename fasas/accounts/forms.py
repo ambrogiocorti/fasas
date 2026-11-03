@@ -41,7 +41,7 @@ class UserForm(forms.ModelForm):
         model = User
         fields = [
             "username", "first_name", "last_name", "email", "fiscal_code", "phone",
-            "role", "qualification", "professional_register", "is_active",
+            "role", "qualification", "professional_register", "is_active", "remote_access",
         ]
 
     def clean_fiscal_code(self):

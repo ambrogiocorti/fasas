@@ -31,6 +31,10 @@ class LoginView(auth_views.LoginView):
     def form_valid(self, form):
         """Dopo la password, se serve, il secondo passaggio: l'accesso si completa solo con il codice dell'app."""
         user = form.get_user()
+        if not twofactor.remote_allowed(user, self.request):
+            record_access(self.request, AccessLog.Event.FAILED, user.get_username(), user)
+            form.add_error(None, twofactor.OUTSIDE_REFUSED)
+            return self.form_invalid(form)
         need = twofactor.requirement(user, self.request)
         if need == "none":
             return super().form_valid(form)

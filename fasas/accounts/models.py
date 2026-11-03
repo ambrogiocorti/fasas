@@ -30,6 +30,10 @@ class User(AbstractUser):
         "iscrizione albo/ordine", max_length=100, blank=True, help_text="Obbligatorio per i medici che firmano"
     )
     theme = models.CharField("tema interfaccia", max_length=10, choices=Theme.choices, default=Theme.AUTO)
+    remote_access = models.BooleanField(
+        "può entrare da fuori struttura", default=True,
+        help_text="Se tolto, il FASAS si apre per questo utente solo dalla rete della struttura (es. dai tablet di "
+                  "reparto, senza codice sul telefono): con la sua password rubata da fuori non si entra.")
 
     class Meta:
         verbose_name = "utente"

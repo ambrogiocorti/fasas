@@ -167,3 +167,67 @@ class TwoFactorApiTests(FasasTestCase):
         self.assertEqual(ok.status_code, 200, ok.content)
         self.assertIn("token", ok.json())
         self.assertEqual(api.post("/api/v1/token/", {"username": "oper", "password": PASSWORD}).status_code, 200)
+
+
+@override_settings(FASAS_2FA_TRUSTED_NETWORKS=["10.20.0.0/16"])
+class RemoteAccessTests(FasasTestCase):
+    """Utenti abilitati solo dalla struttura (es. chi non ha il telefono per il codice): da fuori non si entra."""
+
+    INSIDE = {"REMOTE_ADDR": "10.20.1.5"}
+    OUTSIDE = {"REMOTE_ADDR": "203.0.113.7"}
+
+    def setUp(self):
+        self.operator.remote_access = False
+        self.operator.save()
+
+    def post_login(self, **meta):
+        from .base import PASSWORD
+
+        return self.client.post("/accesso/entra/", {"username": "oper", "password": PASSWORD}, **meta)
+
+    def test_login_only_from_inside(self):
+        from fasas.accounts.models import AccessLog
+
+        response = self.post_login(**self.OUTSIDE)
+        self.assertContains(response, "solo dalla rete della struttura")
+        self.assertTrue(AccessLog.objects.filter(username="oper", event="failed").exists())
+        self.assertEqual(self.post_login(**self.INSIDE).status_code, 302)
+        self.assertEqual(self.client.get("/", **self.INSIDE).status_code, 200)
+
+    def test_session_closed_when_moving_outside(self):
+        self.client.force_login(self.operator)
+        self.assertEqual(self.client.get("/", **self.INSIDE).status_code, 200)
+        response = self.client.get("/", **self.OUTSIDE)
+        self.assertRedirects(response, "/accesso/entra/", fetch_redirect_response=False)
+        self.assertRedirects(self.client.get("/", **self.INSIDE), "/accesso/entra/?next=/",
+                             fetch_redirect_response=False)  # la sessione è chiusa
+
+    def test_users_with_remote_access_unchanged(self):
+        self.client.force_login(self.doctor)
+        self.assertEqual(self.client.get("/profilo/", **self.OUTSIDE).status_code, 200)
+
+    @override_settings(FASAS_2FA_TRUSTED_NETWORKS=[])
+    def test_without_structure_network_nothing_changes(self):
+        self.assertEqual(self.post_login(**self.OUTSIDE).status_code, 302)
+
+    @override_settings(FASAS_API_ENABLED=True)
+    def test_api_token_refused_from_outside(self):
+        from rest_framework.test import APIClient
+
+        from fasas.api.authentication import issue_token
+
+        from .base import PASSWORD
+
+        api = APIClient()
+        response = api.post("/api/v1/token/", {"username": "oper", "password": PASSWORD}, **self.OUTSIDE)
+        self.assertEqual(response.status_code, 403)
+        token = issue_token(self.operator)
+        api.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        self.assertIn(api.get("/api/v1/ospiti/", **self.OUTSIDE).status_code, (401, 403))
+        self.assertEqual(api.get("/api/v1/ospiti/", **self.INSIDE).status_code, 200)
+
+    def test_admin_sets_the_option(self):
+        self.client.force_login(self.admin)
+        self.assertContains(self.client.get("/utenti/", **self.INSIDE), "solo in struttura")
+        page = self.client.get(f"/utenti/{self.operator.pk}/", **self.INSIDE)
+        self.assertContains(page, "entrare da fuori struttura")
