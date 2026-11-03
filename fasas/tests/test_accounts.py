@@ -150,10 +150,10 @@ class UserManagementScreenTests(FasasTestCase):
     def test_access_log_filters_profile_theme_password(self):
         from django.urls import reverse
 
-        AccessLog.objects.create(username="oper", event="login_failed", ip_address="10.0.0.5")
+        AccessLog.objects.create(username="oper", event=AccessLog.Event.FAILED, ip_address="10.0.0.5")
         self.login(self.admin)
         url = reverse("accounts:access_log")
-        self.assertContains(self.client.get(url, {"username": "oper", "event": "login_failed", "ip": "10.0",
+        self.assertContains(self.client.get(url, {"username": "oper", "event": "failed", "ip": "10.0",
                                                   "date_from": "2000-01-01", "date_to": "2999-01-01"}), "10.0.0.5")
         self.login(self.operator)
         profile = reverse("accounts:profile")
