@@ -10,7 +10,7 @@ from fasas.guests.models import Guest
 from .forms import GenerateReportForm, GuestExportForm
 from .guest_export import build_guest_folder
 from .models import GeneratedReport, ReportFormat, ReportType
-from .services import generate_report, read_report, store_report
+from .services import generate_any, read_report, store_report
 
 
 @permission_required("reports.view_generatedreport", raise_exception=True)
@@ -26,12 +26,13 @@ def report_list(request):
             messages.error(request, "Non hai il permesso di generare report.")
         elif form.is_valid():
             data = form.cleaned_data
-            report = generate_report(data["report_type"], data["format"], data["start"], data["end"],
-                                     data["guest"], request.user)
-            messages.success(request, f"Report «{report.title}» generato.")
+            reports = generate_any(data["report_type"], data["template"], data["format"], data["start"], data["end"],
+                                   data["guest"], request.user)
+            messages.success(request, f"Report «{reports[0].title}» generato"
+                                      f"{' in PDF ed Excel' if len(reports) > 1 else ''}.")
             return redirect("reports:list")
     return render(request, "reports/list.html", {
-        "reports": reports[:200], "form": form, "types": ReportType.choices,
+        "reports": reports[:200], "form": form, "types": ReportType.choices + [("custom", "Report da modello")],
     })
 
 

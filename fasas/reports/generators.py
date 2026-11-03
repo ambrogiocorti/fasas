@@ -184,3 +184,63 @@ def render(report_type, fmt, start, end, guest=None, user=None):
     if fmt == ReportFormat.XLSX:
         return data, render_xlsx(data, start, end, guest, user)
     return data, render_pdf(data, start, end, guest, user)
+
+
+# --- Report da modello: più sezioni, colonne scelte, entrambi i formati ---------------------------------------
+
+def columns_for(report_type):
+    """Colonne disponibili di una sezione (le stesse del report singolo)."""
+    import datetime as _dt
+
+    far = _dt.date(1900, 1, 1)
+    return GENERATORS[report_type](far, far, None).headers
+
+
+def section_data(section, start, end, guest=None):
+    """Dati di una sezione con le sole colonne scelte, nell'ordine del report originale."""
+    data = GENERATORS[section["type"]](start, end, guest)
+    wanted = section.get("columns") or data.headers
+    keep = [i for i, header in enumerate(data.headers) if header in wanted] or list(range(len(data.headers)))
+    widths = [data.widths[i] for i in keep] if data.widths else None
+    return ReportData(data.title, [data.headers[i] for i in keep], [[row[i] for i in keep] for row in data.rows], widths)
+
+
+def render_template_pdf(title, sections, start, end, guest=None, user=None):
+    from .pdf import Document
+
+    subtitle = f"Periodo {start:%d/%m/%Y} – {end:%d/%m/%Y}" + (f" · Ospite: {guest}" if guest else "")
+    doc = Document(title, subtitle, orientation="landscape", generated_by=user)
+    for data in sections:
+        doc.heading(data.title, level=2)
+        doc.text(f"{len(data.rows)} registrazioni.", "small")
+        doc.table(data.headers, data.rows, data.widths)
+    return doc.build()
+
+
+def render_template_xlsx(title, sections, start, end, guest=None, user=None):
+    """Un foglio per sezione, con la stessa protezione dalle formule del report singolo."""
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    wb.remove(wb.active)
+    used = set()
+    for data in sections:
+        single = BytesIO(render_xlsx(data, start, end, guest, user))
+        from openpyxl import load_workbook
+
+        source = load_workbook(single).active
+        name = data.title[:31]
+        while name in used:
+            name = name[:28] + f" {len(used)}"
+        used.add(name)
+        sheet = wb.create_sheet(name)
+        for row in source.iter_rows(values_only=True):
+            sheet.append(list(row))
+        for key, dim in source.column_dimensions.items():
+            sheet.column_dimensions[key].width = dim.width
+        sheet.freeze_panes = source.freeze_panes
+    if not wb.sheetnames:
+        wb.create_sheet(title[:31] or "Report")
+    buffer = BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()

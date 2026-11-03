@@ -71,6 +71,7 @@ COORDINATOR = OPERATOR + [
     "pai.add_pai", "pai.change_pai", "pai.approve_pai", "pai.add_paigoal", "pai.change_paigoal", "pai.delete_paigoal",
     "reports.view_generatedreport", "reports.add_generatedreport",
     "reports.view_reportschedule", "reports.add_reportschedule", "reports.change_reportschedule",
+    "reports.view_reporttemplate", "reports.add_reporttemplate", "reports.change_reporttemplate",
     # Passaggio dal cartaceo: importa anagrafiche, terapie, giacenze e documenti scansionati
     "imports.view_importbatch", "imports.add_importbatch",
     "offline.view_offlinerecord",

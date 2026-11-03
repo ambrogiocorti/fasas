@@ -17,16 +17,54 @@ class ReportFormat(models.TextChoices):
     XLSX = "xlsx", "Excel"
 
 
+BOTH_FORMATS = "both"
+FORMAT_CHOICES = ReportFormat.choices + [(BOTH_FORMATS, "PDF ed Excel")]
+
+
+class ReportTemplate(models.Model):
+    """
+    Modello di report salvato: più sezioni nell'ordine scelto, con le sole colonne scelte per ciascuna.
+    sections = [{"type": "medications", "columns": ["Data/ora", "Ospite", "Farmaco"]}, ...]
+    """
+
+    name = models.CharField("nome", max_length=150, unique=True)
+    description = models.CharField("descrizione", max_length=255, blank=True)
+    sections = models.JSONField("sezioni", default=list)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        verbose_name = "modello di report"
+        verbose_name_plural = "modelli di report"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def sections_display(self):
+        labels = dict(ReportType.choices)
+        return " · ".join(f"{labels.get(s['type'], s['type'])} ({len(s.get('columns') or [])} colonne)"
+                          for s in self.sections)
+
+    sections_display.short_description = "sezioni"
+
+
 class ReportSchedule(models.Model):
     class Frequency(models.TextChoices):
         DAILY = "daily", "Giornaliera (giorno precedente)"
         WEEKLY = "weekly", "Settimanale (settimana precedente)"
         MONTHLY = "monthly", "Mensile (mese precedente)"
+        INTERVAL = "interval", "Ogni N giorni (gli N giorni precedenti)"
 
     name = models.CharField("nome", max_length=150)
-    report_type = models.CharField("contenuto", max_length=30, choices=ReportType.choices)
-    format = models.CharField("formato", max_length=5, choices=ReportFormat.choices, default=ReportFormat.PDF)
+    report_type = models.CharField("contenuto", max_length=30, choices=ReportType.choices, blank=True,
+                                   help_text="Oppure scegliere un modello di report qui sotto.")
+    template = models.ForeignKey(ReportTemplate, verbose_name="modello di report", on_delete=models.PROTECT,
+                                 null=True, blank=True)
+    format = models.CharField("formato", max_length=5, choices=FORMAT_CHOICES, default=ReportFormat.PDF)
     frequency = models.CharField("frequenza", max_length=10, choices=Frequency.choices, default=Frequency.MONTHLY)
+    interval_days = models.PositiveSmallIntegerField(
+        "ogni quanti giorni", null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(366)],
+        help_text="Solo per la frequenza «ogni N giorni».")
     guest = models.ForeignKey("guests.Guest", verbose_name="solo per l'ospite", on_delete=models.CASCADE,
                               null=True, blank=True, help_text="Vuoto = tutti gli ospiti")
     retention_years = models.PositiveSmallIntegerField(
@@ -48,7 +86,7 @@ class GeneratedReport(models.Model):
     schedule = models.ForeignKey(ReportSchedule, on_delete=models.SET_NULL, null=True, blank=True,
                                  related_name="reports")
     report_type = models.CharField("contenuto", max_length=30, choices=ReportType.choices + [
-        ("guest_folder", "Cartella completa ospite"),
+        ("guest_folder", "Cartella completa ospite"), ("custom", "Report da modello"),
     ])
     format = models.CharField("formato", max_length=5, choices=ReportFormat.choices)
     title = models.CharField("titolo", max_length=255)
@@ -70,8 +108,8 @@ class GeneratedReport(models.Model):
         ordering = ["-generated_at"]
         constraints = [
             models.UniqueConstraint(
-                fields=["schedule", "period_start", "period_end"], condition=models.Q(schedule__isnull=False),
-                name="unique_schedule_period",
+                fields=["schedule", "period_start", "period_end", "format"], condition=models.Q(schedule__isnull=False),
+                name="unique_schedule_period_format",
             )
         ]
 

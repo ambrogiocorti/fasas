@@ -46,7 +46,8 @@ class ConfigListView(PermRequiredMixin, ListView):
         meta = self.model._meta
         context.update({
             "page_title": self.page_title or meta.verbose_name_plural.capitalize(),
-            "headers": [meta.get_field(f).verbose_name if f in {x.name for x in meta.get_fields()} else f
+            "headers": [meta.get_field(f).verbose_name if f in {x.name for x in meta.get_fields()}
+                        else getattr(getattr(self.model, f, None), "short_description", f)
                         for f in self.list_display],
             "rows": [
                 {"obj": obj, "cells": [_display(obj, f) for f in self.list_display],

@@ -10,7 +10,7 @@ from fasas.core.encryption import delete_stored, read_encrypted, sha256, store_e
 from fasas.core.models import SystemConfig
 
 from . import generators
-from .models import GeneratedReport, ReportFormat, ReportSchedule, ReportType
+from .models import BOTH_FORMATS, GeneratedReport, ReportFormat, ReportSchedule, ReportType
 
 
 def _expires(years, from_date=None):
@@ -43,6 +43,30 @@ def generate_report(report_type, fmt, start, end, guest=None, user=None, schedul
     return store_report(content, title, report_type, fmt, user, guest, start, end, schedule, retention_years)
 
 
+def formats_of(fmt):
+    return [ReportFormat.PDF, ReportFormat.XLSX] if fmt == BOTH_FORMATS else [fmt]
+
+
+def generate_from_template(template, fmt, start, end, guest=None, user=None, schedule=None, retention_years=None):
+    """Report da modello: sezioni e colonne scelte; con «PDF ed Excel» due file con gli stessi dati."""
+    sections = [generators.section_data(section, start, end, guest) for section in template.sections]
+    title = template.name + (f" – {guest}" if guest else "")
+    reports = []
+    for one in formats_of(fmt):
+        render = generators.render_template_xlsx if one == ReportFormat.XLSX else generators.render_template_pdf
+        content = render(template.name, sections, start, end, guest, user)
+        reports.append(store_report(content, title, "custom", one, user, guest, start, end, schedule, retention_years))
+    return reports
+
+
+def generate_any(report_type, template, fmt, start, end, guest=None, user=None, schedule=None, retention_years=None):
+    """Report singolo o da modello, in uno o entrambi i formati."""
+    if template is not None:
+        return generate_from_template(template, fmt, start, end, guest, user, schedule, retention_years)
+    return [generate_report(report_type, one, start, end, guest, user, schedule, retention_years)
+            for one in formats_of(fmt)]
+
+
 def read_report(report, user=None):
     data = read_encrypted(report.storage_name)
     if sha256(data) != report.sha256:
@@ -51,7 +75,10 @@ def read_report(report, user=None):
     return data
 
 
-def previous_period(frequency, today):
+def previous_period(frequency, today, interval_days=None):
+    if frequency == ReportSchedule.Frequency.INTERVAL:
+        days = max(int(interval_days or 1), 1)
+        return today - datetime.timedelta(days=days), today - datetime.timedelta(days=1)
     if frequency == ReportSchedule.Frequency.DAILY:
         day = today - datetime.timedelta(days=1)
         return day, day
@@ -69,14 +96,18 @@ def run_due_schedules(today=None):
 
     today = today or timezone.localdate()
     generated = 0
-    for schedule in ReportSchedule.objects.filter(active=True).select_related("guest"):
-        start, end = previous_period(schedule.frequency, today)
+    for schedule in ReportSchedule.objects.filter(active=True).select_related("guest", "template"):
+        start, end = previous_period(schedule.frequency, today, schedule.interval_days)
         if GeneratedReport.objects.filter(schedule=schedule, period_start=start, period_end=end).exists():
             continue
+        if schedule.frequency == ReportSchedule.Frequency.INTERVAL:
+            last = schedule.reports.order_by("-period_end").first()
+            if last and last.period_end and last.period_end > today - datetime.timedelta(days=schedule.interval_days or 1) - datetime.timedelta(days=1):
+                continue  # non sono ancora passati N giorni dall'ultimo periodo coperto
         try:
             with transaction.atomic():
-                report = generate_report(schedule.report_type, schedule.format, start, end, schedule.guest,
-                                         schedule=schedule, retention_years=schedule.retention_years)
+                report = generate_any(schedule.report_type, schedule.template, schedule.format, start, end,
+                                      schedule.guest, schedule=schedule, retention_years=schedule.retention_years)[0]
         except IntegrityError:
             continue
         schedule.last_run_at = timezone.now()
