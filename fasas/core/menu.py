@@ -124,6 +124,8 @@ MENU = [
         Item("Backup", "database", "backups:list", "backups.manage_backup", namespace="backups"),
         Item("Dispositivi di firma", "id-card", "signatures:devices", "signatures.manage_signer_devices",
              active=("signatures:devices",)),
+        Item("Pubblica l'app", "smartphone", "signatures:app_admin", "signatures.manage_signer_devices",
+             active=("signatures:app_admin",)),
     ], icon="sliders", key="sistema"),
     Section(None, key="fine", items=[
         Item("Notifiche", "bell", "notifications:list", active=("notifications:list",), count="notifications"),

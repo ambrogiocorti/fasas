@@ -96,6 +96,9 @@ class FasasApi(baseUrl: String, var token: String = "", allowLanHttp: Boolean = 
 
     fun me(): JSONObject = call("GET", "dispositivo/")
 
+    /** Ultima versione dell'app per Android pubblicata nel FASAS (Firma › Pubblica l'app). */
+    fun appInfo(): JSONObject = call("GET", "app/android/")
+
     fun reportStatus(status: Map<String, Any>) = call("POST", "dispositivo/stato/", JSONObject(status))
 
     fun pending(wait: Int = 10): List<SignRequest> {

@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Pubblica l'app{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Pubblica l'app FASAS Signer</h1><span class="subtitle">L'APK caricato qui si scarica dalla pagina «App per il telefono»; chi ha la versione precedente riceve l'avviso nell'app.</span></div>
+  <div class="actions"><a class="btn" href="{% url 'signatures:app_download' %}">{% icon "smartphone" %}Pagina per il personale</a></div></div>
+<div class="grid grid-2">
+  <form method="post" enctype="multipart/form-data" class="card" novalidate>
+    {% csrf_token %}
+    <h2>Carica una nuova versione</h2>
+    <p class="muted">Si accetta solo l'app <span class="mono">{{ package }}</span> con un numero di versione più alto di quella attuale. Per l'uso con dati veri caricare la versione <strong>firmata con la chiave della struttura</strong> (docs/FIRMA_CIE.md, «Distribuire l'app»): le versioni di prova accettano anche FASAS in HTTP nella rete locale.</p>
+    {% include "partials/form_fields.html" with form=form %}
+    <div class="form-actions"><button class="btn btn-primary">{% icon "upload" %}Pubblica</button></div>
+  </form>
+  <div class="card table-wrap">
+    <h2>Versioni pubblicate</h2>
+    <table><thead><tr><th>Versione</th><th>Caricata</th><th>Tipo</th></tr></thead>
+      <tbody>{% for r in releases %}<tr><td>{{ r.version_name }} <small class="muted">({{ r.version_code }})</small>{% if forloop.first %} <span class="pill pill-ok">attuale</span>{% endif %}</td><td>{{ r.uploaded_at|date:"d/m/Y H:i" }}<br><small class="muted">{{ r.uploaded_by }}</small></td><td>{% if r.debuggable %}<span class="pill pill-warn">prova</span>{% else %}<span class="pill pill-ok">definitiva</span>{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="3" class="muted">Nessuna versione pubblicata.</td></tr>{% endfor %}</tbody></table>
+  </div>
+</div>
+{% endblock %}

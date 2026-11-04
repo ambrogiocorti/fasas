@@ -276,9 +276,26 @@ internal class HomeScreen(private val ui: Ui, paired: Paired?, testBuild: Boolea
         private set
 
     val root: View
+    private val page = ui.column(14).apply { setPadding(ui.dp(20), ui.dp(24), ui.dp(20), ui.dp(28)) }
+    private var updateCard: View? = null
+
+    /** Riquadro «nuova versione»: subito sotto l'intestazione, una volta sola. */
+    fun showUpdate(version: String, onUpdate: () -> Unit) {
+        if (updateCard != null) return
+        val card = ui.card(16, 10).apply {
+            addView(ui.row(10).apply {
+                addView(ui.icon(R.drawable.ic_info, R.color.fasas_primary, 20))
+                addView(ui.weight(ui.text("Nuova versione disponibile: $version", 15f, R.color.fasas_text, bold = true)))
+            })
+            addView(ui.text("Si installa sopra quella attuale: abbinamento e CIE registrata restano.", 13f,
+                R.color.fasas_muted))
+            addView(ui.fill(ui.button("Aggiorna l'app", R.drawable.ic_link, Ui.Style.PRIMARY) { onUpdate() }))
+        }
+        updateCard = card
+        page.addView(ui.fill(card), 1)
+    }
 
     init {
-        val page = ui.column(14).apply { setPadding(ui.dp(20), ui.dp(24), ui.dp(20), ui.dp(28)) }
         page.addView(ui.fill(header(testBuild)))
         page.addView(ui.fill(status.view))
         if (paired == null) {

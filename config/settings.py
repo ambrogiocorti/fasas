@@ -283,6 +283,8 @@ FASAS_CIE_REVOCATION = os.environ.get("FASAS_CIE_REVOCATION", "soft-fail")  # so
 FASAS_CIE_TIMESTAMP = env_bool("FASAS_CIE_TIMESTAMP", True)  # marca temporale se è configurata una TSA reale
 FASAS_CIE_REQUEST_MINUTES = int(os.environ.get("FASAS_CIE_REQUEST_MINUTES", "5"))
 FASAS_CIE_PAIRING_MINUTES = int(os.environ.get("FASAS_CIE_PAIRING_MINUTES", "10"))
+# App FASAS Signer per Android distribuita dal FASAS (Firma › App per il telefono): si accetta solo questo pacchetto
+FASAS_SIGNER_ANDROID_PACKAGE = os.environ.get("FASAS_SIGNER_ANDROID_PACKAGE", "it.fasas.signer.android")
 FASAS_CIE_ALLOW_HTTP = env_bool("FASAS_CIE_ALLOW_HTTP", DEBUG)  # solo sviluppo: in produzione il Signer usa HTTPS
 # Prima della prima firma con CIE il firmatario firma con la CIE l'accettazione delle condizioni (DPCM 22/02/2013, art. 57)
 FASAS_FEA_REQUIRE_ACCEPTANCE = env_bool("FASAS_FEA_REQUIRE_ACCEPTANCE", True)

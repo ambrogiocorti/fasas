@@ -212,8 +212,8 @@ che usa l'NFC del telefono al posto del lettore e le stesse API del Signer per c
 | | Android | iPhone |
 |---|---|---|
 | Codice | Kotlin, NFC IsoDep, libreria IAS di PagoPA/IPZS (MIT) | SwiftUI, Core NFC, CieSDK di PagoPA (MIT) + patch per la firma |
-| Compilazione | ✅ APK di prova compilato da GitHub (artifact `fasas-signer-android-prova`) | ✅ compila su macOS nella CI, senza firma |
-| Installazione | APK di prova da installare sul telefono (gratuito) | serve l'Apple Developer Program e TestFlight |
+| Compilazione | ✅ APK di prova compilato da GitHub (artifact `fasas-signer-android-prova`); APK definitivo con la chiave della struttura (sotto) | ✅ compila su macOS nella CI, senza firma |
+| Installazione | dal FASAS: Impostazioni › App per il telefono (gratuito) | serve l'Apple Developer Program e TestFlight |
 | Collaudo con una CIE reale | ✅ CIE + PIN FASAS (registrazione e lettura, 4/11/2026); ⬜ firma con il PIN della carta | ⬜ |
 | Guida | [mobile/android](../mobile/android/README.md) | [mobile/ios](../mobile/ios/README.md) |
 
@@ -233,6 +233,33 @@ riprende dal punto raggiunto. Nella schermata principale:
 
 Per aggiornare l'APK di prova bisogna prima disinstallare quello vecchio (ogni compilazione ha una firma di prova
 diversa) e poi abbinare di nuovo il telefono.
+
+### Distribuire l'app (versione definitiva, dal FASAS)
+
+Il personale non usa GitHub: scarica l'app dal FASAS (**Impostazioni › App per il telefono**, con un QR code da
+inquadrare) e l'app avvisa da sola quando c'è una versione nuova. Gli aggiornamenti si installano sopra la versione
+precedente solo se sono firmati sempre con **la stessa chiave della struttura**.
+
+1. **Una volta sola, la chiave della struttura** (su un PC con Java; `keytool` è incluso):
+
+   ```bash
+   keytool -genkeypair -v -keystore fasas-signer.jks -alias fasas -keyalg RSA -keysize 3072 -validity 10000 -dname "CN=FASAS Signer, O=Nome della struttura, C=IT"
+   ```
+
+   Custodire il file e la password come le chiavi di cifratura (cassaforte e copia in un secondo luogo,
+   [SICUREZZA_FISICA_E_CONTINUITA.md](SICUREZZA_FISICA_E_CONTINUITA.md)): **se si perde, nessun telefono potrà più
+   aggiornare l'app** (andrà disinstallata e riabbinata).
+2. **Segreti di GitHub** (Settings › Secrets and variables › Actions): `FASAS_ANDROID_KEYSTORE_B64` (il file in
+   base64: `base64 -w0 fasas-signer.jks` su Linux, `[Convert]::ToBase64String([IO.File]::ReadAllBytes("fasas-signer.jks"))`
+   in PowerShell), `FASAS_KEYSTORE_PASSWORD`, `FASAS_KEY_ALIAS` (`fasas`), `FASAS_KEY_PASSWORD` (di solito la stessa).
+3. **Actions › App FASAS Signer › Run workflow**: oltre all'APK di prova compare l'archivio `fasas-signer-android`
+   con l'APK definitivo (solo HTTPS, numero di versione che cresce a ogni compilazione). Il registro della
+   compilazione riporta l'impronta SHA-256 del certificato di firma: annotarla.
+4. Nel FASAS, **Sistema › Pubblica l'app**: caricare l'APK. Il FASAS accetta solo l'app FASAS Signer con un numero
+   di versione più alto di quella pubblicata e segnala se è una versione di prova.
+
+Chi ha installato una versione di prova (firma diversa) la disinstalla una volta e installa quella definitiva; poi
+abbina di nuovo il telefono. La CIE registrata e il PIN FASAS restano validi.
 
 ## 8b. Verifica con CIE per aprire i documenti
 

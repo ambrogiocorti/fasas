@@ -368,3 +368,31 @@ class FEAAcceptance(models.Model):
 
     def delete(self, *args, **kwargs):
         raise PermissionError("Le accettazioni della FEA vanno conservate almeno 20 anni: si revocano, non si cancellano.")
+
+
+class SignerAppRelease(models.Model):
+    """App FASAS Signer per Android caricata dall'amministratore: il personale la scarica dal FASAS stesso (pagina
+    «App per il telefono», con QR code) e l'app avvisa quando ce n'è una più recente."""
+
+    version_code = models.PositiveIntegerField("numero di versione")
+    version_name = models.CharField("versione", max_length=60)
+    package = models.CharField("pacchetto", max_length=120)
+    debuggable = models.BooleanField("versione di prova", default=False)
+    sha256 = models.CharField("impronta SHA-256", max_length=64)
+    size = models.PositiveIntegerField("dimensione (byte)")
+    file = models.FileField("file APK", upload_to="app/")
+    notes = models.CharField("novità", max_length=300, blank=True)
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, related_name="+")
+    uploaded_at = models.DateTimeField("caricata il", default=timezone.now)
+
+    class Meta:
+        verbose_name = "versione dell'app FASAS Signer"
+        verbose_name_plural = "versioni dell'app FASAS Signer"
+        ordering = ["-version_code", "-uploaded_at"]
+
+    def __str__(self):
+        return f"FASAS Signer {self.version_name} ({self.version_code})"
+
+    @classmethod
+    def latest(cls):
+        return cls.objects.first()

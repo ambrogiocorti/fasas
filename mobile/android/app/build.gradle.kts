@@ -11,13 +11,29 @@ android {
         applicationId = "it.fasas.signer.android"
         minSdk = 26          // java.util.Base64 e IsoDep con timeout estesi
         targetSdk = 34
-        versionCode = 2
-        versionName = "0.2-prova"
+        // Nella CI il numero cresce a ogni compilazione (FASAS_VERSION_CODE): Android installa l'aggiornamento sopra
+        // la versione precedente solo se il numero è più alto e la chiave di firma è la stessa.
+        versionCode = System.getenv("FASAS_VERSION_CODE")?.toIntOrNull() ?: 3
+        versionName = System.getenv("FASAS_VERSION_NAME") ?: "0.3"
+    }
+    // Firma di rilascio con la chiave della struttura: il file e le password arrivano da variabili d'ambiente (nella CI
+    // dai segreti di GitHub) e non sono mai nel repository. Senza, si compila solo la versione di prova (debug).
+    val keystore = System.getenv("FASAS_KEYSTORE_FILE")?.let { file(it) }?.takeIf { it.isFile }
+    signingConfigs {
+        if (keystore != null) {
+            create("release") {
+                storeFile = keystore
+                storePassword = System.getenv("FASAS_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("FASAS_KEY_ALIAS")
+                keyPassword = System.getenv("FASAS_KEY_PASSWORD") ?: System.getenv("FASAS_KEYSTORE_PASSWORD")
+            }
+        }
     }
     buildTypes {
         release {
-            isMinifyEnabled = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            // Niente offuscamento: la libreria della CIE usa la riflessione e il codice è comunque pubblico
+            isMinifyEnabled = false
+            if (keystore != null) signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

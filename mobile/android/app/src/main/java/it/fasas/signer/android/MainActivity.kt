@@ -5,9 +5,11 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.net.Uri
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.IsoDep
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -84,6 +86,30 @@ class MainActivity : Activity() {
         }
         showIdle()
         setContentView(screen.root)
+        checkUpdate()
+    }
+
+    /** Il FASAS dice qual è l'ultima versione dell'app: se è più recente, un riquadro porta al download. */
+    private fun checkUpdate() {
+        val client = api ?: return
+        val server = prefs.getString("server", null) ?: return
+        worker.execute {
+            val info = runCatching { client.appInfo() }.getOrNull() ?: return@execute
+            val url = info.optString("url")
+            // solo un indirizzo dello stesso FASAS a cui il telefono è abbinato
+            if (!info.optBoolean("available") || !url.startsWith(server.trimEnd('/') + "/")) return@execute
+            if (info.optLong("version_code") <= installedVersionCode()) return@execute
+            runOnUiThread {
+                screen.showUpdate(info.optString("version_name")) {
+                    runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+                }
+            }
+        }
+    }
+
+    private fun installedVersionCode(): Long {
+        val info = packageManager.getPackageInfo(packageName, 0)
+        return if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else @Suppress("DEPRECATION") info.versionCode.toLong()
     }
 
     /** Stato di riposo: abbinamento da fare oppure in attesa di richieste dal FASAS. */

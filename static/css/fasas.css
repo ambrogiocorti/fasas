@@ -737,3 +737,5 @@ td.rota-cell.changed { outline: 2px dashed var(--primary); outline-offset: -2px;
 .pack-check input { flex: 1 1 14rem; }
 .pack-video { width: 100%; max-width: 420px; border-radius: 10px; margin-top: .5rem; }
 .dose-row.pack-match { outline: 3px solid var(--ok, #1e8e5a); outline-offset: 2px; border-radius: 8px; }
+.app-qr { text-align: center; }
+.app-qr .qr svg { width: 220px; height: 220px; max-width: 100%; border-radius: 10px; }

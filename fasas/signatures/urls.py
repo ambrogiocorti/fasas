@@ -1,12 +1,15 @@
 from django.urls import path
 
-from . import views
+from . import app_views, views
 
 app_name = "signatures"
 
 urlpatterns = [
     path("credenziale/", views.credential_view, name="credential"),
     path("dispositivi/", views.devices_admin, name="devices"),
+    path("app/", app_views.app_download, name="app_download"),
+    path("app/pubblica/", app_views.app_admin, name="app_admin"),
+    path("app/fasas-signer.apk", app_views.app_apk, name="app_apk"),
     path("cie/prova/", views.cie_test, name="cie_test"),
     path("cie/accesso/", views.cie_access, name="cie_access"),
     path("cie/registrazioni/<int:pk>/", views.enrollment_action, name="enrollment_action"),

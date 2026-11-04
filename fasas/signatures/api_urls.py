@@ -1,11 +1,12 @@
 from django.urls import path
 
-from . import api
+from . import api, app_views
 
 app_name = "signer_api"
 
 urlpatterns = [
     path("abbina/", api.pair, name="pair"),
+    path("app/android/", app_views.app_info, name="app_info"),
     path("dispositivo/", api.me, name="me"),
     path("dispositivo/stato/", api.device_status, name="device_status"),
     path("richieste/", api.pending, name="pending"),

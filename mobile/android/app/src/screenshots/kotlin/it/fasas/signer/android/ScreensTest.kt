@@ -62,6 +62,11 @@ abstract class ScreensTest(night: Boolean) {
             "firma o una verifica, la richiesta compare qui.")
     }.root, "pronto")
 
+    @Test fun update() = paparazzi.snapshot(home(paired = true).apply {
+        status.show(StatusPanel.Kind.IDLE, "Pronto", "In attesa di richieste dal FASAS.")
+        showUpdate("0.3") {}
+    }.root, "aggiornamento")
+
     @Test fun waitingForCard() = paparazzi.snapshot(home(paired = true).apply {
         status.show(StatusPanel.Kind.WAIT_CARD, "Avvicina la CIE", "Appoggia la carta al retro del telefono e tienila " +
             "ferma fino alla fine. Non serve il suo PIN.", "Togli la cover. Appoggia la carta al centro del retro, " +

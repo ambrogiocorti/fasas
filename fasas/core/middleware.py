@@ -101,7 +101,8 @@ class LoginRequiredMiddleware:
 
     EXEMPT_PREFIXES = ("/accesso/", "/static/", "/api/", "/salute/")
     # Involucro dell'app (nessun dato) e servizi offline che rispondono da sé 401 senza sessione.
-    EXEMPT_PATHS = {"/sw.js", "/manifest.webmanifest", "/favicon.ico", "/offline/", "/offline/stato/",
+    EXEMPT_PATHS = {"/sw.js", "/manifest.webmanifest", "/favicon.ico", "/firma/app/fasas-signer.apk", "/offline/",
+                    "/offline/stato/",
                     "/offline/pacchetto/", "/offline/sincronizza/",
                     # caratteristiche pubbliche della firma con CIE (DPCM 22/02/2013, art. 57): nessun dato
                     "/firma/caratteristiche-firma-cie/"}
