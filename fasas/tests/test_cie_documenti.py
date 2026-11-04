@@ -341,3 +341,37 @@ class CieWithoutPinTests(FasasTestCase):
         self.assertEqual(cie.access_methods(), ["nis", "cie"])
         with self.assertRaises(SignatureError):  # la firma dei documenti non cambia: CIE con il suo PIN
             cie.create_request(self.document.current_version, self.operator, "prova")
+
+
+class CscaFolderTests(FasasTestCase):
+    """I file .cer del sito del Ministero in una cartella, anche più CSCA con lo stesso nome (attuale e precedenti)."""
+
+    def test_folder_with_current_and_previous_csca(self):
+        import os
+        import shutil
+        import tempfile
+        from io import StringIO
+
+        from cryptography.hazmat.primitives import serialization
+        from django.core.management import call_command
+
+        from fasas.signatures import nis
+        from fasas.tests.cie_helpers import TestCSCA
+
+        old, current = TestCSCA("Stesso nome"), TestCSCA("Stesso nome")  # stesso soggetto, chiavi diverse
+        folder = tempfile.mkdtemp(prefix="fasas-csca-cartella-")
+        for name, ca in (("CSCA04.cer", old), ("CSCA05.cer", current)):
+            with open(os.path.join(folder, name), "wb") as fh:  # come dal sito: DER, un file per certificato
+                fh.write(ca.cert.public_bytes(serialization.Encoding.DER))
+        with open(os.path.join(folder, "leggimi.txt"), "w") as fh:
+            fh.write("ignorato")
+        card = current.card()
+        with override_settings(FASAS_CIE_CSCA=folder):
+            self.assertEqual(len(nis.csca_certificates()), 2)
+            # il Document Signer è della CSCA «attuale»: va trovata anche se la precedente ha lo stesso nome
+            self.assertIn("csca", nis.verify_sod(card.sod(), card.nis, card.kpub))
+            out = StringIO()
+            call_command("fasas_csca", stdout=out)
+            self.assertIn("CSCA05.cer", out.getvalue())
+            self.assertRegex(out.getvalue(), r"SHA-1: ([0-9a-f]{2} ){19}[0-9a-f]{2}")
+        shutil.rmtree(folder)

@@ -274,7 +274,9 @@ FASAS_CIE_ENABLED = env_bool("FASAS_CIE_ENABLED", True)
 FASAS_CIE_TRUST_ROOTS = os.environ.get("FASAS_CIE_TRUST_ROOTS", "")  # PEM con le CA della CIE (Ministero dell'Interno)
 FASAS_CIE_INTERMEDIATES = os.environ.get("FASAS_CIE_INTERMEDIATES", "")  # PEM con eventuali CA intermedie
 # CIE senza PIN della carta (protocollo NIS): certificati della CSCA italiana, https://csca-ita.interno.gov.it
-FASAS_CIE_CSCA = os.environ.get("FASAS_CIE_CSCA", "")
+# (cartella con i file .cer scaricati o file PEM). Se non indicata: la cartella «certificati-csca» del FASAS, se c'è.
+FASAS_CIE_CSCA = os.environ.get("FASAS_CIE_CSCA", "") or (
+    str(BASE_DIR / "certificati-csca") if (BASE_DIR / "certificati-csca").is_dir() else "")
 FASAS_CIE_REVOCATION = os.environ.get("FASAS_CIE_REVOCATION", "soft-fail")  # soft-fail | hard-fail | off
 FASAS_CIE_TIMESTAMP = env_bool("FASAS_CIE_TIMESTAMP", True)  # marca temporale se è configurata una TSA reale
 FASAS_CIE_REQUEST_MINUTES = int(os.environ.get("FASAS_CIE_REQUEST_MINUTES", "5"))

@@ -122,18 +122,56 @@ def _lds_classes():
     return LDSSecurityObject
 
 
-def csca_certificates():
-    """Certificati della CSCA italiana (https://csca-ita.interno.gov.it), file PEM indicato in FASAS_CIE_CSCA."""
+CERT_SUFFIXES = (".cer", ".crt", ".der", ".pem")
+
+
+def csca_files():
+    """
+    Certificati della CSCA italiana (https://csca-ita.interno.gov.it) indicati in FASAS_CIE_CSCA: una cartella con i
+    file .cer scaricati così come sono (attuale e precedenti: le CIE più vecchie sono firmate da quelli) oppure un
+    file PEM con più certificati. Restituisce (nome del file, certificato).
+    """
+    from pathlib import Path
+
     from cryptography import x509
 
-    path = settings.FASAS_CIE_CSCA
-    if not path:
+    path = Path(settings.FASAS_CIE_CSCA) if settings.FASAS_CIE_CSCA else None
+    if path is None or not path.exists():
         return []
-    with open(path, "rb") as fh:
-        data = fh.read()
-    if b"-----BEGIN" in data:
-        return x509.load_pem_x509_certificates(data)
-    return [x509.load_der_x509_certificate(data)]
+    files = sorted(f for f in path.iterdir() if f.suffix.lower() in CERT_SUFFIXES) if path.is_dir() else [path]
+    found = []
+    for file in files:
+        data = file.read_bytes()
+        try:
+            certs = (x509.load_pem_x509_certificates(data) if b"-----BEGIN" in data
+                     else [x509.load_der_x509_certificate(data)])
+        except ValueError as exc:
+            raise NisError(f"Certificato CSCA non leggibile: {file.name}.", "trust_not_configured") from exc
+        found += [(file.name, cert) for cert in certs]
+    return found
+
+
+def csca_certificates():
+    return [cert for _, cert in csca_files()]
+
+
+def _issuers(signer, csca):
+    """CSCA con il nome dell'emittente del Document Signer; prima quella con la chiave indicata dal Document Signer."""
+    from cryptography import x509
+
+    candidates = [c for c in csca if c.subject == signer.issuer]
+    try:
+        wanted = signer.extensions.get_extension_for_class(x509.AuthorityKeyIdentifier).value.key_identifier
+    except x509.ExtensionNotFound:
+        return candidates
+
+    def matches(cert):
+        try:
+            return cert.extensions.get_extension_for_class(x509.SubjectKeyIdentifier).value.digest == wanted
+        except x509.ExtensionNotFound:
+            return False
+
+    return sorted(candidates, key=lambda c: not matches(c))
 
 
 def _hash(name, data):
@@ -225,13 +263,16 @@ def verify_sod(sod_file, nis, kpub_file, csca=None, now=None):
     _verify_signer(signer, signer_info, b"\x31" + signed_attrs.dump()[1:])
 
     now = now or datetime.datetime.now(datetime.UTC)
-    issuer = next((c for c in csca if c.subject == signer.issuer), None)
+    issuer = None
+    for candidate in _issuers(signer, csca):  # più CSCA con lo stesso nome (attuale e precedenti)
+        try:
+            signer.verify_directly_issued_by(candidate)
+        except Exception:  # firma non di questa CSCA o algoritmi incoerenti: si prova la successiva
+            continue
+        issuer = candidate
+        break
     if issuer is None:
         raise NisError("Il Document Signer non è emesso dalla CSCA italiana configurata.", "cert_untrusted")
-    try:
-        signer.verify_directly_issued_by(issuer)
-    except Exception as exc:  # firma della CSCA non valida o algoritmi incoerenti
-        raise NisError("Il Document Signer non è emesso dalla CSCA italiana configurata.", "cert_untrusted") from exc
     for cert, what in ((signer, "Document Signer"), (issuer, "CSCA")):
         if not (cert.not_valid_before_utc <= now <= cert.not_valid_after_utc):
             raise NisError(f"Certificato {what} della carta scaduto o non ancora valido.", "cert_expired")

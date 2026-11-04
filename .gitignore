@@ -17,3 +17,6 @@ htmlcov/
 
 # Carta di prova per la firma con CIE (manage.py fasas_carta_di_prova)
 .carta-di-prova/
+
+# certificati della CSCA italiana scaricati dal sito del Ministero (pubblici, uno per installazione)
+/certificati-csca/

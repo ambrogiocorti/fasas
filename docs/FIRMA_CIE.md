@@ -295,9 +295,19 @@ Android ripete gli stessi comandi verso la carta:
 5. PIN FASAS dimenticato o bloccato, carta persa o rinnovata: l'amministratore **azzera** la registrazione e si
    ripete dal punto 1.
 
-Da configurare: `FASAS_CIE_CSCA` con i certificati della CSCA italiana scaricati da
-<https://csca-ita.interno.gov.it> (controllarne le impronte sul sito). Senza, la configurazione rifiuta questa
-scelta.
+Da configurare, una volta: i certificati della **CSCA italiana** da <https://csca-ita.interno.gov.it>, sezione
+«Certificates». Si scaricano i file **CSCA05.cer** (attuale) e i precedenti **CSCA04, CSCA03, CSCA02, CSCA01,
+CSCA00** (le CIE più vecchie sono firmate da quelli); non servono i «Link Certificates», la Master List né la CRL.
+Si mettono, così come sono, nella cartella **`certificati-csca`** dentro la cartella del FASAS (sul server:
+`/opt/fasas/certificati-csca`, poi `sudo ./scripts/aggiorna_fasas.sh --solo-sicurezza` per ricostruire il FASAS),
+oppure si indica un'altra cartella in `FASAS_CIE_CSCA`. Poi:
+
+```bash
+python manage.py fasas_csca
+```
+
+mostra i certificati caricati con l'impronta SHA-1 scritta come sul sito: devono coincidere tutte. Senza
+certificati la configurazione rifiuta la scelta «CIE + PIN FASAS».
 
 **Impronta o volto al posto del PIN FASAS: non realizzati.** I telefoni non permettono alle app di registrare
 impronte o volti propri (solo quelli del telefono, che non si vogliono usare); conservare impronte o volti del
