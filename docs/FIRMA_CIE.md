@@ -220,6 +220,53 @@ che usa l'NFC del telefono al posto del lettore e le stesse API del Signer per c
 Per la prova, `avvia-telefono.bat` avvia il FASAS raggiungibile dal telefono sulla stessa Wi-Fi e mostra
 l'indirizzo da inserire nell'app; solo le versioni di prova delle app accettano HTTP, e solo verso la rete locale.
 
+**App Android (dal 4/11/2026).** La lettura NFC resta accesa fino all'esito e ogni errore diventa un messaggio (prima
+la schermata poteva restare ferma su «Avvicina la CIE»); stessa sequenza dell'SDK ufficiale (riconoscimento della
+carta, controllo «extended APDU», canale sicuro e PIN); se la carta si sposta basta riappoggiarla, la richiesta
+riprende dal punto raggiunto. Nella schermata principale:
+
+- **Prova la lettura della CIE**: senza il FASAS e senza PIN controlla che telefono e carta si parlino; poi, a
+  scelta, prova il PIN e mostra il codice fiscale letto dal certificato (che deve coincidere con quello del profilo
+  nel FASAS). Un PIN errato consuma uno dei 3 tentativi.
+- **Dove trovo il PIN della CIE?**: è di 8 cifre e non si sceglie: le prime 4 sono sulla ricevuta della richiesta
+  della carta in Comune, le ultime 4 nella lettera arrivata con la CIE (oppure quello cambiato con l'app «CIE ID»).
+
+Per aggiornare l'APK di prova bisogna prima disinstallare quello vecchio (ogni compilazione ha una firma di prova
+diversa) e poi abbinare di nuovo il telefono.
+
+## 8b. Verifica con CIE per aprire i documenti
+
+In *Configurazione generale* la direzione può attivare **«verifica con CIE per aprire, scaricare o modificare i
+documenti»** (spenta per default). Con la verifica attiva, prima di mostrare o cambiare un documento dell'ospite
+(anche già firmato) il FASAS chiede di confermare l'identità con la CIE:
+
+| Dove | Cosa serve |
+|---|---|
+| Pagina del documento, «Apri», «Scarica», modifica, nuova versione, verifica e firma | verifica per quel documento |
+| Esportazione della cartella con i documenti allegati e suo download dall'archivio report | verifica per tutti i documenti dell'ospite |
+
+Come funziona: la pagina «Verifica con CIE» crea una richiesta con un codice di controllo; l'app FASAS Signer sul
+telefono (o il Signer sul computer) la mostra, l'utente digita il PIN e appoggia la carta, che **firma una sfida
+casuale del server** (non il documento). Il server controlla che il certificato sia emesso dalle CA della CIE, sia
+valido e sia intestato all'utente collegato (codice fiscale del profilo), verifica la firma della sfida e apre il
+documento per il tempo scelto in configurazione (10 minuti per default). È un'**autenticazione**, non una firma
+del documento: non crea versioni né firme e resta nell'audit («Accesso ai documenti verificato con CIE»).
+
+Prima di attivarla:
+
+1. CIE attiva sul server (`FASAS_CIE_ENABLED`) con le CA della CIE configurate: senza, la configurazione rifiuta
+   l'attivazione;
+2. collaudo con una CIE reale sul telefono che userà ciascun utente (punto 10.1): finché la lettura non è provata,
+   attivarla bloccherebbe i documenti a tutti;
+3. codice fiscale nel profilo di ogni utente che apre documenti e telefono abbinato (*Impostazioni › Firma
+   digitale*: con la verifica attiva l'abbinamento è possibile anche per chi non firma);
+4. decidere che cosa fare in emergenza o per chi non ha la CIE: la verifica si spegne dalla stessa pagina.
+
+Le richieste di verifica non permettono di firmare documenti: chi non ha il permesso di firma con CIE può solo
+verificarsi. Provato con carte di prova (`fasas.tests.test_cie_documenti`): accesso solo al documento verificato e
+per il tempo previsto, anche ai documenti firmati; carta di un'altra persona o di una CA estranea rifiutata;
+esportazione con i documenti bloccata; attivazione rifiutata senza CIE sul server.
+
 ## 9. Prove eseguite
 
 Automatiche (`python manage.py test fasas.tests.test_cie_signature fasas.tests.test_cie_signer_pkcs11`):

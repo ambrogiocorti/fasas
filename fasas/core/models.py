@@ -113,6 +113,15 @@ class SystemConfig(models.Model):
         help_text="Serve per trascrivere il foglio di emergenza dopo un'interruzione. La riapertura spetta al "
                   "coordinatore, resta nell'audit e il turno si richiude da solo dopo 12 ore.")
 
+    documents_cie_required = models.BooleanField(
+        "verifica con CIE per aprire, scaricare o modificare i documenti", default=False,
+        help_text="Anche i documenti già firmati. Ogni utente deve avere il codice fiscale nel profilo e un telefono "
+                  "(o un PC con lettore) abbinato in Impostazioni › Firma digitale: chi non ha la CIE non apre i "
+                  "documenti. Richiede la CIE attivata sul server (docs/FIRMA_CIE.md).")
+    documents_cie_minutes = models.PositiveIntegerField(
+        "dopo la verifica, lo stesso documento resta aperto per (minuti)", default=10,
+        validators=[MinValueValidator(1), MaxValueValidator(480)])
+
     max_upload_mb = models.PositiveIntegerField(
         "dimensione massima file (MB)", default=20, validators=[MinValueValidator(1), MaxValueValidator(500)]
     )

@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.http import content_disposition_header
 
+from fasas.documents.cie_gate import cie_gate
 from fasas.guests.models import Guest
 
 from .forms import GenerateReportForm, GuestExportForm
@@ -39,6 +40,9 @@ def report_list(request):
 @permission_required("reports.view_generatedreport", raise_exception=True)
 def report_download(request, pk):
     report = get_object_or_404(GeneratedReport, pk=pk)
+    if report.report_type == "guest_folder" and report.guest_id:  # contiene i documenti dell'ospite
+        if (gate := cie_gate(request, report.guest)) is not None:
+            return gate
     response = HttpResponse(read_report(report, request.user), content_type=report.content_type)
     response["Content-Disposition"] = content_disposition_header(True, report.filename)
     response["Cache-Control"] = "no-store"
@@ -50,6 +54,8 @@ def guest_export(request, guest_pk):
     guest = get_object_or_404(Guest, pk=guest_pk)
     form = GuestExportForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
+        if form.cleaned_data["include_documents"] and (gate := cie_gate(request, guest)) is not None:
+            return gate
         data = build_guest_folder(guest, request.user, form.cleaned_data["include_documents"],
                                   form.cleaned_data["date_from"])
         report = store_report(data, f"Cartella completa {guest}", "guest_folder", ReportFormat.PDF, request.user,

@@ -11,6 +11,7 @@ from fasas.audit.models import AuditLog
 from fasas.audit.services import log_event
 from fasas.guests.models import Guest
 
+from .cie_gate import cie_gate
 from .forms import DocumentEditForm, DocumentForm, VersionForm
 from .models import Document, DocumentVersion
 from .services import DocumentLockedError, add_uploaded_version, create_document, read_version
@@ -55,6 +56,8 @@ def document_create(request, guest_pk):
 @permission_required("documents.view_document", raise_exception=True)
 def document_detail(request, pk):
     document = get_object_or_404(Document.objects.select_related("guest"), pk=pk)
+    if (gate := cie_gate(request, document.guest, document)) is not None:
+        return gate
     versions = document.versions.select_related("uploaded_by").prefetch_related("signatures_requested")
     access_log = None
     if request.user.has_perm("audit.view_auditlog") or request.user.has_perm("guests.change_guest"):
@@ -80,6 +83,8 @@ def document_edit(request, pk):
     document = get_object_or_404(Document, pk=pk)
     if document.guest.is_archived:
         raise PermissionDenied("Cartella archiviata.")
+    if (gate := cie_gate(request, document.guest, document)) is not None:
+        return gate
     form = DocumentEditForm(request.POST or None, instance=document)
     if request.method == "POST" and form.is_valid():
         form.save()
@@ -94,6 +99,8 @@ def document_edit(request, pk):
 @permission_required("documents.add_document", raise_exception=True)
 def version_upload(request, pk):
     document = get_object_or_404(Document, pk=pk)
+    if (gate := cie_gate(request, document.guest, document)) is not None:
+        return gate
     form = VersionForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
         try:
@@ -112,6 +119,8 @@ def version_upload(request, pk):
 def _file_response(request, version, inline):
     if not request.user.has_perm("documents.view_document"):
         raise PermissionDenied
+    if (gate := cie_gate(request, version.document.guest, version.document)) is not None:
+        return gate
     data = read_version(version, user=request.user, audit=not inline)
     if inline:
         log_event(AuditLog.Action.VIEW, version, guest=version.document.guest)
@@ -124,12 +133,14 @@ def _file_response(request, version, inline):
 
 
 def version_download(request, pk):
-    return _file_response(request, get_object_or_404(DocumentVersion, pk=pk), inline=False)
+    return _file_response(request, get_object_or_404(DocumentVersion.objects.select_related("document__guest"), pk=pk),
+                          inline=False)
 
 
 @xframe_options_sameorigin  # anteprima del PDF nella pagina di firma (stessa origine)
 def version_view(request, pk):
-    return _file_response(request, get_object_or_404(DocumentVersion, pk=pk), inline=True)
+    return _file_response(request, get_object_or_404(DocumentVersion.objects.select_related("document__guest"), pk=pk),
+                          inline=True)
 
 
 SIGNABLE_CATEGORIES = [

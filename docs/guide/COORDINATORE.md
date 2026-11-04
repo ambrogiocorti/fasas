@@ -18,6 +18,9 @@
   *Anagrafica e sanitario*.
 - Ricovero, assenza, rientro: scheda → movimento (conta anche per le presenze e le rette).
 - Documenti: scheda → *Documenti* (cifrati, con registro di chi li apre).
+- Se la struttura ha attivato la **verifica con CIE**, per aprire, scaricare o modificare un documento (anche già
+  firmato) si conferma l'identità con la CIE sul telefono: pagina «Verifica con CIE», codice di controllo, PIN della
+  carta, carta appoggiata al telefono. Vale qualche minuto per quel documento.
 - **PAI**: scheda → *PAI*: bozza, obiettivi per area, «Approva e metti in vigore» (PDF archiviato); verifiche
   degli obiettivi; revisione entro la data indicata. La pagina mostra ultime valutazioni e lesioni aperte.
 - Dimissione: scheda → dimissione: la cartella diventa di sola lettura. **Prima** esportare la cartella completa

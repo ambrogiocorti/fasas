@@ -9,7 +9,7 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.http import content_disposition_header
+from django.utils.http import content_disposition_header, url_has_allowed_host_and_scheme
 from django.views.decorators.cache import never_cache
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
@@ -18,8 +18,10 @@ from django.views.defaults import page_not_found
 from fasas.audit.models import AuditLog
 from fasas.audit.services import log_event
 from fasas.core.encryption import DecryptionError, decrypt, encrypt, read_encrypted
-from fasas.documents.models import DocumentVersion
+from fasas.documents.cie_gate import cie_gate
+from fasas.documents.models import Document, DocumentVersion
 from fasas.documents.services import read_version
+from fasas.guests.models import Guest
 
 from . import cie, external, fea_terms
 from .forms import CIESignForm, CredentialForm, RemoteCredentialForm, SendOTPForm, SignForm
@@ -35,7 +37,8 @@ PAIRING_KEY = "fasas_cie_pairing"
 
 
 def can_configure_signature(user):
-    return user.has_perm("signatures.sign_document") or user.has_perm("signatures.sign_with_cie")
+    return (user.has_perm("signatures.sign_document") or user.has_perm("signatures.sign_with_cie")
+            or cie.can_use_device(user))
 
 
 def credential_view(request):
@@ -44,7 +47,8 @@ def credential_view(request):
     if not can_configure_signature(user):
         raise PermissionDenied
     can_certificate = user.has_perm("signatures.sign_document")
-    can_cie = user.has_perm("signatures.sign_with_cie") and cie.is_enabled()  # spenta: niente abbinamenti né prove
+    can_cie = cie.can_use_device(user)  # firma con CIE o verifica per aprire i documenti; spenta: niente abbinamenti
+    can_cie_sign = user.has_perm("signatures.sign_with_cie") and cie.is_enabled()
     credential = SigningCredential.objects.filter(user=user).first()
     form = CredentialForm(request.POST or None, request.FILES or None, prefix="p12")
     remote_form = RemoteCredentialForm(request.POST or None, prefix="remote",
@@ -94,13 +98,15 @@ def credential_view(request):
     devices = _devices(user) if can_cie else []
     return render(request, "signatures/credential.html", {
         "credential": credential, "form": form, "remote_form": remote_form, "can_certificate": can_certificate,
-        "can_cie": can_cie, "remote_configured": bool(settings.FASAS_CSC_SERVICE_URL),
+        "can_cie": can_cie, "can_cie_sign": can_cie_sign, "remote_configured": bool(settings.FASAS_CSC_SERVICE_URL),
+        "documents_cie_required": cie.documents_gate_on() and cie.is_enabled(),
+        "documents_cie_minutes": request.fasas_config.documents_cie_minutes, "fiscal_code": user.fiscal_code,
         "provider_name": settings.FASAS_CSC_PROVIDER_NAME, "level": level, "level_error": level_error,
         "tsa": bool(settings.FASAS_SIGNATURE_TSA_URL), "cie": cie_readiness(user, devices) if can_cie else None,
         "devices": devices, "pairing": pairing, "server_url": request.build_absolute_uri("/"),
         "pairing_minutes": settings.FASAS_CIE_PAIRING_MINUTES,
-        "tests": SignatureRequest.objects.filter(user=user, purpose=SignatureRequest.Purpose.TEST)[:5] if can_cie else [],
-        "acceptance": cie.valid_acceptance(user) if can_cie else None,
+        "tests": SignatureRequest.objects.filter(user=user, purpose=SignatureRequest.Purpose.TEST)[:5] if can_cie_sign else [],
+        "acceptance": cie.valid_acceptance(user) if can_cie_sign else None,
         "acceptance_required": settings.FASAS_FEA_REQUIRE_ACCEPTANCE, "terms_draft": fea_terms.is_draft(),
     })
 
@@ -158,6 +164,8 @@ def _session_token(request, credential):
 @permission_required("signatures.sign_document", raise_exception=True)
 def sign_version_view(request, pk):
     version = get_object_or_404(DocumentVersion.objects.select_related("document__guest"), pk=pk)
+    if (gate := cie_gate(request, version.document.guest, version.document)) is not None:
+        return gate
     credential = SigningCredential.objects.filter(user=request.user).first()
     remote = credential is not None and credential.kind == SigningCredential.Kind.REMOTE
     token = _session_token(request, credential) if remote else None
@@ -199,6 +207,8 @@ def sign_version_view(request, pk):
 @permission_required("documents.view_document", raise_exception=True)
 def verify_version_view(request, pk):
     version = get_object_or_404(DocumentVersion.objects.select_related("document__guest"), pk=pk)
+    if (gate := cie_gate(request, version.document.guest, version.document)) is not None:
+        return gate
     results = verify_pdf(read_version(version, user=request.user)) if version.is_pdf else []
     return render(request, "signatures/verify.html", {
         "version": version, "document": version.document, "guest": version.document.guest, "results": results,
@@ -214,6 +224,35 @@ STEPS = [
 ]
 
 
+ACCESS_STEPS = [
+    ("waiting", "In attesa della CIE"), ("card", "Carta rilevata"), ("authorizing", "PIN sul telefono"),
+    ("signing", "La carta conferma l'identità"), ("verifying", "Verifica del certificato"),
+    ("signed", "Identità verificata"),
+]
+ACCESS_NEXT = "fasas_cie_access_next"
+
+
+def cie_user_required(view):
+    """Firma con CIE oppure verifica di identità per i documenti (chi può usare un FASAS Signer)."""
+    @functools.wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if not (request.user.has_perm(cie.PERMISSION) or cie.can_use_device(request.user)):
+            raise PermissionDenied
+        return view(request, *args, **kwargs)
+
+    return wrapper
+
+
+def _access_next(request, signature_request):
+    """Dove tornare dopo la verifica: la pagina del documento chiesta all'inizio (solo indirizzi di questo sito)."""
+    saved = request.session.get(ACCESS_NEXT, {}).get(str(signature_request.pk))
+    if saved:
+        return saved
+    if signature_request.access_document_id:
+        return signature_request.access_document.get_absolute_url()
+    return reverse("documents:guest_list", args=[signature_request.access_guest_id])
+
+
 def own_request(view):
     """
     Solo il firmatario vede la propria richiesta; per gli altri non esiste. Si risponde 404 senza sollevare
@@ -227,6 +266,8 @@ def own_request(view):
             cie.deny("Accesso a una richiesta di firma CIE di un altro utente o inesistente.", user=request.user,
                      obj=signature_request, request_id=str(request_id), code="not_found")
             return page_not_found(request, Http404())
+        if not (signature_request.purpose == SignatureRequest.Purpose.ACCESS or request.user.has_perm(cie.PERMISSION)):
+            raise PermissionDenied
         return view(request, cie.expire_if_needed(signature_request))
 
     return wrapper
@@ -242,6 +283,8 @@ def cie_sign_view(request, pk):
     version = get_object_or_404(DocumentVersion.objects.select_related("document__guest"), pk=pk)
     if not request.user.has_perm("documents.view_document"):
         raise PermissionDenied
+    if (gate := cie_gate(request, version.document.guest, version.document)) is not None:
+        return gate
     active = SignatureRequest.objects.filter(version=version, user=request.user,
                                              status__in=SignatureRequest.ACTIVE).first()
     if active is not None and cie.expire_if_needed(active).is_active:
@@ -263,9 +306,16 @@ def cie_sign_view(request, pk):
     })
 
 
-@permission_required("signatures.sign_with_cie", raise_exception=True)
+@cie_user_required
 @own_request
 def cie_request_view(request, signature_request):
+    if signature_request.purpose == SignatureRequest.Purpose.ACCESS:
+        return render(request, "signatures/cie_request.html", {
+            "req": signature_request, "steps": ACCESS_STEPS, "access": True, "test": False,
+            "guest": signature_request.access_guest, "document": signature_request.access_document,
+            "status_url": reverse("signatures:cie_status", args=[signature_request.pk]),
+            "devices": _devices(request.user), "minutes": request.fasas_config.documents_cie_minutes,
+        })
     test = signature_request.purpose != SignatureRequest.Purpose.DOCUMENT  # prova o accettazione: nessun ospite
     preview_url = (reverse("signatures:cie_test_file", args=[signature_request.pk]) if test
                    else reverse("documents:view", args=[signature_request.version_id]))
@@ -279,7 +329,7 @@ def cie_request_view(request, signature_request):
     })
 
 
-def status_payload(signature_request):
+def status_payload(signature_request, result_url=None):
     order = [code for code, _ in STEPS]
     devices = SignerDevice.objects.filter(user=signature_request.user, revoked_at__isnull=True)
     online = any(d.is_online for d in devices)
@@ -294,8 +344,14 @@ def status_payload(signature_request):
         "devices": devices.count(), "device_online": online, "result_url": None,
         "test_card": signature_request.is_test_card,
     }
+    if signature_request.purpose == SignatureRequest.Purpose.ACCESS:
+        payload["access"] = True
+        payload["label"] = {**dict(ACCESS_STEPS), "failed": "Verifica non riuscita"}.get(
+            signature_request.status, payload["label"])
     if signature_request.status == SignatureRequest.Status.SIGNED:
-        if signature_request.signature_id:
+        if signature_request.purpose == SignatureRequest.Purpose.ACCESS:
+            payload["result_url"] = result_url
+        elif signature_request.signature_id:
             payload["result_url"] = signature_request.version.document.get_absolute_url()
             payload["version"] = signature_request.signature.signed_version.number
         elif signature_request.purpose == SignatureRequest.Purpose.ACCEPTANCE:
@@ -309,14 +365,16 @@ def status_payload(signature_request):
 
 
 @never_cache
-@permission_required("signatures.sign_with_cie", raise_exception=True)
+@cie_user_required
 @own_request
 def cie_status(request, signature_request):
-    return JsonResponse(status_payload(signature_request))
+    result_url = (_access_next(request, signature_request)
+                  if signature_request.purpose == SignatureRequest.Purpose.ACCESS else None)
+    return JsonResponse(status_payload(signature_request, result_url))
 
 
 @require_POST
-@permission_required("signatures.sign_with_cie", raise_exception=True)
+@cie_user_required
 @own_request
 def cie_cancel(request, signature_request):
     try:
@@ -324,14 +382,17 @@ def cie_cancel(request, signature_request):
     except SignatureError as exc:
         messages.error(request, str(exc))
     else:
-        messages.info(request, "Firma annullata: il documento è di nuovo modificabile.")
+        messages.info(request, "Verifica annullata." if signature_request.purpose == SignatureRequest.Purpose.ACCESS
+                      else "Firma annullata: il documento è di nuovo modificabile.")
+    if signature_request.purpose == SignatureRequest.Purpose.ACCESS:
+        return redirect("documents:guest_list", guest_pk=signature_request.access_guest_id)
     if signature_request.purpose != SignatureRequest.Purpose.DOCUMENT:
         return redirect("signatures:credential")
     return redirect(signature_request.version.document.get_absolute_url())
 
 
 @require_POST
-@permission_required("signatures.sign_with_cie", raise_exception=True)
+@cie_user_required
 @own_request
 def cie_retry(request, signature_request):
     try:
@@ -339,7 +400,53 @@ def cie_retry(request, signature_request):
     except SignatureError as exc:
         messages.error(request, str(exc))
         return redirect("signatures:cie_request", request_id=signature_request.pk)
+    if signature_request.purpose == SignatureRequest.Purpose.ACCESS:
+        saved = request.session.get(ACCESS_NEXT, {})
+        if str(signature_request.pk) in saved:
+            saved[str(new.pk)] = saved[str(signature_request.pk)]
+            request.session[ACCESS_NEXT] = saved
     return redirect("signatures:cie_request", request_id=new.pk)
+
+
+@permission_required("documents.view_document", raise_exception=True)
+def cie_access(request):
+    """
+    Verifica di identità con la CIE prima di aprire, scaricare o modificare un documento (Configurazione generale).
+    ?documento=<id> per un documento, ?ospite=<id> per tutti i documenti di un ospite (esportazione della cartella).
+    """
+    document = guest = None
+    source = request.POST if request.method == "POST" else request.GET
+    document_id, guest_id = source.get("documento", ""), source.get("ospite", "")
+    if document_id.isdigit():
+        document = get_object_or_404(Document.objects.select_related("guest"), pk=document_id)
+        guest = document.guest
+    elif guest_id.isdigit():
+        guest = get_object_or_404(Guest, pk=guest_id)
+    else:
+        raise Http404
+    next_url = source.get("next") or ""
+    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()},
+                                           require_https=request.is_secure()):
+        next_url = document.get_absolute_url() if document else reverse("documents:guest_list", args=[guest.pk])
+    if cie.has_document_access(request.user, guest, document):
+        return redirect(next_url)
+    error = None
+    if request.method == "POST":
+        try:
+            signature_request = cie.create_access_request(request.user, guest, document)
+        except SignatureError as exc:
+            error = str(exc)
+        else:
+            saved = request.session.get(ACCESS_NEXT, {})
+            saved = dict(list(saved.items())[-20:])  # solo le ultime richieste
+            saved[str(signature_request.pk)] = next_url
+            request.session[ACCESS_NEXT] = saved
+            return redirect("signatures:cie_request", request_id=signature_request.pk)
+    return render(request, "signatures/cie_access.html", {
+        "document": document, "guest": guest, "next": next_url, "error": error,
+        "can_use": cie.can_use_device(request.user), "devices": _devices(request.user),
+        "fiscal_code": request.user.fiscal_code, "minutes": request.fasas_config.documents_cie_minutes,
+    })
 
 
 @require_POST

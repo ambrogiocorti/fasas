@@ -109,6 +109,17 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
   proposta; il turno riaperto si richiude da solo dopo 12 ore. Abilitata per default (la direzione può
   disattivarla).
 
+### Menu e CIE
+- Menu laterale a tendine raggruppate per attività (Assistenza, Turno, Da controllare, Clinica, Personale, Archivio
+  e report, Amministrazione, Sistema): aperta quella della pagina corrente, conteggi visibili anche a tendina chiusa.
+- Verifica con CIE per aprire, scaricare o modificare i documenti, anche firmati (Configurazione generale, spenta
+  per default): la carta firma una sfida casuale, il certificato deve essere della CIE e intestato all'utente;
+  accesso a quel documento per pochi minuti, nell'audit. Vale anche per l'esportazione della cartella con i
+  documenti. Chi non firma può abbinare il telefono solo per verificarsi (docs/FIRMA_CIE.md, sezione 8b).
+- App Android: la lettura della CIE resta attiva fino all'esito (prima poteva restare ferma su «Avvicina la CIE»),
+  messaggi a ogni passo, carta spostata = si riappoggia e si riprende; «Prova la lettura della CIE» senza FASAS
+  (anche del PIN, con il codice fiscale letto dalla carta) e spiegazione di dove trovare il PIN.
+
 ### Manutenzione del server
 - `scripts/aggiorna_fasas.sh`: la manutenzione del mese in un comando. `--controlla` dice se gli aggiornamenti
   automatici di Ubuntu funzionano, se serve un riavvio, se c'è una nuova versione e quanto sono vecchi i

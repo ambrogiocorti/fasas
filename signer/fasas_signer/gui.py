@@ -11,7 +11,7 @@ from tkinter import messagebox, ttk
 from . import __version__, config
 from .card import CardError, current_os, make_card
 from .client import ServerClient, ServerError
-from .console import describe
+from .console import describe, is_access
 from .engine import Service, UserInterface
 
 PLATFORM = {"windows": "windows", "macos": "macos", "linux": "linux"}.get(current_os(), "other")
@@ -45,6 +45,11 @@ class TkUI(UserInterface):
         self.app.calls.put(lambda: self.app.set_status(text))
 
     def done(self, request, result):
+        if is_access(request):
+            self.app.calls.put(lambda: (self.app.set_status("Identità verificata."),
+                                        messagebox.showinfo("FASAS Signer", "Identità verificata: torna al FASAS, "
+                                                                            "il documento si apre.")))
+            return
         level = (result.get("verification") or {}).get("level", "PAdES")
         self.app.calls.put(lambda: (self.app.set_status("Documento firmato correttamente."),
                                     messagebox.showinfo("FASAS Signer", f"Documento firmato correttamente ({level}).")))
@@ -173,13 +178,17 @@ class App:
     def confirm_dialog(self, request):
         """Prima di qualsiasi operazione sulla carta: cosa si firma e codice di controllo da confrontare col FASAS."""
         self.root.deiconify()
-        dialog = self._dialog("Richiesta di firma con CIE")
+        access = is_access(request)
+        heading = "Verifica di identità con CIE" if access else "Richiesta di firma con CIE"
+        dialog = self._dialog(heading)
         result = {"ok": False}
-        ttk.Label(dialog, text="Richiesta di firma con CIE", font=("TkDefaultFont", 13, "bold")).pack(padx=18, pady=(16, 6))
+        ttk.Label(dialog, text=heading, font=("TkDefaultFont", 13, "bold")).pack(padx=18, pady=(16, 6))
         ttk.Label(dialog, text=describe(request), justify="left", wraplength=440).pack(padx=18, anchor="w")
         ttk.Label(dialog, text=request["verify_code"], font=("TkFixedFont", 22, "bold")).pack(pady=10)
-        ttk.Label(dialog, text="Firma elettronica avanzata con la tua CIE. Firma solo se il codice coincide con "
-                               "quello mostrato nella pagina del FASAS.", wraplength=440).pack(padx=18)
+        ttk.Label(dialog, text=("La CIE conferma la tua identità per aprire il documento: non lo firma. "
+                                "Conferma solo se il codice coincide con quello mostrato nella pagina del FASAS.")
+                  if access else ("Firma elettronica avanzata con la tua CIE. Firma solo se il codice coincide con "
+                                  "quello mostrato nella pagina del FASAS."), wraplength=440).pack(padx=18)
 
         def answer(value):
             result["ok"] = value
@@ -187,7 +196,7 @@ class App:
 
         row = ttk.Frame(dialog)
         row.pack(pady=14)
-        sign = ttk.Button(row, text="Firma con CIE", command=lambda: answer(True))
+        sign = ttk.Button(row, text="Verifica con CIE" if access else "Firma con CIE", command=lambda: answer(True))
         sign.pack(side="left", padx=6)
         ttk.Button(row, text="Rifiuta", command=lambda: answer(False)).pack(side="left", padx=6)
         sign.focus_set()

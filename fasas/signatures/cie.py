@@ -25,7 +25,7 @@ from fasas.audit.services import log_event
 from fasas.core.encryption import delete_stored, read_encrypted, store_encrypted
 
 from . import external
-from .models import DevicePairing, LegalLevel, Signature, SignatureRequest, SignerDevice
+from .models import CieAccess, DevicePairing, LegalLevel, Signature, SignatureRequest, SignerDevice
 from .providers import SignatureError, next_field_name, timestamper
 
 ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # senza 0/O e 1/I, facili da confondere
@@ -75,6 +75,20 @@ def can_sign(user):
     return is_enabled() and user.is_active and user.has_perm(PERMISSION)
 
 
+def documents_gate_on():
+    """La struttura chiede la verifica con CIE per aprire, scaricare o modificare i documenti."""
+    from fasas.core.models import SystemConfig
+
+    return SystemConfig.get().documents_cie_required
+
+
+def can_use_device(user):
+    """Può abbinare e usare un FASAS Signer: per firmare con la CIE oppure per aprire i documenti verificandosi."""
+    if not (is_enabled() and user.is_active):
+        return False
+    return user.has_perm(PERMISSION) or (documents_gate_on() and user.has_perm("documents.view_document"))
+
+
 def deny(reason, *, user=None, obj=None, request_id="", code=""):
     """Tentativo non autorizzato o anomalo: resta nell'audit (catena SHA-256, rileva manomissioni)."""
     log_event(AuditLog.Action.DENIED, obj, user=user, repr_text=f"Firma CIE {request_id}"[:255] if obj is None else None,
@@ -85,8 +99,8 @@ def deny(reason, *, user=None, obj=None, request_id="", code=""):
 
 @transaction.atomic
 def create_pairing(user):
-    if not can_sign(user):
-        raise SignatureError("Non hai il permesso di firmare con la CIE.", "forbidden")
+    if not can_use_device(user):
+        raise SignatureError("Non hai il permesso di usare la CIE nel FASAS.", "forbidden")
     now = timezone.now()
     DevicePairing.objects.filter(user=user, used_at__isnull=True, expires_at__gt=now).update(expires_at=now)
     code = f"{_code()}-{_code()}"
@@ -103,7 +117,7 @@ def pair_device(code, name, platform, app_version=""):
     with transaction.atomic():
         pairing = (DevicePairing.objects.select_for_update().select_related("user")
                    .filter(code_hash=_hash(_normalize(code)), used_at__isnull=True, expires_at__gt=now).first())
-        if pairing is None or not can_sign(pairing.user):
+        if pairing is None or not can_use_device(pairing.user):
             raise SignatureError("Codice di abbinamento non valido o scaduto.", "pairing_invalid")
         token = secrets.token_urlsafe(32)
         if platform not in SignerDevice.Platform.values:
@@ -123,7 +137,7 @@ def authenticate_device(token):
         return None
     device = (SignerDevice.objects.select_related("user")
               .filter(token_hash=_hash(token), revoked_at__isnull=True).first())
-    if device is None or not can_sign(device.user):
+    if device is None or not can_use_device(device.user):
         return None
     now = timezone.now()
     if device.last_seen_at is None or now - device.last_seen_at > datetime.timedelta(seconds=15):
@@ -274,6 +288,75 @@ def create_acceptance_request(user):
     return request
 
 
+def create_access_request(user, guest, document=None):
+    """
+    Verifica di identità con la CIE prima di aprire, scaricare o modificare un documento (o, senza documento, tutti
+    i documenti dell'ospite per l'esportazione della cartella). La carta firma una sfida casuale del server: non è
+    la firma di un documento e non ne crea una nuova versione.
+    """
+    if not can_use_device(user) or not user.has_perm("documents.view_document"):
+        raise SignatureError("Non puoi usare la CIE per aprire i documenti: chiedi all'amministratore.", "forbidden")
+    if not external.trust_roots():
+        raise SignatureError("Verifica con CIE non ancora attivabile: l'amministratore deve configurare le CA della "
+                             "CIE (FASAS_CIE_TRUST_ROOTS).", "trust_not_configured")
+    if not user.fiscal_code:
+        raise SignatureError("Nel tuo profilo manca il codice fiscale: chiedilo all'amministratore.", "missing_fiscal_code")
+    existing = SignatureRequest.objects.filter(
+        user=user, purpose=SignatureRequest.Purpose.ACCESS, access_guest=guest, access_document=document,
+        status__in=SignatureRequest.ACTIVE).first()
+    if existing is not None and expire_if_needed(existing).is_active:
+        return existing
+    request = _base_request(user, reason="Verifica di identità per aprire i documenti", location=str(_community()),
+                            purpose=SignatureRequest.Purpose.ACCESS, access_guest=guest, access_document=document,
+                            version_sha256=hashlib.sha256(secrets.token_bytes(32)).hexdigest())
+    request.with_timestamp = False
+    request.save()
+    return request
+
+
+def _access_challenge(request):
+    """Ciò che la carta firma per dimostrare l'identità: legato a richiesta, utente e documento, mai riusabile."""
+    text = "\n".join([
+        "FASAS - verifica di identita' con CIE (non e' la firma di un documento)",
+        f"richiesta={request.pk}", f"codice={request.verify_code}", f"utente={request.user.username}",
+        f"ospite={request.access_guest_id}", f"documento={request.access_document_id or 'tutti'}",
+        f"quando={timezone.now().isoformat()}", f"casuale={secrets.token_hex(16)}",
+    ]).encode()
+    return external.PreparedSignature(field_name="", document_digest="", reserved_start=0, reserved_end=0,
+                                      signed_attrs=external.b64(text))
+
+
+def _grant_access(request_id):
+    from fasas.core.models import SystemConfig
+
+    with transaction.atomic():
+        request = SignatureRequest.objects.select_for_update().get(pk=request_id)
+        if request.status != Status.VERIFYING:
+            raise SignatureError("Richiesta chiusa durante la verifica.", "bad_state")
+        now = timezone.now()
+        access = CieAccess.objects.create(
+            user=request.user, guest=request.access_guest, document=request.access_document, request=request,
+            granted_at=now, certificate_subject=request.certificate_subject,
+            expires_at=now + datetime.timedelta(minutes=SystemConfig.get().documents_cie_minutes),
+        )
+        request.verification = {**request.verification, "identity_verified": True, "level": "Verifica di identità"}
+        log_event(AuditLog.Action.PERMISSION, access, user=request.user, guest=request.access_guest,
+                  repr_text="Accesso ai documenti verificato con CIE",
+                  changes={"verifica": [None, "CIE" if not request.is_test_card else "carta di prova"],
+                           "documento": [None, str(request.access_document_id or "tutti")],
+                           "valido_fino": [None, timezone.localtime(access.expires_at).strftime("%d/%m/%Y %H:%M")]})
+        _close(request, Status.SIGNED)
+    return request
+
+
+def has_document_access(user, guest, document=None):
+    """Con la verifica attiva serve un accesso CIE valido per quel documento (o per tutti i documenti dell'ospite)."""
+    if not documents_gate_on():
+        return True
+    scope = Q(document__isnull=True) if document is None else (Q(document=document) | Q(document__isnull=True))
+    return CieAccess.objects.filter(scope, user=user, guest=guest, expires_at__gt=timezone.now()).exists()
+
+
 def revoke_acceptance(acceptance, by, reason=""):
     acceptance.revoked_at, acceptance.revoked_reason = timezone.now(), (reason or "Revocata dal firmatario")[:255]
     acceptance.save(update_fields=["revoked_at", "revoked_reason"])
@@ -335,6 +418,12 @@ def retry_request(request, user):
         if following.is_active:
             return following
         raise SignatureError("Per questa richiesta è già stato fatto un nuovo tentativo.", "bad_state")
+    if request.purpose == SignatureRequest.Purpose.ACCESS:
+        new = create_access_request(user, request.access_guest, request.access_document)
+        if new.pk != request.pk and new.previous_id is None:
+            new.previous, new.attempt = request, request.attempt + 1
+            new.save(update_fields=["previous", "attempt"])
+        return new
     if request.purpose in (SignatureRequest.Purpose.TEST, SignatureRequest.Purpose.ACCEPTANCE):
         new = (create_test_request if request.purpose == SignatureRequest.Purpose.TEST
                else create_acceptance_request)(user)
@@ -368,6 +457,10 @@ def describe(request):
         title, version = "Documento di prova (nessun dato sanitario)", None
     elif request.purpose == SignatureRequest.Purpose.ACCEPTANCE:
         title, version = "Accettazione delle condizioni della firma con CIE", None
+    elif request.purpose == SignatureRequest.Purpose.ACCESS:
+        title = (request.access_document.title if request.access_document_id
+                 else f"tutti i documenti dell'ospite {request.access_guest} (esportazione)")
+        version = None
     else:
         title, version = request.version.document.title, request.version.number
     return {
@@ -487,26 +580,30 @@ def submit_certificate(request_id, device, nonce, certificate_b64):
         cert = external.load_certificate(external.unb64(certificate_b64, "Certificato"))
         info = external.check_certificate_for_user(cert, request.user)
         chain_note = ""
-        if request.purpose in (SignatureRequest.Purpose.DOCUMENT, SignatureRequest.Purpose.ACCEPTANCE):
+        if request.purpose in (SignatureRequest.Purpose.DOCUMENT, SignatureRequest.Purpose.ACCEPTANCE,
+                               SignatureRequest.Purpose.ACCESS):
             external.validate_certificate_chain(cert)
         else:
             try:
                 external.validate_certificate_chain(cert)
             except SignatureError as exc:  # nella prova si segnala ma si prosegue: serve a collaudare il dispositivo
                 chain_note = str(exc)
-        source = _source_pdf(request)
-        location = request.location or "FASAS"
-        prepared, prepared_pdf = external.prepare(
-            source, cert, external.intermediate_certs(), field_name=next_field_name(source), reason=request.reason,
-            location=location, with_timestamp=request.with_timestamp,
-        )
+        if request.purpose == SignatureRequest.Purpose.ACCESS:
+            prepared, prepared_pdf = _access_challenge(request), None
+        else:
+            source = _source_pdf(request)
+            location = request.location or "FASAS"
+            prepared, prepared_pdf = external.prepare(
+                source, cert, external.intermediate_certs(), field_name=next_field_name(source),
+                reason=request.reason, location=location, with_timestamp=request.with_timestamp,
+            )
     except SignatureError as exc:
         fail(request.pk, exc.code, str(exc))
         raise
     with transaction.atomic():
         request = _locked(request_id, device, states=(Status.CARD,))
         old_storage = request.prepared_storage
-        request.prepared_storage = store_encrypted(prepared_pdf, "signing/requests")
+        request.prepared_storage = store_encrypted(prepared_pdf, "signing/requests") if prepared_pdf else ""
         request.prepared = prepared.to_dict()
         request.certificate = certificate_b64
         request.certificate_subject = info["subject"]
@@ -534,6 +631,8 @@ def submit_signature(request_id, device, nonce, signature_b64):
         cert = external.load_certificate(external.unb64(request.certificate))
         prepared = external.PreparedSignature.from_dict(request.prepared)
         external.check_signature_value(cert, prepared, signature_value)
+        if request.purpose == SignatureRequest.Purpose.ACCESS:
+            return _grant_access(request.pk)
         source = _source_pdf(request)
         signed = external.finish(read_encrypted(request.prepared_storage), prepared, cert,
                                  external.intermediate_certs(), signature_value, with_timestamp=request.with_timestamp)

@@ -172,6 +172,7 @@ class SignatureRequest(models.Model):
         DOCUMENT = "document", "Documento"
         TEST = "test", "Prova di funzionamento"
         ACCEPTANCE = "acceptance", "Accettazione delle condizioni della FEA"
+        ACCESS = "access", "Verifica di identità per aprire i documenti"
 
     ACTIVE = ("waiting", "card", "authorizing", "signing", "verifying")
     CANCELLABLE = ("waiting", "card", "authorizing", "signing")
@@ -181,6 +182,11 @@ class SignatureRequest(models.Model):
     version = models.ForeignKey("documents.DocumentVersion", on_delete=models.PROTECT, null=True, blank=True,
                                 related_name="signature_requests")
     version_sha256 = models.CharField("impronta della versione bloccata", max_length=64)
+    # Verifica di identità (scopo «access»): il documento da aprire, oppure tutti i documenti di un ospite
+    access_document = models.ForeignKey("documents.Document", on_delete=models.CASCADE, null=True, blank=True,
+                                        related_name="cie_access_requests")
+    access_guest = models.ForeignKey("guests.Guest", on_delete=models.CASCADE, null=True, blank=True,
+                                     related_name="cie_access_requests")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="signature_requests")
     device = models.ForeignKey(SignerDevice, on_delete=models.PROTECT, null=True, blank=True, related_name="requests")
     status = models.CharField("stato", max_length=12, choices=Status.choices, default=Status.WAITING, db_index=True)
@@ -240,6 +246,30 @@ class SignatureRequest(models.Model):
         if self.status in ("signing", "verifying"):
             return "FIRMA_IN_CORSO"
         return {"signed": "FIRMATO", "failed": "ERRORE", "cancelled": "ANNULLATO", "expired": "ANNULLATO"}[self.status]
+
+
+class CieAccess(models.Model):
+    """
+    Accesso ai documenti dopo la verifica di identità con la CIE: vale per un documento (o per tutti i documenti di
+    un ospite, per l'esportazione della cartella) e solo per pochi minuti. La carta ha firmato una sfida casuale del
+    server con la sua chiave; il certificato è intestato all'utente (codice fiscale) ed emesso dalle CA della CIE.
+    """
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="cie_accesses")
+    guest = models.ForeignKey("guests.Guest", on_delete=models.CASCADE, related_name="cie_accesses")
+    document = models.ForeignKey("documents.Document", on_delete=models.CASCADE, null=True, blank=True,
+                                 related_name="cie_accesses")
+    request = models.OneToOneField(SignatureRequest, on_delete=models.CASCADE, related_name="cie_access")
+    granted_at = models.DateTimeField("verificato il", default=timezone.now)
+    expires_at = models.DateTimeField("valido fino al", db_index=True)
+    certificate_subject = models.CharField("titolare certificato", max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = "accesso ai documenti verificato con CIE"
+        verbose_name_plural = "accessi ai documenti verificati con CIE"
+        ordering = ["-granted_at"]
+
+    def __str__(self):
+        return f"Accesso CIE di {self.user} fino al {timezone.localtime(self.expires_at):%d/%m %H:%M}"
 
 
 class FEAAcceptance(models.Model):
