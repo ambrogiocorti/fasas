@@ -143,6 +143,28 @@ details summary { cursor: pointer; color: var(--text-2); }
   border-radius: 0 3px 3px 0; background: var(--primary); }
 .nav .count { margin-left: auto; background: var(--danger); color: #fff; border-radius: 999px; font-size: .7rem;
   min-width: 1.35rem; padding: .05rem .4rem; text-align: center; font-weight: 700; line-height: 1.35; }
+/* Tendine del menu (details/summary: funzionano anche senza JavaScript e da tastiera) */
+.nav-group { margin: .05rem 0; }
+.nav-group > summary {
+  list-style: none; display: flex; align-items: center; gap: .7rem; min-height: 36px; padding: .4rem .65rem;
+  border-radius: 8px; color: var(--text-2); font-size: .91rem; font-weight: 500; cursor: pointer; user-select: none;
+  transition: background .12s, color .12s;
+}
+.nav-group > summary::-webkit-details-marker { display: none; }
+.nav-group > summary > .icon { width: 18px; height: 18px; color: var(--text-muted); }
+.nav-group > summary:hover { background: var(--surface-3); color: var(--text); }
+.nav-group > summary:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.nav-group-label { flex: 1; min-width: 0; }
+.nav-chevron { display: grid; place-items: center; color: var(--text-muted); }
+.nav-chevron .icon { width: 15px; height: 15px; transition: transform .15s; }
+.nav-group[open] > summary .nav-chevron .icon { transform: rotate(90deg); }
+.nav-group[open] > summary > .count { display: none; }
+.nav-group[data-nav-current] > summary { color: var(--text); font-weight: 650; }
+.nav-group[data-nav-current] > summary > .icon { color: var(--primary); }
+.nav-sub { margin: .1rem 0 .4rem 1.45rem; padding-left: .55rem; border-left: 1px solid var(--border); }
+.nav .nav-sub a { min-height: 32px; padding: .3rem .6rem; font-size: .88rem; }
+.nav .nav-sub a.active::before { left: calc(-.55rem - 1px); top: 6px; bottom: 6px; }
+@media (prefers-reduced-motion: reduce) { .nav-chevron .icon { transition: none; } }
 
 .user-card { display: flex; align-items: center; gap: .65rem; margin: .5rem .65rem .75rem; padding: .6rem .65rem;
   border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }

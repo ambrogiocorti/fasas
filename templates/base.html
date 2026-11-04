@@ -24,10 +24,21 @@
     </div>
     <nav class="nav">
       {% for section in menu %}
-        {% if section.title %}<div class="nav-section">{{ section.title }}</div>{% elif not forloop.first %}<div class="nav-section nav-gap"></div>{% endif %}
-        {% for item in section.items %}
-          <a href="{{ item.url }}" class="{% if item.active %}active{% endif %}">{% icon item.icon %}{{ item.label }}{% if item.count %}<span class="count">{{ item.count }}</span>{% endif %}</a>
-        {% endfor %}
+        {% if section.title %}
+          <details class="nav-group" data-nav-group="{{ section.key }}"{% if section.open %} open data-nav-current{% endif %}>
+            <summary>{% icon section.icon %}<span class="nav-group-label">{{ section.title }}</span>{% if section.count %}<span class="count">{{ section.count }}</span>{% endif %}<span class="nav-chevron" aria-hidden="true">{% icon "chevron-right" %}</span></summary>
+            <div class="nav-sub">
+              {% for item in section.items %}
+                <a href="{{ item.url }}" class="{% if item.active %}active{% endif %}"{% if item.active %} aria-current="page"{% endif %}>{{ item.label }}{% if item.count %}<span class="count">{{ item.count }}</span>{% endif %}</a>
+              {% endfor %}
+            </div>
+          </details>
+        {% else %}
+          {% if section.gap %}<div class="nav-section nav-gap"></div>{% endif %}
+          {% for item in section.items %}
+            <a href="{{ item.url }}" class="{% if item.active %}active{% endif %}"{% if item.active %} aria-current="page"{% endif %}>{% icon item.icon %}{{ item.label }}{% if item.count %}<span class="count">{{ item.count }}</span>{% endif %}</a>
+          {% endfor %}
+        {% endif %}
       {% endfor %}
     </nav>
     <div class="user-card">

@@ -14,6 +14,25 @@
     }
   });
 
+  // Menu a tendine: quella della pagina corrente è aperta dal server; le altre aperte a mano si ricordano
+  // in questo browser (solo i nomi delle tendine, nessun dato)
+  (function () {
+    const KEY = "fasas-menu-aperti";
+    const groups = Array.prototype.slice.call(document.querySelectorAll("[data-nav-group]"));
+    if (!groups.length) return;
+    let saved = [];
+    try { saved = JSON.parse(window.localStorage.getItem(KEY) || "[]"); } catch (err) { saved = []; }
+    if (!Array.isArray(saved)) saved = [];
+    groups.forEach(function (group) {
+      if (!group.hasAttribute("data-nav-current") && saved.indexOf(group.dataset.navGroup) !== -1) group.open = true;
+      group.addEventListener("toggle", function () {
+        const open = groups.filter(function (g) { return g.open && !g.hasAttribute("data-nav-current"); })
+          .map(function (g) { return g.dataset.navGroup; });
+        try { window.localStorage.setItem(KEY, JSON.stringify(open)); } catch (err) { /* navigazione privata */ }
+      });
+    });
+  })();
+
   // Tasto "/" per andare alla ricerca (se non si sta già scrivendo in un campo)
   document.addEventListener("keydown", function (e) {
     if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;

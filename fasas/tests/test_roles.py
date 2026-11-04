@@ -80,6 +80,21 @@ class RoleAccessTests(FasasTestCase):
         self.assertIn(reverse("audit:list"), menu)
         self.assertNotIn(reverse("guests:list"), menu)
 
+    def test_menu_groups_are_compact(self):
+        self.login(self.coordinator)
+        page = self.client.get(reverse("clinical:sos_pending")).content.decode()
+        # tendine per argomento: aperta solo quella della pagina corrente
+        for key in ("assistenza", "turno", "controlli", "clinica", "personale", "archivio", "sistema"):
+            self.assertIn(f'data-nav-group="{key}"', page)
+        self.assertRegex(page, r'data-nav-group="controlli" open data-nav-current')
+        self.assertNotRegex(page, r'data-nav-group="assistenza" open')
+        self.assertIn(reverse("clinical:board"), page)  # le voci ci sono, dentro le tendine
+        # una tendina con una sola voce per il ruolo diventa una voce semplice
+        self.login(self.operator)
+        page = self.client.get(reverse("core:dashboard")).content.decode()
+        self.assertNotIn('data-nav-group="controlli"', page)
+        self.assertIn(reverse("protocols:activations"), page)
+
     def test_notifications_reach_only_authorized_roles(self):
         notify("sos_validation", "SOS da validare", users=[self.operator, self.coordinator, self.doctor, self.admin])
         recipients = set(Notification.objects.filter(kind="sos_validation").values_list("recipient__username",
