@@ -121,6 +121,10 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
   quello). Protocollo NIS del Ministero: SOD verificato con la CSCA italiana e autenticazione interna della carta su
   una sfida del server; registrazione confermata di persona da un amministratore; PIN FASAS solo come impronta,
   bloccato dopo 5 errori. Firmare con la CIE richiede ancora il PIN della carta.
+- Modalità senza rete anche per il medico, in **sola lettura** (terapie, allergie, contatti): nessuna registrazione.
+- CIE già registrata e registrata di nuovo dallo stesso utente (es. app reinstallata): restano PIN FASAS e conferma;
+  messaggio più chiaro se la carta è registrata per un altro utente. Nell'app, il dialogo del PIN della carta
+  ricorda che non è il PIN FASAS e di annullare invece di tirare a indovinare.
 - App Android: la lettura della CIE resta attiva fino all'esito (prima poteva restare ferma su «Avvicina la CIE»),
   messaggi a ogni passo, carta spostata = si riappoggia e si riprende; «Prova la lettura della CIE» senza FASAS
   (anche del PIN, con il codice fiscale letto dalla carta) e spiegazione di dove trovare il PIN.

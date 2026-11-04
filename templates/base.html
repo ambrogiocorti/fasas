@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="FASAS">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231d5fa0'/%3E%3Cpath d='M27 16h-5l-4 11-6-22-4 11H5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 </head>
-<body data-sw-url="{% url 'service_worker' %}"{% if perms.offline.use_offline %} data-offline-user="{{ request.user.username }}" data-offline-idle="{{ request.fasas_config.session_timeout_minutes }}" data-offline-pack-url="{% url 'offline:pack' %}" data-offline-sync-url="{% url 'offline:sync' %}"{% endif %}>
+<body data-sw-url="{% url 'service_worker' %}"{% if perms.offline.use_offline or perms.offline.view_offline_pack %} data-offline-user="{{ request.user.username }}" data-offline-idle="{{ request.fasas_config.session_timeout_minutes }}" data-offline-pack-url="{% url 'offline:pack' %}" data-offline-sync-url="{% url 'offline:sync' %}"{% endif %}>
 {% include "partials/icons.html" %}
 <div class="layout">
   <aside class="sidebar" aria-label="Menu principale">

@@ -436,10 +436,12 @@
         el("span", { class: "subtitle" }, `${pack.community} · dati aggiornati al ${dateTime(pack.generated_at)} · ${pack.shifts.map((s) => s.label.toLowerCase()).join(" e ")}`)));
     const warn = expired ? el("div", { class: "alert alert-danger" }, el("div", { class: "alert-body" },
       "Dati di oltre 12 ore fa: terapie e stati potrebbero essere cambiati. Verificare con il foglio di emergenza o con il coordinatore.")) : null;
+    const readonly = pack.readonly ? el("div", { class: "alert alert-info" }, el("div", { class: "alert-body" },
+      "Sola lettura: puoi consultare terapie, allergie e contatti, ma senza rete non registri nulla. Le indicazioni al turno si danno a voce e si annotano sul foglio di emergenza.")) : null;
     const tabs = el("div", { class: "tabs" }, [["round", "Giro farmaci"], ["guests", "Ospiti"], ["queue", `Da inviare (${this.queue.filter((q) => q.state !== "synced").length})`]]
       .map(([key, label]) => el("a", { href: "#", class: this.tab === key ? "active" : "", onclick: (e) => { e.preventDefault(); this.tab = key; this.renderMain(); } }, label)));
     const body = this.tab === "round" ? this.renderRound() : this.tab === "guests" ? this.renderGuests() : this.renderQueue();
-    main.replaceChildren(head, warn || "", tabs, body);
+    main.replaceChildren(head, warn || "", readonly || "", tabs, body);
   };
 
   App.prototype.renderRound = function () {

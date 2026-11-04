@@ -395,8 +395,9 @@ class MainActivity : Activity() {
     private fun askPin(flow: SigningFlow, request: SignRequest, message: String?) {
         val field = pinField()
         AlertDialog.Builder(this).setTitle("PIN della CIE")
-            .setMessage((message?.let { "$it\n\n" } ?: "") + "PIN completo della CIE, 8 cifre. Va solo alla carta, " +
-                "non al FASAS. Attenzione: 3 PIN errati bloccano la carta.")
+            .setMessage((message?.let { "$it\n\n" } ?: "") + "PIN della carta, 8 cifre: non è il PIN FASAS. Va solo " +
+                "alla carta, non al FASAS. Se non lo ricordi premi Annulla e non tirare a indovinare: 3 PIN errati " +
+                "bloccano la carta (si sblocca con il PUK nell'app CieID).")
             .setView(field).setCancelable(false)
             .setPositiveButton("Avanti") { _, _ ->
                 val pin = field.text.toString()

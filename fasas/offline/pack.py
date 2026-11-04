@@ -87,6 +87,7 @@ def build_pack(user, now=None):
             "at": _iso(reading.occurred_at), "out_of_range": reading.out_of_range,
         })
 
+    writer = user.has_perm("offline.use_offline")
     return {
         "version": 1,
         "generated_at": _iso(now),
@@ -119,10 +120,12 @@ def build_pack(user, now=None):
         "event_types": [{"code": c, "label": label} for c, label in ClinicalEvent.EventType.choices],
         "severities": [{"code": c, "label": label} for c, label in ClinicalEvent.Severity.choices],
         "administration_statuses": [{"code": c, "label": label} for c, label in TherapyAdministration.Status.choices],
+        # Sola lettura (medico): consulta i dati del turno ma non registra nulla senza rete
+        "readonly": not user.has_perm("offline.use_offline"),
         "permissions": {
-            "administration": user.has_perm("clinical.add_therapyadministration"),
-            "parameter": user.has_perm("clinical.add_parameterreading"),
-            "diary": user.has_perm("daily.add_diaryentry"),
-            "event": user.has_perm("clinical.add_clinicalevent"),
+            "administration": writer and user.has_perm("clinical.add_therapyadministration"),
+            "parameter": writer and user.has_perm("clinical.add_parameterreading"),
+            "diary": writer and user.has_perm("daily.add_diaryentry"),
+            "event": writer and user.has_perm("clinical.add_clinicalevent"),
         },
     }

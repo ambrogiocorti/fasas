@@ -325,6 +325,17 @@ class CieWithoutPinTests(FasasTestCase):
         status, pending = self.phone.get("richieste/?attesa=0")
         self.assertEqual(pending["requests"][0]["purpose"], "enroll")
 
+    def test_same_card_again_keeps_pin_and_confirmation(self):
+        enrollment = self.ready()  # es. app reinstallata: si registra di nuovo la stessa carta
+        status, data = self.enroll()
+        self.assertEqual(status, 200, data)
+        self.assertEqual(CieEnrollment.objects.filter(user=self.operator, revoked_at__isnull=True).get(), enrollment)
+        enrollment.refresh_from_db()
+        self.assertTrue(enrollment.ready)
+        status, data = self.enroll(CSCA.card())  # carta diversa: nuova registrazione da confermare
+        self.assertEqual(status, 200, data)
+        self.assertFalse(CieEnrollment.objects.get(user=self.operator, revoked_at__isnull=True).ready)
+
     def test_one_card_one_person(self):
         self.ready()
         other_phone = DeviceClient(self.client_class())
@@ -333,6 +344,7 @@ class CieWithoutPinTests(FasasTestCase):
         self.phone = other_phone
         _, (status, data) = self.run_request(request.pk, with_sod=True)
         self.assertEqual((status, data["error"]), (400, "card_in_use"))
+        self.assertIn("azzerare", data["message"])
 
     def test_the_card_pin_still_works_and_signing_still_needs_it(self):
         page = self.client.get(reverse("signatures:cie_access"), {"documento": self.document.pk})

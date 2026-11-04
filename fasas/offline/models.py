@@ -36,7 +36,8 @@ class OfflineRecord(models.Model):
     object_label = models.CharField("registrazione creata", max_length=255, blank=True)
 
     class Meta:
-        permissions = [("use_offline", "Può lavorare in modalità offline sul dispositivo")]
+        permissions = [("use_offline", "Può lavorare in modalità offline sul dispositivo"),
+                       ("view_offline_pack", "Può consultare senza rete i dati del turno (sola lettura)")]
         verbose_name = "registrazione offline"
         verbose_name_plural = "registrazioni offline"
         ordering = ["-received_at"]

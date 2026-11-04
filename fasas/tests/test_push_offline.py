@@ -247,9 +247,15 @@ class OfflineTests(FasasTestCase):
 
     def test_pack_contents_and_access(self):
         self.assertEqual(self.client.get(reverse("offline:pack")).status_code, 401)
-        for user in (self.doctor, self.admin):
-            self.login(user)
-            self.assertEqual(self.client.get(reverse("offline:pack")).status_code, 403, user.username)
+        self.login(self.admin)
+        self.assertEqual(self.client.get(reverse("offline:pack")).status_code, 403)
+        # il medico consulta senza rete in sola lettura: nessuna azione di registrazione nel pacchetto
+        self.login(self.doctor)
+        self.assertContains(self.client.get(reverse("core:dashboard")), "data-offline-user=")
+        pack = self.client.get(reverse("offline:pack")).json()
+        self.assertTrue(pack["readonly"])
+        self.assertFalse(any(pack["permissions"].values()))
+        self.assertTrue(any(g["allergies"] for g in pack["guests"]))
         self.login(self.operator)
         response = self.client.get(reverse("offline:pack"))
         self.assertIn("no-store", response["Cache-Control"])
@@ -261,6 +267,7 @@ class OfflineTests(FasasTestCase):
         self.assertTrue(any(s["therapy"] == self.sos.pk and s["max_daily"] == 2 for s in pack["sos"]))
         self.assertTrue(all(d["therapy"] == self.therapy.pk for d in pack["doses"]))
         self.assertTrue(pack["permissions"]["administration"])
+        self.assertFalse(pack["readonly"])
 
     def test_offline_page_is_an_empty_shell(self):
         response = self.client.get(reverse("offline:page"))

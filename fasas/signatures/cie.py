@@ -489,8 +489,18 @@ def _save_enrollment(request_id, nis_raw, kpub, info):
     with transaction.atomic():
         request = SignatureRequest.objects.select_for_update().get(pk=request_id)
         if CieEnrollment.objects.filter(nis_hash=nis_digest, revoked_at__isnull=True).exclude(user=request.user).exists():
-            _close(request, Status.FAILED, "card_in_use", "Questa CIE è già registrata per un altro utente.")
-            raise SignatureError("Questa CIE è già registrata per un altro utente.", "card_in_use")
+            message = ("Questa CIE è già registrata per un altro utente del FASAS (una carta vale per una sola persona). "
+                       "Se è la tua, chiedi all'amministratore di azzerare quella registrazione in Utenti e permessi.")
+            _close(request, Status.FAILED, "card_in_use", message[:255])
+            raise SignatureError(message, "card_in_use")
+        current = CieEnrollment.objects.filter(user=request.user, revoked_at__isnull=True).first()
+        if current is not None and current.nis_hash == nis_digest and current.kpub_hash == nis_protocol.kpub_hash(kpub):
+            # stessa carta già registrata (es. app reinstallata): restano PIN FASAS e conferma dell'amministratore
+            request.verification = {**request.verification, "enrolled": True, "level": "CIE già registrata"}
+            log_event(AuditLog.Action.CONFIG, current, user=request.user, repr_text="Registrazione della CIE",
+                      changes={"cie": ["registrata", "stessa carta verificata di nuovo"]})
+            _close(request, Status.SIGNED)
+            return request
         now = timezone.now()
         CieEnrollment.objects.filter(user=request.user, revoked_at__isnull=True).update(
             revoked_at=now, revoked_reason="Sostituita da una nuova registrazione")

@@ -13,6 +13,7 @@
 | Contenzioni | autorizzazione con motivo, alternative provate, durata; il documento firmato va allegato |
 | Lesioni | categoria e piano di medicazione; chiusura alla guarigione |
 | Firmare documenti | *Documenti da firmare* (se è configurata la firma con il proprio prestatore qualificato) |
+| Senza rete | se il FASAS non è raggiungibile, sul dispositivo dove si è entrati di recente si consultano in sola lettura terapie, allergie e contatti del turno (si sblocca con la propria password); le indicazioni si danno a voce e si annotano sul foglio di emergenza |
 
 **Avvisi alla prescrizione**: il FASAS segnala stesso farmaco o principio attivo già in terapia e allergie
 registrate (se attivi). Sono promemoria sui dati registrati: la decisione resta del medico, che conferma

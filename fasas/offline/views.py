@@ -3,6 +3,7 @@ import json
 
 from django.conf import settings
 from django.contrib.auth.decorators import permission_required
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.middleware.csrf import get_token
 from django.shortcuts import render
@@ -24,6 +25,11 @@ from .sync import sync
 
 SHELL_STATIC = ["css/fasas.css", "js/fasas.js", "js/offline.js", "img/icon-192.png", "img/badge-96.png"]
 PERM = "offline.use_offline"
+VIEW_PERM = "offline.view_offline_pack"  # medico: consultazione senza rete, nessuna registrazione
+
+
+def can_download_pack(user):
+    return user.has_perm(PERM) or user.has_perm(VIEW_PERM)
 
 
 def _version():
@@ -79,7 +85,8 @@ def status(request):
         return JsonResponse({"online": True, "authenticated": False}, status=401)
     return JsonResponse({
         "online": True, "authenticated": True, "user": request.user.username, "csrf": get_token(request),
-        "can_use_offline": request.user.has_perm(PERM), "server_time": timezone.now().isoformat(),
+        "can_use_offline": can_download_pack(request.user), "read_only": not request.user.has_perm(PERM),
+        "server_time": timezone.now().isoformat(),
     })
 
 
@@ -87,7 +94,7 @@ def status(request):
 def pack(request):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "login"}, status=401)
-    if not request.user.has_perm(PERM):
+    if not can_download_pack(request.user):
         return JsonResponse({"error": "forbidden"}, status=403)
     data = build_pack(request.user)
     log_event(AuditLog.Action.DOWNLOAD, None, user=request.user, repr_text="Pacchetto dati per lavoro senza rete",
@@ -115,8 +122,9 @@ def sync_view(request):
     return JsonResponse({"results": sync(request.user, records)})
 
 
-@permission_required(PERM, raise_exception=True)
 def emergency_pdf(request):
+    if not can_download_pack(request.user):
+        raise PermissionDenied
     data = emergency_sheet(request.user)
     log_event(AuditLog.Action.EXPORT, None, user=request.user, repr_text="Foglio di emergenza",
               changes={"foglio di emergenza": [None, "PDF"]}, reason="Stampa del foglio di emergenza")

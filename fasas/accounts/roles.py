@@ -104,6 +104,8 @@ COORDINATOR = OPERATOR + [
 # Consulta la cartella clinica, valida i farmaci SOS e autorizza le contenzioni (spec. §4);
 # registra gli interventi sanitari. Non gestisce turni, magazzino, registro giornaliero o report.
 DOCTOR = VIEW_CARE + [
+    # Durante un'interruzione consulta terapie, allergie e contatti sul proprio dispositivo, senza registrare nulla
+    "offline.view_offline_pack",
     "core.edit_after_window",
     "guests.add_diagnosis", "guests.change_diagnosis", "guests.add_allergy", "guests.change_allergy",
     "documents.add_document",
