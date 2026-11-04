@@ -22,17 +22,22 @@ interface CieSession {
 sealed class Outcome {
     data class Signed(val level: String) : Outcome()
     data class PinWrong(val attemptsLeft: Int?) : Outcome()
+    /** La carta si è allontanata prima della fine: la richiesta resta aperta, basta riappoggiarla. */
+    data class CardMoved(val message: String) : Outcome()
     data class Failed(val code: String, val message: String) : Outcome()
 }
 
 /**
- * Flusso per telefono: conferma e PIN prima di avvicinare la carta, poi un'unica sessione NFC breve in cui
+ * Flusso per telefono: conferma e PIN prima di avvicinare la carta, poi una sessione NFC breve in cui
  * si apre il canale sicuro, si legge il certificato, il FASAS prepara il documento e la carta firma.
  * Ogni passo usa il nonce del passo precedente; il PIN non viene mai inviato al server.
+ * Se la carta si allontana a metà, i passi già fatti sul server restano validi e si riprende da lì.
  */
 class SigningFlow(private val api: FasasApi) {
     private var nonce: String? = null
     private var cardReported = false
+    private var prepared: Prepared? = null
+    private var signingReported = false
 
     fun accept(request: SignRequest) {
         val claimed = api.claim(request.id)
@@ -42,6 +47,8 @@ class SigningFlow(private val api: FasasApi) {
         }
         nonce = claimed.getString("nonce")
         cardReported = false
+        prepared = null
+        signingReported = false
     }
 
     fun refuse(request: SignRequest) {
@@ -49,8 +56,11 @@ class SigningFlow(private val api: FasasApi) {
         api.error(request.id, claimed.getString("nonce"), "cancelled")
     }
 
-    fun cancel(request: SignRequest) {
-        nonce?.let { runCatching { api.error(request.id, it, "cancelled") } }
+    fun cancel(request: SignRequest) = abort(request, "cancelled")
+
+    /** Chiude la richiesta sul server con un codice d'errore (es. telefono non compatibile, errore imprevisto). */
+    fun abort(request: SignRequest, code: String) {
+        nonce?.let { runCatching { api.error(request.id, it, code) } }
         nonce = null
     }
 
@@ -59,6 +69,7 @@ class SigningFlow(private val api: FasasApi) {
         try {
             if (!cardReported) {
                 current = api.state(request.id, current, "card")
+                nonce = current
                 cardReported = true
             }
             try {
@@ -69,18 +80,27 @@ class SigningFlow(private val api: FasasApi) {
                 nonce = current
                 return Outcome.PinWrong(e.attemptsLeft)
             }
-            val prepared = api.certificate(request.id, current, session.readCertificate())
-            current = prepared.nonce
-            val expected = SHA256_DIGEST_INFO_PREFIX + MessageDigest.getInstance("SHA-256").digest(prepared.toBeSigned)
-            if (!prepared.digestInfo.contentEquals(expected) || prepared.verifyCode != request.verifyCode) {
+            val certificate = session.readCertificate()
+            val ready = prepared ?: api.certificate(request.id, current, certificate).also {
+                current = it.nonce
+                nonce = current
+                prepared = it
+            }
+            val expected = SHA256_DIGEST_INFO_PREFIX + MessageDigest.getInstance("SHA-256").digest(ready.toBeSigned)
+            if (!ready.digestInfo.contentEquals(expected) || ready.verifyCode != request.verifyCode) {
                 throw CardException("device_error", "Dati da firmare incoerenti ricevuti dal server: firma interrotta.")
             }
-            current = api.state(request.id, current, "signing")
-            val signature = session.signDigestInfo(prepared.digestInfo)
+            if (!signingReported) {
+                current = api.state(request.id, current, "signing")
+                nonce = current
+                signingReported = true
+            }
+            val signature = session.signDigestInfo(ready.digestInfo)
             val result = api.sign(request.id, current, signature)
             nonce = null
             return Outcome.Signed(result.optJSONObject("verification")?.optString("level") ?: "PAdES")
         } catch (e: CardException) {
+            if (e.code == "card_removed") return Outcome.CardMoved(e.message ?: "Carta allontanata.")
             runCatching { api.error(request.id, current, e.code) }
             nonce = null
             return Outcome.Failed(e.code, e.message ?: e.code)

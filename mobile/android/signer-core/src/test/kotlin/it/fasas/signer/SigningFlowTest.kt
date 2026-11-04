@@ -75,3 +75,89 @@ class SigningFlowTest {
         println("Esito: $outcome")
     }
 }
+
+/** FASAS finto in memoria (stessi passi e nonce del server vero) per provare il flusso senza rete né carta. */
+class FakeFasas : AutoCloseable {
+    private val server = com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress("127.0.0.1", 0), 0)
+    private var nonce = "n0"
+    private var counter = 0
+    val calls = mutableListOf<String>()
+    lateinit var publicKey: java.security.PublicKey
+    val toBeSigned = "attributi firmati di prova".toByteArray()
+    var signedOk = false
+    val url get() = "http://127.0.0.1:${server.address.port}/"
+
+    init {
+        server.createContext("/api/firma/v1/") { ex ->
+            val path = ex.requestURI.path.removePrefix("/api/firma/v1/")
+            val body = ex.requestBody.readBytes().toString(Charsets.UTF_8).let { if (it.isBlank()) org.json.JSONObject() else org.json.JSONObject(it) }
+            val step = path.split("/").getOrElse(2) { "" }
+            calls += step
+            val reply = org.json.JSONObject()
+            var status = 200
+            if (step != "prendi" && body.optString("nonce") != nonce) {
+                status = 409; reply.put("error", "bad_nonce").put("message", "nonce errato")
+            } else {
+                nonce = "n${++counter}"
+                reply.put("nonce", nonce)
+                when (step) {
+                    "prendi" -> reply.put("verify_code", "ABCD-EFGH")
+                    "certificato" -> {
+                        val digest = MessageDigest.getInstance("SHA-256").digest(toBeSigned)
+                        reply.put("to_be_signed", Base64Codec.encode(toBeSigned))
+                            .put("digest_info", Base64Codec.encode(SigningFlow.SHA256_DIGEST_INFO_PREFIX + digest))
+                            .put("verify_code", "ABCD-EFGH")
+                    }
+                    "firma" -> {
+                        val ok = Signature.getInstance("SHA256withRSA").run {
+                            initVerify(publicKey); update(toBeSigned); verify(Base64Codec.decode(body.getString("signature")))
+                        }
+                        signedOk = ok
+                        reply.put("verification", org.json.JSONObject().put("level", "PAdES-B-B"))
+                    }
+                }
+            }
+            val bytes = reply.toString().toByteArray()
+            ex.sendResponseHeaders(status, bytes.size.toLong())
+            ex.responseBody.use { it.write(bytes) }
+        }
+        server.start()
+    }
+
+    override fun close() = server.stop(0)
+}
+
+/** Carta che si allontana la prima volta che le si chiede di firmare. */
+class SlippingSession(private val inner: SoftwareTestSession) : CieSession by inner {
+    var slips = 1
+    override fun signDigestInfo(digestInfo: ByteArray): ByteArray {
+        if (slips-- > 0) throw CardException("card_removed", "La carta è stata allontanata dal telefono.")
+        return inner.signDigestInfo(digestInfo)
+    }
+}
+
+class CardMovedTest {
+    @Test
+    fun resumesAfterTheCardIsMoved() {
+        val pair = java.security.KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.genKeyPair()
+        FakeFasas().use { fake ->
+            fake.publicKey = pair.public
+            val flow = SigningFlow(FasasApi(fake.url))
+            val request = SignRequest("r1", "Documento", 1, "00", "ABCD-EFGH", "")
+            flow.accept(request)
+            val session = SlippingSession(SoftwareTestSession(pair.private, byteArrayOf(1, 2, 3), "12345678"))
+            assertIs<Outcome.CardMoved>(flow.onCard(request, session, "12345678"))
+            val outcome = flow.onCard(request, session, "12345678")
+            assertIs<Outcome.Signed>(outcome, outcome.toString())
+            assertTrue(fake.signedOk)
+            // certificato inviato una volta sola, nessun errore segnalato al server: la richiesta è proseguita
+            assertEquals(listOf("prendi", "stato", "certificato", "stato", "firma"), fake.calls)
+        }
+    }
+
+    @Test
+    fun accessRequestsAreRecognised() {
+        assertTrue(SignRequest("r", "t", null, "00", "C", "", purpose = "access").isAccess)
+        assertTrue(!SignRequest("r", "t", null, "00", "C", "").isAccess)
+    }
+}

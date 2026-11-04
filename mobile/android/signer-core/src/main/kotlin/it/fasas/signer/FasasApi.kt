@@ -11,7 +11,11 @@ class ServerException(val status: Int, val code: String, message: String) : Exce
 data class SignRequest(
     val id: String, val title: String, val version: Int?, val documentSha256: String,
     val verifyCode: String, val reason: String,
-)
+    /** «document», «test», «acceptance» oppure «access» (verifica di identità prima di aprire un documento) */
+    val purpose: String = "document",
+) {
+    val isAccess get() = purpose == "access"
+}
 
 data class Prepared(val nonce: String, val toBeSigned: ByteArray, val digestInfo: ByteArray, val verifyCode: String)
 
@@ -91,7 +95,8 @@ class FasasApi(baseUrl: String, var token: String = "", allowLanHttp: Boolean = 
         return (0 until items.length()).map { i ->
             val r = items.getJSONObject(i)
             SignRequest(r.getString("id"), r.getString("title"), if (r.isNull("version")) null else r.getInt("version"),
-                r.getString("document_sha256"), r.getString("verify_code"), r.optString("reason"))
+                r.getString("document_sha256"), r.getString("verify_code"), r.optString("reason"),
+                r.optString("purpose", "document"))
         }
     }
 

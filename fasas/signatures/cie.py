@@ -43,6 +43,8 @@ DEVICE_ERRORS = {
     "pin_blocked": "PIN della CIE bloccato: sbloccarlo con il PUK dall'app «CIE ID».",
     "cancelled": "Firma annullata sul dispositivo.",
     "cert_missing": "Sulla carta non è stato trovato il certificato.",
+    "not_cie": "La carta appoggiata al telefono non è una CIE.",
+    "nfc_unsupported": "Il telefono non supporta i comandi NFC necessari alla CIE: usare un altro telefono o il computer.",
     "unsupported_mechanism": "La carta non supporta il meccanismo di firma RSA richiesto.",
     "timeout": "Tempo scaduto sul dispositivo.",
     "device_error": "Errore del dispositivo di firma.",
