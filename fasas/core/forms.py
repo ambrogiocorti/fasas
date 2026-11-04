@@ -29,6 +29,8 @@ class SystemConfigForm(forms.ModelForm):
             elif not unchanged and cleaned.get("documents_verification") == "nis" and not nis.csca_certificates():
                 self.add_error("documents_verification", "Per la CIE con il PIN FASAS servono i certificati della CSCA "
                                "italiana (FASAS_CIE_CSCA, docs/FIRMA_CIE.md).")
+            elif not unchanged and cleaned.get("documents_verification") == "cie" and not cie.card_pin_tested():
+                self.add_error("documents_verification", cie.NOT_TESTED)
             elif not unchanged and cleaned.get("documents_verification") == "cie" and not external.trust_roots():
                 self.add_error("documents_verification", "Per la CIE con il suo PIN servono i certificati delle CA "
                                "della CIE (FASAS_CIE_TRUST_ROOTS, docs/FIRMA_CIE.md).")

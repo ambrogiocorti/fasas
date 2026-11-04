@@ -128,6 +128,7 @@ def credential_view(request):
         "acceptance_required": settings.FASAS_FEA_REQUIRE_ACCEPTANCE, "terms_draft": fea_terms.is_draft(),
         "nis_enabled": can_cie and request.fasas_config.documents_verification == "nis",
         "enrollment": cie.enrollment_of(user) if can_cie else None, "pin_form": FasasPinForm(enrollment=None),
+        "card_pin_tested": cie.card_pin_tested() if can_cie_sign else True,
     })
 
 

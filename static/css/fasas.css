@@ -739,3 +739,10 @@ td.rota-cell.changed { outline: 2px dashed var(--primary); outline-offset: -2px;
 .dose-row.pack-match { outline: 3px solid var(--ok, #1e8e5a); outline-offset: 2px; border-radius: 8px; }
 .app-qr { text-align: center; }
 .app-qr .qr svg { width: 220px; height: 220px; max-width: 100%; border-radius: 10px; }
+/* Dimensione del testo scelta dall'utente (Il mio profilo) */
+html[data-text="large"] { font-size: 17px; }
+html[data-text="larger"] { font-size: 19px; }
+/* Link dentro il testo riconoscibili anche senza colore (WCAG 1.4.1) */
+.content p a:not(.btn), .content li a:not(.btn):not(.pill), .alert-body a:not(.btn) {
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px;
+}

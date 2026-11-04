@@ -158,9 +158,12 @@ class UserManagementScreenTests(FasasTestCase):
         self.login(self.operator)
         profile = reverse("accounts:profile")
         self.assertEqual(self.client.get(profile).status_code, 200)
-        self.client.post(profile, {"first_name": "Olga", "last_name": "Test", "email": "", "phone": "", "theme": "dark"})
+        self.client.post(profile, {"first_name": "Olga", "last_name": "Test", "email": "", "phone": "", "theme": "dark",
+                                   "text_size": "large"})
         self.operator.refresh_from_db()
-        self.assertEqual((self.operator.first_name, self.operator.theme), ("Olga", "dark"))
+        self.assertEqual((self.operator.first_name, self.operator.theme, self.operator.text_size),
+                         ("Olga", "dark", "large"))
+        self.assertContains(self.client.get(profile), 'data-text="large"')
         response = self.client.post(reverse("accounts:set_theme"), {"theme": "light", "next": "https://altro.example/"})
         self.assertRedirects(response, reverse("core:dashboard"), fetch_redirect_response=False)
         self.operator.refresh_from_db()

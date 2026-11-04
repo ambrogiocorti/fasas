@@ -67,6 +67,37 @@ jobs:
       - run: python manage.py fasas_demo --skip-if-exists --ambiente-di-prova
       - run: python manage.py test fasas.tests
 
+  accessibilita:
+    # Pagine principali per ogni ruolo controllate con axe-core (WCAG 2.1 A e AA), in chiaro e in scuro
+    runs-on: ubuntu-latest
+    env:
+      DJANGO_DEBUG: "1"
+      FASAS_LOG_LEVEL: WARNING
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: pip install --require-hashes -r requirements.lock
+      - run: python manage.py migrate --verbosity 0
+      - run: python manage.py fasas_demo --skip-if-exists --ambiente-di-prova
+      - name: FASAS avviato
+        run: |
+          python manage.py runserver 127.0.0.1:8765 --noreload > /tmp/server.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://127.0.0.1:8765/accesso/entra/ && break; sleep 1; done
+      - name: Controllo di accessibilità
+        run: |
+          npm install --no-save --no-audit --no-fund axe-core@4.10.2 playwright@1.49.1
+          npx playwright install --with-deps chromium
+          node scripts/accessibilita.js
+      - name: Registro del server in caso di errore
+        if: failure()
+        run: tail -50 /tmp/server.log
+
   container:
     # Immagine di produzione e docker compose completo: database, sito, job, proxy HTTPS.
     # PostgreSQL 16 con client 17: prova anche il ripristino verso un server più vecchio (es. Supabase).

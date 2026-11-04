@@ -288,6 +288,9 @@ FASAS_SIGNER_ANDROID_PACKAGE = os.environ.get("FASAS_SIGNER_ANDROID_PACKAGE", "i
 FASAS_CIE_ALLOW_HTTP = env_bool("FASAS_CIE_ALLOW_HTTP", DEBUG)  # solo sviluppo: in produzione il Signer usa HTTPS
 # Prima della prima firma con CIE il firmatario firma con la CIE l'accettazione delle condizioni (DPCM 22/02/2013, art. 57)
 FASAS_FEA_REQUIRE_ACCEPTANCE = env_bool("FASAS_FEA_REQUIRE_ACCEPTANCE", True)
+# Firma e verifica con il PIN della carta disponibili solo dopo il collaudo in questa struttura: almeno una firma di
+# prova riuscita con una CIE vera (catena verificata con le CA della CIE). Spegnere solo nei test automatici.
+FASAS_CIE_PIN_REQUIRES_TEST = env_bool("FASAS_CIE_PIN_REQUIRES_TEST", True)
 FASAS_FEA_TERMS_FILE = os.environ.get("FASAS_FEA_TERMS_FILE", "")  # testo approvato dal legale (vuoto = bozza)
 FASAS_FEA_RETENTION_YEARS = int(os.environ.get("FASAS_FEA_RETENTION_YEARS", "20"))
 

@@ -1,6 +1,10 @@
 # Roadmap
 
-Stato al 03/11/2026, versione 0.9.0 più le novità non ancora rilasciate ([CHANGELOG](../CHANGELOG.md)). ✅ fatto · 🟡 da decidere o da completare fuori dal software · ⬜ da fare
+Stato al 04/11/2026, versione 0.10.0 «pilota» ([CHANGELOG](../CHANGELOG.md)). ✅ fatto · 🟡 da decidere o da completare fuori dal software · ⬜ da fare
+
+> **Blocco delle funzioni fino alla fine del pilota.** Dalla 0.10.0 si fanno solo correzioni di errori e dei punti
+> scomodi segnalati con «Segnala un problema». Le voci ⬜ delle fasi 2 e 3 si riprendono dopo la 1.0, scegliendole
+> in base all'uso reale ([PIANO_PILOTA.md](PIANO_PILOTA.md)).
 
 ## Fase 1 – Prima di inserire dati reali
 
@@ -28,7 +32,13 @@ Stato al 03/11/2026, versione 0.9.0 più le novità non ancora rilasciate ([CHAN
 | 🟡 | GDPR: registro, DPIA, informative, nomine | bozze pronte in [gdpr/](gdpr/README.md), compreso l'accordo art. 28 con il fornitore; da completare con DPO/consulente |
 | 🟡 | Requisiti FASAS regionali e conservazione | checklist per l'ATS in [gdpr/CHECKLIST_ATS.md](gdpr/CHECKLIST_ATS.md) |
 | 🟡 | Validazione clinica di protocolli e interazioni | pulsante «Valida» del medico: prima i protocolli non si attivano e le interazioni non entrano nei promemoria |
-| 🟡 | Prova sul campo | 2–4 settimane con 2–3 operatori, accanto alla carta; schede di una pagina per ruolo in [guide/](guide/OPERATORE.md) |
+| 🟡 | Pilota | un nucleo, 5-8 utenti, 4-6 settimane accanto al cartaceo, con indicatori, segnalazioni e criteri per andare avanti o fermarsi – [PIANO_PILOTA.md](PIANO_PILOTA.md); schede per ruolo in [guide/](guide/OPERATORE.md) |
+| ✅ | Moduli accendibili e configurazione per il pilota | Configurazione › Moduli: i moduli facoltativi si spengono senza perdere dati |
+| ✅ | Segnalazioni e indicatori del pilota | «Segnala un problema» in ogni pagina; giro farmaci, registrazioni mancanti e in ritardo, checklist |
+| ✅ | Pacchetto per l'ispezione | un PDF per la vigilanza ATS/ASL, archiviato come i report |
+| ✅ | App Android distribuita dal FASAS | APK firmato con la chiave della struttura, QR code, avviso di aggiornamento – [FIRMA_CIE.md](FIRMA_CIE.md) |
+| ✅ | Accessibilità | controllo automatico WCAG 2.1 A/AA nella CI, testo più grande per utente; prova con le persone nel pilota |
+| ✅ | Continuità del fornitore | [SECONDO_TECNICO.md](SECONDO_TECNICO.md) e [MODELLO_CONTRATTO_ASSISTENZA.md](MODELLO_CONTRATTO_ASSISTENZA.md) |
 | 🟡 | Sicurezza fisica e continuità | modelli pronti – [SICUREZZA_FISICA_E_CONTINUITA.md](SICUREZZA_FISICA_E_CONTINUITA.md); locale, cassaforte e vice amministratore a cura della struttura |
 
 ## Fase 2 – Miglioramenti di grande utilità
@@ -44,9 +54,9 @@ Stato al 03/11/2026, versione 0.9.0 più le novità non ancora rilasciate ([CHAN
 | ✅ | Token API con scadenza e revoca | API comunque spenta finché non serve |
 | ⬜ | Tracciato del flusso regionale delle presenze | quando l'ATS indica il formato |
 | ⬜ | Fatturazione elettronica delle rette (SDI) | solo se le rette vanno fatturate dal sistema; altrimenti export al gestionale |
-| ⬜ | Banca dati dei farmaci | anagrafica e interazioni da fonte ufficiale/commerciale |
-| ⬜ | Codici a barre / QR alla somministrazione | braccialetto ospite + confezione |
-| ⬜ | Pacchetto «pronto per l'ispezione» | report unico per la vigilanza ATS |
+| ✅ | Anagrafica dei farmaci da fonte ufficiale | elenco open data AIFA (CC BY 4.0) caricato dalla struttura; le interazioni restano quelle validate dal medico |
+| 🟡 | Codici a barre alla somministrazione | controllo della confezione nel giro farmaci (lettore o fotocamera); braccialetto dell'ospite da fare |
+| ✅ | Pacchetto «pronto per l'ispezione» | report unico per la vigilanza ATS |
 | ⬜ | Conservazione a norma | invio dei fascicoli chiusi a un conservatore accreditato |
 | ⬜ | Firma di più documenti con un'unica autorizzazione | firma massiva per i medici |
 | 🟡 | FASAS Signer per Android | **congelato**: APK di prova compilabile a mano da GitHub, da collaudare con una CIE reale solo se la struttura attiva la firma con CIE |

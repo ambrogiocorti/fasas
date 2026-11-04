@@ -18,7 +18,7 @@ _MEDIA = tempfile.mkdtemp(prefix="fasas-test-media-")
 _BACKUP = tempfile.mkdtemp(prefix="fasas-test-backup-")
 
 
-@override_settings(MEDIA_ROOT=_MEDIA, FASAS_BACKUP_DIR=__import__("pathlib").Path(_BACKUP),
+@override_settings(MEDIA_ROOT=_MEDIA, FASAS_BACKUP_DIR=__import__("pathlib").Path(_BACKUP), FASAS_CIE_PIN_REQUIRES_TEST=False,
                    FASAS_ALLOWED_NETWORKS=[], PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"])
 class FasasTestCase(TestCase):
     @classmethod

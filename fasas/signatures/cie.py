@@ -215,6 +215,28 @@ def _base_request(user, *, reason="", location="", previous=None, **fields):
     )
 
 
+def card_pin_tested():
+    """
+    Firma con il PIN della carta collaudata in questa installazione: almeno una firma di prova riuscita con una CIE
+    vera (catena verificata con le CA della CIE configurate, non una carta di prova). Finché non c'è, firma dei
+    documenti, accettazione della FEA e verifica con il PIN della carta restano nascoste o rifiutate.
+    """
+    if not settings.FASAS_CIE_PIN_REQUIRES_TEST:
+        return True
+    tests = SignatureRequest.objects.filter(purpose=SignatureRequest.Purpose.TEST,
+                                            status=SignatureRequest.Status.SIGNED, verification__trusted=True)
+    return any(not t.is_test_card for t in tests.only("certificate_issuer")[:50])
+
+
+NOT_TESTED = ("La firma con il PIN della carta non è ancora stata collaudata in questa struttura: prima serve una "
+              "firma di prova riuscita con una CIE vera (Impostazioni › Firma digitale › Prova di firma).")
+
+
+def _require_card_pin_tested():
+    if not card_pin_tested():
+        raise SignatureError(NOT_TESTED, "not_tested")
+
+
 def create_request(version, user, reason="", previous=None):
     """Blocca la versione e crea la richiesta. Se l'utente ha già una richiesta attiva per la versione, la restituisce."""
     from fasas.documents.services import read_version
@@ -222,6 +244,7 @@ def create_request(version, user, reason="", previous=None):
 
     if not can_sign(user):
         raise SignatureError("Non hai il permesso di firmare con la CIE.", "forbidden")
+    _require_card_pin_tested()
     if not version.is_pdf:
         raise SignatureError("Con la CIE si firmano solo documenti PDF (formato PAdES).")
     document = version.document
@@ -275,6 +298,7 @@ def create_acceptance_request(user):
 
     if not can_sign(user):
         raise SignatureError("Non hai il permesso di firmare con la CIE.", "forbidden")
+    _require_card_pin_tested()
     if not external.trust_roots():
         raise SignatureError("Firma con CIE non ancora attivabile: l'amministratore deve configurare le CA della CIE "
                              "(FASAS_CIE_TRUST_ROOTS).", "trust_not_configured")
@@ -290,10 +314,13 @@ def create_acceptance_request(user):
 
 
 def access_methods():
-    """Metodi ammessi per aprire i documenti: CIE + PIN FASAS (NIS) e/o CIE con il suo PIN."""
+    """Metodi ammessi per aprire i documenti: CIE + PIN FASAS (NIS) e/o CIE con il suo PIN (questo solo dopo il
+    collaudo della firma con il PIN della carta)."""
     from fasas.core.models import SystemConfig
 
-    return ["nis", "cie"] if SystemConfig.get().documents_verification == "nis" else ["cie"]
+    if SystemConfig.get().documents_verification == "nis":
+        return ["nis", "cie"] if card_pin_tested() else ["nis"]
+    return ["cie"]
 
 
 def enrollment_of(user):
@@ -324,6 +351,7 @@ def create_access_request(user, guest, document=None, method="cie"):
             raise SignatureError("PIN FASAS bloccato dopo troppi errori: chiedi all'amministratore di azzerare la "
                                  "registrazione della CIE e registrala di nuovo.", "pin_blocked")
     else:
+        _require_card_pin_tested()
         if not external.trust_roots():
             raise SignatureError("Verifica con CIE non ancora attivabile: l'amministratore deve configurare le CA della "
                                  "CIE (FASAS_CIE_TRUST_ROOTS).", "trust_not_configured")

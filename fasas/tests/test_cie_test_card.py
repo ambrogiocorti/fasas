@@ -88,7 +88,7 @@ class TestCardCommandTests(FasasTestCase):
 @unittest.skipIf(ON_POSTGRES, SKIP_PG)
 @override_settings(MEDIA_ROOT=_MEDIA, FASAS_BACKUP_DIR=Path(_BACKUP), FASAS_ALLOWED_NETWORKS=[],
                    PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"], FASAS_CIE_REVOCATION="off",
-                   FASAS_CIE_ALLOW_HTTP=True, FASAS_SIGNATURE_TSA_URL="")
+                   FASAS_CIE_ALLOW_HTTP=True, FASAS_SIGNATURE_TSA_URL="", FASAS_CIE_PIN_REQUIRES_TEST=False)
 class TestCardSignerTests(LiveServerTestCase):
     def setUp(self):
         call_command("fasas_setup", stdout=io.StringIO())

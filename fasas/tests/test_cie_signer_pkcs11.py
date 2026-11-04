@@ -119,7 +119,8 @@ class ScriptedUI:
 @unittest.skipUnless(HAVE_PKCS11, "SoftHSM2 o python-pkcs11 non installati")
 @unittest.skipIf(ON_POSTGRES, SKIP_PG)
 @override_settings(MEDIA_ROOT=_MEDIA, FASAS_BACKUP_DIR=Path(_BACKUP), FASAS_ALLOWED_NETWORKS=[],
-                   PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"], **PKI.settings())
+                   PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"], FASAS_CIE_PIN_REQUIRES_TEST=False,
+                   **PKI.settings())
 class SignerPkcs11Tests(LiveServerTestCase):
     @classmethod
     def setUpClass(cls):
@@ -229,7 +230,8 @@ class FakeCard:
 
 @unittest.skipIf(ON_POSTGRES, SKIP_PG)
 @override_settings(MEDIA_ROOT=_MEDIA, FASAS_BACKUP_DIR=Path(_BACKUP), FASAS_ALLOWED_NETWORKS=[],
-                   PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"], **PKI.settings())
+                   PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"], FASAS_CIE_PIN_REQUIRES_TEST=False,
+                   **PKI.settings())
 class SignerEngineErrorTests(LiveServerTestCase):
     setUp = SignerPkcs11Tests.setUp
 

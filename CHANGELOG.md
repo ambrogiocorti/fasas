@@ -12,6 +12,45 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
 
 ## Non ancora rilasciato
 
+Nessuna novità.
+
+## 0.10.0 – 04/11/2026 – versione per il pilota
+
+Da questa versione si fanno solo correzioni fino alla fine del pilota (docs/PIANO_PILOTA.md).
+
+### Pilota
+- **Moduli accendibili** (Configurazione › Moduli): PAI, valutazioni, lesioni, protocolli automatici, appuntamenti,
+  magazzino, importazione, turni, presenze e rette, report, segnalazioni e firma remota si spengono uno per uno
+  (menu, cruscotti, pagine, promemoria e job) senza perdere dati; «Applica la configurazione per il pilota».
+- **Segnala un problema** in ogni pagina (solo percorso e ora, niente parametri né dati degli ospiti); elenco con
+  stato e risposta per l'amministratore, notifica, CSV.
+- **Indicatori del pilota**: dosi registrate, mancanti e in ritardo salvate a ogni chiusura turno, durata del giro
+  farmaci, checklist, segnalazioni; CSV per il confronto con il cartaceo. Piano del pilota in docs/PIANO_PILOTA.md.
+- **Pacchetto per l'ispezione**: un PDF per la vigilanza ATS/ASL con ospiti e PAI, somministrazioni, eventi,
+  contenzioni, scadenze, protocolli, backup e verifica del registro delle operazioni.
+
+### Farmaci
+- **Elenco ufficiale dei medicinali** (open data AIFA, CC BY 4.0): caricamento di CSV o Excel con le colonne
+  riconosciute dal nome (provato con file costruiti sul formato atteso: il file AIFA va provato al primo
+  caricamento), ricerca, compilazione della scheda del farmaco; codice AIC di 9 cifre.
+- **Controllo della confezione** nel giro farmaci con lettore di codici a barre o fotocamera (dove il browser legge
+  i codici): evidenzia le dosi del turno con quel farmaco; non registra e non blocca.
+
+### Firma e app
+- **App Android dal FASAS**: Sistema › Pubblica l'app (APK letto e controllato dal FASAS), Impostazioni › App per il
+  telefono con QR code, avviso di aggiornamento nell'app; APK definitivo firmato con la chiave della struttura nella
+  CI se ci sono i segreti (docs/FIRMA_CIE.md, «Distribuire l'app»).
+- **Firma con il PIN della carta solo dopo il collaudo**: firma dei documenti, accettazione della FEA e verifica con
+  il PIN della carta restano spente finché in struttura non riesce una firma di prova con una CIE vera. La verifica
+  con CIE + PIN FASAS non cambia.
+
+### Accessibilità e continuità
+- Controllo automatico di accessibilità (axe-core, WCAG 2.1 A e AA) di 47 pagine per tutti i ruoli, in chiaro e in
+  scuro, nella CI; corretti link riconoscibili solo dal colore e un campo senza nome. Testo più grande per utente
+  (Il mio profilo).
+- docs/SECONDO_TECNICO.md (guida per chi sostituisce lo sviluppatore) e docs/MODELLO_CONTRATTO_ASSISTENZA.md.
+
+
 ### Installazione
 - Guida per installare il FASAS su un PC in struttura raggiungibile in HTTPS senza costi, con lista degli oggetti e
   della spesa (docs/INSTALLAZIONE_IN_STRUTTURA.md): Ubuntu Server con disco cifrato sbloccato dal TPM, DuckDNS,

@@ -33,7 +33,7 @@ class OTPForm(forms.Form):
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "email", "phone", "theme"]
+        fields = ["first_name", "last_name", "email", "phone", "theme", "text_size"]
 
 
 class UserForm(forms.ModelForm):

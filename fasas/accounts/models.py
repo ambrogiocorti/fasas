@@ -30,6 +30,14 @@ class User(AbstractUser):
         "iscrizione albo/ordine", max_length=100, blank=True, help_text="Obbligatorio per i medici che firmano"
     )
     theme = models.CharField("tema interfaccia", max_length=10, choices=Theme.choices, default=Theme.AUTO)
+
+    class TextSize(models.TextChoices):
+        NORMAL = "normal", "Normale"
+        LARGE = "large", "Grande"
+        LARGER = "larger", "Molto grande"
+
+    text_size = models.CharField("dimensione del testo", max_length=10, choices=TextSize.choices,
+                                 default=TextSize.NORMAL)
     remote_access = models.BooleanField(
         "può entrare da fuori struttura", default=True,
         help_text="Se tolto, il FASAS si apre per questo utente solo dalla rete della struttura (es. dai tablet di "

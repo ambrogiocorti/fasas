@@ -6,8 +6,8 @@
   <div class="actions">{% if perms.guests.add_guest %}<a class="btn btn-primary" href="{% url 'guests:create' %}">{% icon "plus" %}Nuovo ospite</a>{% endif %}</div>
 </div>
 <form class="filters" method="get">
-  <input type="search" name="q" value="{{ q }}" placeholder="Nome, cognome, CF, camera">
-  <select name="status">
+  <input type="search" name="q" value="{{ q }}" placeholder="Nome, cognome, CF, camera" aria-label="Cerca ospite">
+  <select name="status" aria-label="Stato degli ospiti">
     <option value="in_care" {% if status == 'in_care' %}selected{% endif %}>In carico (presenti e assenti)</option>
     {% for code, label in statuses %}<option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
     <option value="all" {% if status == 'all' %}selected{% endif %}>Tutti</option>
