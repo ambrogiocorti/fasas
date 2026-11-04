@@ -7,8 +7,8 @@
     <span class="subtitle">{% if month.is_published %}Pubblicato il {{ month.published_at|date:"d/m/Y H:i" }} da {{ month.published_by }}{% else %}In preparazione: il personale lo vede dopo la pubblicazione{% endif %}</span>
   </div>
   <div class="actions">
-    <a class="btn" href="?mese={{ prev|date:'Y-m' }}">{% icon "chevron-left" %}</a>
-    <a class="btn" href="?mese={{ next|date:'Y-m' }}">{% icon "chevron-right" %}</a>
+    <a class="btn" href="?mese={{ prev|date:'Y-m' }}" aria-label="Mese precedente" title="Mese precedente">{% icon "chevron-left" %}</a>
+    <a class="btn" href="?mese={{ next|date:'Y-m' }}" aria-label="Mese successivo" title="Mese successivo">{% icon "chevron-right" %}</a>
     <a class="btn" href="{% url 'staffing:excel' %}?mese={{ first|date:'Y-m' }}">{% icon "download" %}Excel</a>
     <button class="btn" type="button" onclick="window.print()">{% icon "printer" %}Stampa</button>
     {% if perms.staffing.change_rotasettings %}<a class="btn" href="{% url 'staffing:settings' %}">{% icon "sliders" %}Regole</a>{% endif %}

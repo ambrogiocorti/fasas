@@ -3,8 +3,8 @@
 {% block content %}
 <div class="page-head"><h1>Protocolli attivati</h1><div class="actions">{% if perms.protocols.view_protocol %}<a class="btn" href="{% url 'protocols:list' %}">Regole</a>{% endif %}</div></div>
 <form class="filters" method="get">
-  <select name="status"><option value="open" {% if status == 'open' %}selected{% endif %}>Da gestire / in corso</option><option value="resolved" {% if status == 'resolved' %}selected{% endif %}>Risolti</option><option value="dismissed" {% if status == 'dismissed' %}selected{% endif %}>Archiviati</option><option value="all" {% if status == 'all' %}selected{% endif %}>Tutti</option></select>
-  <select name="kind"><option value="">Tutti i tipi</option>{% for c, l in kinds %}<option value="{{ c }}" {% if request.GET.kind == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <select name="status" aria-label="Stato"><option value="open" {% if status == 'open' %}selected{% endif %}>Da gestire / in corso</option><option value="resolved" {% if status == 'resolved' %}selected{% endif %}>Risolti</option><option value="dismissed" {% if status == 'dismissed' %}selected{% endif %}>Archiviati</option><option value="all" {% if status == 'all' %}selected{% endif %}>Tutti</option></select>
+  <select name="kind" aria-label="Tipo di protocollo"><option value="">Tutti i tipi</option>{% for c, l in kinds %}<option value="{{ c }}" {% if request.GET.kind == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
   <button class="btn">Filtra</button>
 </form>
 <div class="card table-wrap"><table>

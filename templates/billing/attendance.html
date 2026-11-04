@@ -7,8 +7,8 @@
     <span class="subtitle">{% if month.is_closed %}Mese chiuso il {{ month.closed_at|date:"d/m/Y" }} da {{ month.closed_by }}: valori definitivi per la rendicontazione{% else %}Calcolate dai movimenti degli ospiti (ingressi, ricoveri, rientri in famiglia, dimissioni) e dalle correzioni{% endif %}</span>
   </div>
   <div class="actions">
-    <a class="btn" href="?mese={{ prev|date:'Y-m' }}">{% icon "chevron-left" %}</a>
-    <a class="btn" href="?mese={{ next|date:'Y-m' }}">{% icon "chevron-right" %}</a>
+    <a class="btn" href="?mese={{ prev|date:'Y-m' }}" aria-label="Mese precedente" title="Mese precedente">{% icon "chevron-left" %}</a>
+    <a class="btn" href="?mese={{ next|date:'Y-m' }}" aria-label="Mese successivo" title="Mese successivo">{% icon "chevron-right" %}</a>
     <a class="btn" href="{% url 'billing:attendance_excel' %}?mese={{ first|date:'Y-m' }}">{% icon "download" %}Excel</a>
     {% if perms.billing.view_feestatement %}<a class="btn" href="{% url 'billing:statements' %}?mese={{ first|date:'Y-m' }}">{% icon "receipt" %}Prospetti</a>{% endif %}
   </div>

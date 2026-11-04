@@ -34,7 +34,7 @@
 <div class="card table-wrap">
   <form class="filters" method="get">
     <input type="hidden" name="days" value="{{ days }}">
-    <select name="type"><option value="">Tutti i parametri</option>{% for t in types %}<option value="{{ t.pk }}" {% if request.GET.type == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</select>
+    <select name="type" aria-label="Tipo di parametro"><option value="">Tutti i parametri</option>{% for t in types %}<option value="{{ t.pk }}" {% if request.GET.type == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</select>
     <button class="btn btn-sm">Filtra</button>
   </form>
   <table>

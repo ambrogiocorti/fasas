@@ -10,7 +10,7 @@
 </div>
 {% endif %}
 <form class="filters" method="get">
-  <select name="type"><option value="">Tutti i report</option>{% for c, l in types %}<option value="{{ c }}" {% if request.GET.type == c %}selected{% endif %}>{{ l }}</option>{% endfor %}<option value="guest_folder" {% if request.GET.type == 'guest_folder' %}selected{% endif %}>Cartelle complete</option></select>
+  <select name="type" aria-label="Tipo di report"><option value="">Tutti i report</option>{% for c, l in types %}<option value="{{ c }}" {% if request.GET.type == c %}selected{% endif %}>{{ l }}</option>{% endfor %}<option value="guest_folder" {% if request.GET.type == 'guest_folder' %}selected{% endif %}>Cartelle complete</option></select>
   <button class="btn">Filtra</button>
 </form>
 <div class="card table-wrap"><table>

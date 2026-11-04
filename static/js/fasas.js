@@ -537,3 +537,15 @@
     }
   });
 })();
+
+// Tabelle larghe che scorrono di lato: raggiungibili e scorribili anche da tastiera (WCAG 2.1.1)
+(function () {
+  const sync = () => document.querySelectorAll('.table-wrap').forEach((box) => {
+    if (box.scrollWidth > box.clientWidth + 1 && !box.hasAttribute('tabindex')) {
+      box.setAttribute('tabindex', '0');
+      if (!box.hasAttribute('aria-label')) box.setAttribute('aria-label', (box.querySelector('h2, h3') || {}).textContent || 'Tabella');
+    }
+  });
+  sync();
+  window.addEventListener('resize', sync);
+})();

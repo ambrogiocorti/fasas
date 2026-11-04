@@ -4,8 +4,8 @@
 <div class="page-head">
   <div><h1>Prospetti e incassi – {{ label }}</h1><span class="subtitle">Prospetti mensili di retta per ogni ospite e pagante, dalle presenze chiuse del mese</span></div>
   <div class="actions">
-    <a class="btn" href="?mese={{ prev|date:'Y-m' }}">{% icon "chevron-left" %}</a>
-    <a class="btn" href="?mese={{ next|date:'Y-m' }}">{% icon "chevron-right" %}</a>
+    <a class="btn" href="?mese={{ prev|date:'Y-m' }}" aria-label="Mese precedente" title="Mese precedente">{% icon "chevron-left" %}</a>
+    <a class="btn" href="?mese={{ next|date:'Y-m' }}" aria-label="Mese successivo" title="Mese successivo">{% icon "chevron-right" %}</a>
     {% if month %}<a class="btn" href="{% url 'billing:statements_excel' %}?mese={{ first|date:'Y-m' }}">{% icon "download" %}Excel</a>{% endif %}
   </div>
 </div>
@@ -20,7 +20,7 @@
 {% endif %}
 
 <form class="filters" method="get"><input type="hidden" name="mese" value="{{ first|date:'Y-m' }}">
-  <select name="stato"><option value="">Tutti gli stati</option>{% for code, text in statuses %}<option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ text }}</option>{% endfor %}</select>
+  <select name="stato" aria-label="Stato del prospetto"><option value="">Tutti gli stati</option>{% for code, text in statuses %}<option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ text }}</option>{% endfor %}</select>
   <button class="btn">Filtra</button>
   {% if summary.n %}<span class="muted">{{ summary.n }} prospetti · € {{ summary.total|floatformat:2 }}</span>{% endif %}
 </form>

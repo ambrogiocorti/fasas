@@ -45,7 +45,7 @@ Da questa versione si fanno solo correzioni fino alla fine del pilota (docs/PIAN
   con CIE + PIN FASAS non cambia.
 
 ### Accessibilità e continuità
-- Controllo automatico di accessibilità (axe-core, WCAG 2.1 A e AA) di 47 pagine per tutti i ruoli, in chiaro e in
+- Controllo automatico di accessibilità (axe-core, WCAG 2.1 A e AA) di 65 pagine per tutti i ruoli, in chiaro e in
   scuro, nella CI; corretti link riconoscibili solo dal colore e un campo senza nome. Testo più grande per utente
   (Il mio profilo).
 - docs/SECONDO_TECNICO.md (guida per chi sostituisce lo sviluppatore) e docs/MODELLO_CONTRATTO_ASSISTENZA.md.
