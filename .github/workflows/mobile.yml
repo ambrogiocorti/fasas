@@ -38,20 +38,30 @@ jobs:
           FASAS_SCREENSHOTS: "1"
         run: |
           gradle --no-daemon -Pandroid.useAndroidX=true :app:recordPaparazziDebug
-          ls -la app/src/test/snapshots/images/
-          # un foglio piccolo nel log (base64), per controllare l'aspetto senza scaricare l'archivio
-          command -v montage > /dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick > /dev/null)
-          cd app/src/test/snapshots/images
-          montage $(ls *Light*pronto* *Light*avvicina* *Light*richiesta* *Light*pin* *Dark*pronto* *Dark*richiesta*) \
-            -tile 3x2 -geometry 200x+4+4 -background '#808080' /tmp/foglio.png
-          convert /tmp/foglio.png -colors 64 PNG8:/tmp/foglio8.png
-          echo "==FOGLIO $(stat -c %s /tmp/foglio8.png)"; base64 -w0 /tmp/foglio8.png; echo; echo "==FINE"
+          ls app/src/test/snapshots/images/
       - uses: actions/upload-artifact@v4
         with:
           name: fasas-signer-android-schermate
           path: mobile/android/app/src/test/snapshots/images/
           retention-days: 30
           if-no-files-found: ignore
+
+  schermate:
+    # Due schermate in un foglio piccolo stampato nel log (base64): si controlla l'aspetto senza scaricare l'archivio
+    needs: android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: fasas-signer-android-schermate
+          path: schermate
+      - name: Foglio compatto
+        run: |
+          command -v montage > /dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick > /dev/null)
+          cd schermate
+          montage $(ls *Light*pronto*) $(ls *Dark*richiesta*) -tile 2x1 -geometry 240x+4+4 -background '#808080' /tmp/f.png
+          convert /tmp/f.png -colors 48 PNG8:/tmp/f8.png
+          echo "==FOGLIO $(stat -c %s /tmp/f8.png)"; base64 -w0 /tmp/f8.png; echo; echo "==FINE"
 
   ios:
     # Verifica che l'app per iPhone compili (senza firma: per installarla serve un account Apple Developer)
