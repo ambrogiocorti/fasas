@@ -53,7 +53,8 @@ Si entra con `admin`, `coordinatore`, `operatore`, `medico` o `amministrativo`, 
 **Una sola guida**: [docs/INSTALLAZIONE_IN_STRUTTURA.md](docs/INSTALLAZIONE_IN_STRUTTURA.md) – PC dedicato con
 Ubuntu Server e disco cifrato, Docker (database PostgreSQL, job, HTTPS), indirizzo DuckDNS, copia fuori sede su
 Backblaze B2 nel piano gratuito, gruppo di continuità; con lista della spesa e calendario di manutenzione. Lo script
-`scripts/prepara_server.sh` fa la parte tecnica ed è provato a ogni modifica nella CI.
+`scripts/prepara_server.sh` fa la parte tecnica ed è provato a ogni modifica nella CI; la manutenzione del mese è
+`scripts/aggiorna_fasas.sh`, anche da casa con la VPN dell'amministratore (`scripts/accesso_remoto.sh`).
 
 Riferimenti tecnici per chi installa diversamente: [docs/CONTAINER.md](docs/CONTAINER.md) (Docker su un altro server),
 [docs/DEPLOY.md](docs/DEPLOY.md) (installazione tradizionale senza Docker, anche con un database gestito).

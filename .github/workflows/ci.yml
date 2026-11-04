@@ -155,6 +155,36 @@ jobs:
           printf 'battery.charge: 30\nbattery.runtime: 900\nups.status: OB\n' | sudo tee /etc/nut/fasas-prova.dev
           for i in $(seq 1 30); do test -f /run/fasas-spegnimento-simulato && break; sleep 2; done
           test -f /run/fasas-spegnimento-simulato
+      - name: Manutenzione del mese (backup, contenitori aggiornati, controllo)
+        run: |
+          sudo ./scripts/aggiorna_fasas.sh --controlla
+          sudo ./scripts/aggiorna_fasas.sh --solo-sicurezza
+          sudo grep -q "aggiornamento completato" /var/log/fasas-aggiornamenti.log
+          curl -skf --resolve fasas.localhost:443:127.0.0.1 https://fasas.localhost/salute/
+      - name: VPN di manutenzione (un «PC di casa» simulato in una rete separata)
+        run: |
+          sudo ./scripts/accesso_remoto.sh --configura --indirizzo 10.200.0.1
+          sudo ./scripts/accesso_remoto.sh --aggiungi pc-casa
+          # «casa»: rete separata, collegata al server solo da un cavo virtuale verso la porta UDP della VPN
+          sudo ip netns add casa
+          sudo ip link add veth-server type veth peer name veth-casa
+          sudo ip link set veth-casa netns casa
+          sudo ip addr add 10.200.0.1/24 dev veth-server
+          sudo ip link set veth-server up
+          sudo ip -n casa addr add 10.200.0.2/24 dev veth-casa
+          sudo ip -n casa link set veth-casa up
+          sudo ip -n casa link set lo up
+          if sudo ip netns exec casa ping -c1 -W2 10.77.0.1; then echo "server raggiungibile senza VPN"; exit 1; fi
+          sudo install -d -m 700 /etc/wg-casa
+          sudo cp "$HOME/fasas-pc-casa.conf" /etc/wg-casa/casa.conf
+          sudo ip netns exec casa wg-quick up /etc/wg-casa/casa.conf
+          sudo ip netns exec casa ping -c3 -W5 10.77.0.1
+          sudo ./scripts/accesso_remoto.sh --elenca | grep pc-casa | grep -q "ultimo collegamento"
+          sudo ./scripts/accesso_remoto.sh --stato
+          # accesso tolto: lo stesso PC non passa più
+          sudo ./scripts/accesso_remoto.sh --rimuovi pc-casa
+          if sudo ip netns exec casa ping -c2 -W3 10.77.0.1; then echo "accesso tolto ma ancora attivo"; exit 1; fi
+          sudo ./scripts/accesso_remoto.sh --elenca
       - name: Log in caso di errore
         if: failure()
         run: sudo docker compose logs --tail 100

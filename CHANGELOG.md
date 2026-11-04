@@ -109,6 +109,16 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
   proposta; il turno riaperto si richiude da solo dopo 12 ore. Abilitata per default (la direzione può
   disattivarla).
 
+### Manutenzione del server
+- `scripts/aggiorna_fasas.sh`: la manutenzione del mese in un comando. `--controlla` dice se gli aggiornamenti
+  automatici di Ubuntu funzionano, se serve un riavvio, se c'è una nuova versione e quanto sono vecchi i
+  contenitori; senza opzioni fa un backup verificato, aggiorna versione e contenitori, riavvia il FASAS e controlla
+  che risponda. Riavvio del server solo con `--riavvia` e mai se il disco chiederebbe la frase alla tastiera.
+  Registro in `/var/log/fasas-aggiornamenti.log`.
+- `scripts/accesso_remoto.sh`: VPN WireGuard di manutenzione per l'amministratore (gratuita, senza servizi
+  esterni): SSH da casa senza aprire la porta 22, un accesso per PC con ultimo collegamento, revoca immediata.
+  Provata nella CI con un «PC di casa» simulato in una rete separata (passo 15c della guida).
+
 ### Correzioni
 - Evacuazioni: un «non avvenuta» registrato dopo mezzanotte ora vale per il giorno appena iniziato (prima veniva
   attribuito alla notte del giorno precedente e il conteggio dei giorni non documentati sbagliava di uno).

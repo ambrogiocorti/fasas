@@ -47,7 +47,8 @@ done
 install_nut() {
   command -v upsmon > /dev/null && command -v upsd > /dev/null && return 0
   echo "  installo NUT (Network UPS Tools)..."
-  DEBIAN_FRONTEND=noninteractive timeout 900 apt-get -o DPkg::Lock::Timeout=300 install -y -q nut > /dev/null \
+  { timeout 900 apt-get -o DPkg::Lock::Timeout=300 update -qq \
+    && DEBIAN_FRONTEND=noninteractive timeout 900 apt-get -o DPkg::Lock::Timeout=300 install -y -q nut > /dev/null; } \
     || die "installazione di NUT non riuscita: riprovare più tardi (aggiornamenti in corso?)"
 }
 

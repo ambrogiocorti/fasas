@@ -241,7 +241,8 @@ Nel pannello del router:
 2. **Inoltro porte**: due regole, protocollo **TCP**:
    - porta esterna **80** → `192.168.1.50` porta **80**
    - porta esterna **443** → `192.168.1.50` porta **443**
-3. **Nient'altro**: non inoltrare mai la porta 22 (SSH) né altre porte.
+3. **Nient'altro**: non inoltrare mai la porta 22 (SSH) né altre porte. L'unica eccezione, facoltativa, è la
+   porta **UDP 51820** della VPN di manutenzione dell'amministratore (passo 15c).
 4. Se c'è **UPnP**, disattivarlo; disattivare la **gestione remota del router** da internet; se la password del
    router è quella dell'etichetta, cambiarla (e salvarla nel gestore).
 
@@ -556,6 +557,41 @@ assente» e attendere lo spegnimento del server; poi riattaccare la spina e cont
 solo entro qualche minuto (se non riparte: impostazione del BIOS del passo 2). Annotare la durata nel registro del
 piano di continuità.
 
+### Passo 15c. Manutenzione da casa (facoltativa): VPN dell'amministratore
+
+Gli aggiornamenti di sicurezza di Ubuntu sono automatici (passo 15); la manutenzione del mese (passo 18) si può
+fare anche da casa, **senza mai aprire la porta 22 (SSH) verso internet**: una VPN WireGuard (gratuita, nessun
+servizio esterno né abbonamento) collega solo il PC dell'amministratore al server con un canale cifrato, e solo da
+quel canale si entra con SSH. Chi usa il FASAS non vede nessuna differenza.
+
+1. Sul server (in struttura):
+
+```bash
+cd /opt/fasas && sudo ./scripts/accesso_remoto.sh --configura
+```
+
+2. Sul router: una regola di inoltro in più, protocollo **UDP**: porta esterna **51820** → `192.168.1.50` porta
+   **51820**. Nient'altro.
+3. Un accesso per ogni PC dell'amministratore (e del sostituto), con un nome riconoscibile:
+
+```bash
+cd /opt/fasas && sudo ./scripts/accesso_remoto.sh --aggiungi pc-casa-mario
+```
+
+4. Lo script crea il file `fasas-pc-casa-mario.conf` nella cartella dell'amministratore sul server. Dal PC di
+   casa, **mentre è in struttura** (sulla rete della struttura), copiarlo con
+   `scp amministratore@192.168.1.50:fasas-pc-casa-mario.conf .`, poi cancellarlo dal server con
+   `rm ~/fasas-pc-casa-mario.conf`. Contiene la chiave del PC: va tenuto solo su quel PC.
+5. Sul PC installare **WireGuard** (gratuito, <https://www.wireguard.com/install/>), «Importa tunnel da file» e
+   scegliere il file. Da casa: attivare il tunnel, poi `ssh amministratore@10.77.0.1`.
+
+Controlli: `sudo ./scripts/accesso_remoto.sh --elenca` mostra gli accessi e l'ultimo collegamento di ciascuno.
+**PC perso o rubato, persona che lascia l'incarico**: `sudo ./scripts/accesso_remoto.sh --rimuovi pc-casa-mario`
+(effetto immediato). Gli accessi al server restano in `/var/log/auth.log` (passo 15).
+
+Attenzione: da casa **non** riavviare il server se il disco chiede la frase segreta alla tastiera (passo 5 senza
+TPM): il FASAS resterebbe spento fino all'arrivo di qualcuno. Lo script del passo 18 lo controlla da solo.
+
 ### Passo 16. Controllo gratuito dall'esterno
 
 Il FASAS avvisa da solo l'amministratore di backup falliti, errori e problemi dell'audit. Se però il server è
@@ -581,7 +617,7 @@ il primo giorno di gennaio, aprile, luglio e ottobre.
 |---|---|---|
 | Ogni giorno | niente: backup, verifiche e aggiornamenti sono automatici. Leggere le notifiche del FASAS | — |
 | Ogni settimana | *Impostazioni › Stato del sistema ed errori*: controlli tutti verdi | 2 min |
-| Ogni mese | copia su disco USB (passo 14); in Backblaze lo spazio usato resta sotto 9 GB; `disco_continuita.sh --stato` | 10 min |
+| Ogni mese | `sudo ./scripts/aggiorna_fasas.sh` (backup, contenitori aggiornati, nuova versione se c'è: anche da casa, passo 15c); copia su disco USB (passo 14); in Backblaze lo spazio usato resta sotto 9 GB; `disco_continuita.sh --stato` | 20 min |
 | Ogni 6 mesi | prova del gruppo di continuità: staccare la spina e misurare quanto restano accesi server e router; prova di un turno con la modalità senza rete e il foglio di emergenza (docs/PIANO_DI_CONTINUITA.md) | 1 ora |
 | Ogni 3 mesi | stampare e firmare il verbale della prova di ripristino automatica | 5 min |
 | Ogni anno | provare la busta delle chiavi (sotto); togliere gli utenti di chi non lavora più; controllare la batteria del gruppo di continuità; spolverare il server; controllare che il router abbia l'ultimo aggiornamento | 1 ora |
@@ -606,18 +642,29 @@ Se avete rifatto la busta (passo 13.7) usare il nome più recente, es. `busta-ch
 devono essere uguali a quelle del file `.env` (`sudo grep -E "KEY|TOKEN" /opt/fasas/.env`).
 Il comando lavora in un contenitore temporaneo che legge la chiavetta in sola lettura e poi sparisce.
 
-**Aggiornare il FASAS a una nuova versione** (non automatico, apposta):
-
-1. leggere `CHANGELOG.md` della nuova versione; se possibile provarla prima su un altro PC con dati di fantasia
-   (docs/CONTAINER.md, «Ambiente di prova separato»);
-2. in *Backup* «Esegui backup ora», poi:
+**Manutenzione del mese e aggiornamenti** (non automatici, apposta). Prima si guarda cosa c'è da fare (non cambia
+nulla):
 
 ```bash
-cd /opt/fasas && sudo git pull && sudo docker compose up -d --build
+cd /opt/fasas && sudo ./scripts/aggiorna_fasas.sh --controlla
 ```
 
-3. entrare e controllare le funzioni principali. Tornare indietro non si fa con `git`: le modifiche al database
-   vanno solo avanti, si ripristina il backup del punto 2.
+Dice se gli aggiornamenti automatici di Ubuntu funzionano, se serve un riavvio, se c'è una nuova versione del FASAS
+(con l'elenco delle modifiche) e quanti giorni hanno i contenitori (PostgreSQL, Redis, Caddy, Python). Poi:
+
+```bash
+cd /opt/fasas && sudo ./scripts/aggiorna_fasas.sh
+```
+
+Fa un backup verificato, scarica la nuova versione se c'è, aggiorna i contenitori, riavvia il FASAS e controlla che
+risponda (1–2 minuti senza servizio: farlo fuori dagli orari di giro farmaci). Con `--solo-sicurezza` aggiorna i
+contenitori ma non la versione del FASAS; con `--riavvia` riavvia anche il server se Ubuntu lo chiede (non lo fa
+se il disco chiederebbe la frase alla tastiera). Ogni esecuzione è annotata in `/var/log/fasas-aggiornamenti.log`.
+
+Prima di una nuova versione leggere `CHANGELOG.md`; se possibile provarla prima su un altro PC con dati di fantasia
+(docs/CONTAINER.md, «Ambiente di prova separato»). Dopo, entrare e controllare le funzioni principali. Tornare
+indietro non si fa con `git`: le modifiche al database vanno solo avanti, si ripristina il backup fatto dallo
+script.
 
 ---
 
@@ -694,7 +741,9 @@ un database vuoto). Poi:
 - Gli script `scripts/prepara_server.sh` e `scripts/copia_backup_usb.sh` sono stati provati con router, DuckDNS e
   disco USB simulati; `prepara_server.sh` gira anche a ogni modifica su un vero Ubuntu 24.04 con Docker nella CI
   di GitHub (job «installazione»: crea il `.env`, avvia tutto, controlla HTTPS, chiavi e che un secondo avvio non
-  cambi le chiavi).
+  cambi le chiavi). Nello stesso job girano anche `disco_continuita.sh` (con un disco virtuale),
+  `gruppo_continuita.sh` (con un gruppo simulato), `aggiorna_fasas.sh` e `accesso_remoto.sh` (con un «PC di casa»
+  simulato in una rete separata che entra nella VPN, raggiunge il server e viene escluso dopo `--rimuovi`).
 - **Non** sono stati provati su hardware reale: l'installazione di Ubuntu, lo sblocco con il TPM e la password di
   GRUB (passo 5), un router vero e il certificato di Let's Encrypt per un indirizzo DuckDNS, il caricamento su un
   vero bucket Backblaze con Object Lock (il FASAS lo prova con un simulatore S3). Per questo i passi 9, 12 e 13
