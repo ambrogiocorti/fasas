@@ -52,7 +52,10 @@ abstract class ScreensTest(night: Boolean) {
         }
     }
 
-    @Test fun pairing() = paparazzi.snapshot(home(paired = false, test = true).root, "abbinamento")
+    @Test fun pairing() = paparazzi.snapshot(home(paired = false, test = true).apply {
+        status.show(StatusPanel.Kind.SETUP, "Abbina il telefono al FASAS",
+            "Serve una volta sola: poi le richieste di firma e di verifica compaiono qui da sole.")
+    }.root, "abbinamento")
 
     @Test fun ready() = paparazzi.snapshot(home(paired = true).apply {
         status.show(StatusPanel.Kind.IDLE, "Pronto", "In attesa di richieste dal FASAS. Quando dal FASAS avvii una " +
@@ -77,14 +80,20 @@ abstract class ScreensTest(night: Boolean) {
         "Il PIN che hai scelto nel FASAS al primo accesso: non è il PIN della carta né quello del telefono.", 8,
         "6-8 cifre").first, "PIN FASAS"), "pin-fasas")
 
-    /** Icona dell'app: adattiva (la forma la sceglie il telefono) e monocromatica (icone a tema di Android 13+). */
+    /**
+     * Icona dell'app: i due livelli dell'icona adattiva sovrapposti a mano (il simulatore di Paparazzi non disegna le
+     * icone adattive; sul telefono la forma la sceglie il launcher) e la versione monocromatica di Android 13+.
+     */
     @Test fun icon() = paparazzi.snapshot(ui.row(28).apply {
         val u = ui
         setPadding(u.dp(24), u.dp(24), u.dp(24), u.dp(24))
         setBackgroundColor(u.color(R.color.fasas_bg))
-        for (res in listOf(R.mipmap.ic_launcher, R.mipmap.ic_launcher_round)) {
-            addView(ImageView(context).apply { setImageResource(res) }, LinearLayout.LayoutParams(u.dp(96), u.dp(96)))
-        }
+        gravity = android.view.Gravity.TOP
+        addView(FrameLayout(context).apply {
+            setBackgroundResource(R.drawable.ic_launcher_background)
+            addView(ImageView(context).apply { setImageResource(R.drawable.ic_launcher_foreground) },
+                FrameLayout.LayoutParams(u.dp(108), u.dp(108)))
+        }, LinearLayout.LayoutParams(u.dp(108), u.dp(108)))
         addView(FrameLayout(context).apply {
             background = u.rounded(0xFFD6E4F5.toInt(), 48)
             addView(ImageView(context).apply {
