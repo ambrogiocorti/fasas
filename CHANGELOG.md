@@ -116,6 +116,11 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
   per default): la carta firma una sfida casuale, il certificato deve essere della CIE e intestato all'utente;
   accesso a quel documento per pochi minuti, nell'audit. Vale anche per l'esportazione della cartella con i
   documenti. Chi non firma può abbinare il telefono solo per verificarsi (docs/FIRMA_CIE.md, sezione 8b).
+- **CIE senza il suo PIN**: per aprire i documenti si appoggia la CIE al telefono e si digita il **PIN FASAS**
+  scelto al primo accesso (predefinito in Configurazione generale; chi ricorda il PIN della carta può usare anche
+  quello). Protocollo NIS del Ministero: SOD verificato con la CSCA italiana e autenticazione interna della carta su
+  una sfida del server; registrazione confermata di persona da un amministratore; PIN FASAS solo come impronta,
+  bloccato dopo 5 errori. Firmare con la CIE richiede ancora il PIN della carta.
 - App Android: la lettura della CIE resta attiva fino all'esito (prima poteva restare ferma su «Avvicina la CIE»),
   messaggi a ogni passo, carta spostata = si riappoggia e si riprende; «Prova la lettura della CIE» senza FASAS
   (anche del PIN, con il codice fiscale letto dalla carta) e spiegazione di dove trovare il PIN.

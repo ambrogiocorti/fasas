@@ -267,6 +267,49 @@ verificarsi. Provato con carte di prova (`fasas.tests.test_cie_documenti`): acce
 per il tempo previsto, anche ai documenti firmati; carta di un'altra persona o di una CA estranea rifiutata;
 esportazione con i documenti bloccata; attivazione rifiutata senza CIE sul server.
 
+### CIE senza il suo PIN: la carta + il PIN FASAS (predefinito)
+
+In *Configurazione generale › come ci si verifica* la scelta predefinita è **«CIE appoggiata al telefono + PIN
+FASAS»**: la carta si appoggia sempre, ma al posto del PIN della carta (che molti non ricordano) si digita un **PIN
+FASAS** scelto dall'utente. Chi ricorda il PIN della carta può usare anche quello. Per **firmare** i documenti con
+la CIE serve ancora il PIN della carta: è la carta stessa a chiederlo prima di usare la chiave di firma.
+
+Si usa il protocollo ufficiale del Ministero dell'Interno per i servizi senza PIN, basato sul **NIS** (Numero
+Identificativo per i Servizi): [Manuale di integrazione per servizi basati sul NIS](https://docs.italia.it/italia/cie/cie-accessi-pinless-manuale-docs/it/stabile/index.html),
+SDK di riferimento [italia/cie-nis-java-sdk](https://github.com/italia/cie-nis-java-sdk) (BSD-3), di cui l'app
+Android ripete gli stessi comandi verso la carta:
+
+1. **Primo accesso (una volta)**: in *Impostazioni › Firma digitale* l'utente preme «Registra la tua CIE» e la
+   appoggia al telefono. L'app legge senza PIN il NIS (EF 1001), la chiave pubblica dell'autenticazione interna (EF
+   1005) e il SOD (EF 1006), e fa firmare alla carta una sfida casuale del server. Il FASAS verifica il SOD (firma del
+   Document Signer emesso dalla **CSCA italiana**, impronte di NIS e chiave) e l'autenticazione interna (la carta
+   possiede la chiave privata: non è un clone). Conserva solo l'impronta del NIS e la chiave pubblica.
+2. L'utente sceglie il **PIN FASAS** (6-8 cifre, non banale). Il FASAS ne conserva solo l'impronta (come le
+   password); dopo **5 errori di seguito** si blocca.
+3. **Conferma dell'amministratore**: il NIS non dice a chi appartiene la carta, quindi un amministratore (diverso
+   dall'utente) conferma in *Utenti e permessi* di aver visto di persona carta e persona. Senza conferma non si apre
+   nulla.
+4. **Ogni volta**: pagina «Verifica con CIE» → telefono: codice di controllo, PIN FASAS, carta appoggiata. Il FASAS
+   controlla che sia la carta registrata (NIS e chiave), che risponda alla nuova sfida con la sua chiave privata e
+   che il PIN FASAS sia giusto. PIN errato: si riprova senza riappoggiare la carta.
+5. PIN FASAS dimenticato o bloccato, carta persa o rinnovata: l'amministratore **azzera** la registrazione e si
+   ripete dal punto 1.
+
+Da configurare: `FASAS_CIE_CSCA` con i certificati della CSCA italiana scaricati da
+<https://csca-ita.interno.gov.it> (controllarne le impronte sul sito). Senza, la configurazione rifiuta questa
+scelta.
+
+**Impronta o volto al posto del PIN FASAS: non realizzati.** I telefoni non permettono alle app di registrare
+impronte o volti propri (solo quelli del telefono, che non si vogliono usare); conservare impronte o volti del
+personale sarebbe un trattamento di dati biometrici (art. 9 GDPR) con forti limiti del Garante per i dipendenti.
+L'unica via hardware sono chiavi di sicurezza personali con lettore di impronte (FIDO2), circa 50-100 euro a persona.
+
+Provato con carte di prova (CSCA, Document Signer, SOD e chiave della carta generati nei test): registrazione,
+PIN FASAS (anche troppo facile, errato con nuovo tentativo, blocco dopo 5), conferma solo da un altro
+amministratore, accesso al documento; rifiutati carta diversa da quella registrata, clone senza chiave privata, SOD
+di una CSCA estranea, stessa carta per due utenti. **Non provato con una CIE reale**: comandi verso la carta, formato
+della risposta all'autenticazione interna e SOD reale vanno collaudati con la propria CIE.
+
 ## 9. Prove eseguite
 
 Automatiche (`python manage.py test fasas.tests.test_cie_signature fasas.tests.test_cie_signer_pkcs11`):

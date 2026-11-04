@@ -9,6 +9,7 @@ urlpatterns = [
     path("dispositivi/", views.devices_admin, name="devices"),
     path("cie/prova/", views.cie_test, name="cie_test"),
     path("cie/accesso/", views.cie_access, name="cie_access"),
+    path("cie/registrazioni/<int:pk>/", views.enrollment_action, name="enrollment_action"),
     path("cie/accettazione/", views.fea_accept, name="fea_accept"),
     path("cie/accettazione/revoca/", views.fea_revoke, name="fea_revoke"),
     path("cie/accettazioni/", views.fea_registry, name="fea_registry"),

@@ -25,7 +25,8 @@ from fasas.audit.services import log_event
 from fasas.core.encryption import delete_stored, read_encrypted, store_encrypted
 
 from . import external
-from .models import CieAccess, DevicePairing, LegalLevel, Signature, SignatureRequest, SignerDevice
+from . import nis as nis_protocol
+from .models import CieAccess, CieEnrollment, DevicePairing, LegalLevel, Signature, SignatureRequest, SignerDevice
 from .providers import SignatureError, next_field_name, timestamper
 
 ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # senza 0/O e 1/I, facili da confondere
@@ -288,7 +289,18 @@ def create_acceptance_request(user):
     return request
 
 
-def create_access_request(user, guest, document=None):
+def access_methods():
+    """Metodi ammessi per aprire i documenti: CIE + PIN FASAS (NIS) e/o CIE con il suo PIN."""
+    from fasas.core.models import SystemConfig
+
+    return ["nis", "cie"] if SystemConfig.get().documents_verification == "nis" else ["cie"]
+
+
+def enrollment_of(user):
+    return CieEnrollment.objects.filter(user=user, revoked_at__isnull=True).first()
+
+
+def create_access_request(user, guest, document=None, method="cie"):
     """
     Verifica di identità con la CIE prima di aprire, scaricare o modificare un documento (o, senza documento, tutti
     i documenti dell'ospite per l'esportazione della cartella). La carta firma una sfida casuale del server: non è
@@ -296,19 +308,36 @@ def create_access_request(user, guest, document=None):
     """
     if not can_use_device(user) or not user.has_perm("documents.view_document"):
         raise SignatureError("Non puoi usare la CIE per aprire i documenti: chiedi all'amministratore.", "forbidden")
-    if not external.trust_roots():
-        raise SignatureError("Verifica con CIE non ancora attivabile: l'amministratore deve configurare le CA della "
-                             "CIE (FASAS_CIE_TRUST_ROOTS).", "trust_not_configured")
-    if not user.fiscal_code:
-        raise SignatureError("Nel tuo profilo manca il codice fiscale: chiedilo all'amministratore.", "missing_fiscal_code")
+    if method not in access_methods():
+        raise SignatureError("Metodo di verifica non ammesso dalla configurazione.", "forbidden")
+    if method == "nis":
+        enrollment = enrollment_of(user)
+        if enrollment is None:
+            raise SignatureError("Prima registra la tua CIE e scegli il PIN FASAS (Impostazioni › Firma digitale).",
+                                 "not_enrolled")
+        if not enrollment.is_confirmed:
+            raise SignatureError("La registrazione della tua CIE aspetta la conferma dell'amministratore.",
+                                 "not_confirmed")
+        if not enrollment.pin_hash:
+            raise SignatureError("Scegli il PIN FASAS in Impostazioni › Firma digitale.", "pin_missing")
+        if enrollment.pin_locked:
+            raise SignatureError("PIN FASAS bloccato dopo troppi errori: chiedi all'amministratore di azzerare la "
+                                 "registrazione della CIE e registrala di nuovo.", "pin_blocked")
+    else:
+        if not external.trust_roots():
+            raise SignatureError("Verifica con CIE non ancora attivabile: l'amministratore deve configurare le CA della "
+                                 "CIE (FASAS_CIE_TRUST_ROOTS).", "trust_not_configured")
+        if not user.fiscal_code:
+            raise SignatureError("Nel tuo profilo manca il codice fiscale: chiedilo all'amministratore.",
+                                 "missing_fiscal_code")
     existing = SignatureRequest.objects.filter(
         user=user, purpose=SignatureRequest.Purpose.ACCESS, access_guest=guest, access_document=document,
-        status__in=SignatureRequest.ACTIVE).first()
+        access_method=method, status__in=SignatureRequest.ACTIVE).first()
     if existing is not None and expire_if_needed(existing).is_active:
         return existing
     request = _base_request(user, reason="Verifica di identità per aprire i documenti", location=str(_community()),
                             purpose=SignatureRequest.Purpose.ACCESS, access_guest=guest, access_document=document,
-                            version_sha256=hashlib.sha256(secrets.token_bytes(32)).hexdigest())
+                            access_method=method, version_sha256=hashlib.sha256(secrets.token_bytes(32)).hexdigest())
     request.with_timestamp = False
     request.save()
     return request
@@ -334,19 +363,171 @@ def _grant_access(request_id):
         if request.status != Status.VERIFYING:
             raise SignatureError("Richiesta chiusa durante la verifica.", "bad_state")
         now = timezone.now()
+        by_nis = request.access_method == "nis"
         access = CieAccess.objects.create(
             user=request.user, guest=request.access_guest, document=request.access_document, request=request,
-            granted_at=now, certificate_subject=request.certificate_subject,
+            granted_at=now, certificate_subject=request.certificate_subject, method="nis" if by_nis else "cie",
             expires_at=now + datetime.timedelta(minutes=SystemConfig.get().documents_cie_minutes),
         )
         request.verification = {**request.verification, "identity_verified": True, "level": "Verifica di identità"}
         log_event(AuditLog.Action.PERMISSION, access, user=request.user, guest=request.access_guest,
                   repr_text="Accesso ai documenti verificato con CIE",
-                  changes={"verifica": [None, "CIE" if not request.is_test_card else "carta di prova"],
+                  changes={"verifica": [None, "CIE + PIN FASAS" if by_nis
+                                        else "CIE" if not request.is_test_card else "carta di prova"],
                            "documento": [None, str(request.access_document_id or "tutti")],
                            "valido_fino": [None, timezone.localtime(access.expires_at).strftime("%d/%m/%Y %H:%M")]})
         _close(request, Status.SIGNED)
     return request
+
+
+def create_enroll_request(user):
+    """Primo accesso: si registra la propria CIE appoggiandola al telefono (non serve il PIN della carta)."""
+    if not can_use_device(user):
+        raise SignatureError("Non puoi usare la CIE nel FASAS: chiedi all'amministratore.", "forbidden")
+    if not nis_protocol.csca_certificates():
+        raise SignatureError("Registrazione non ancora attivabile: l'amministratore deve configurare i certificati "
+                             "della CSCA italiana (FASAS_CIE_CSCA).", "trust_not_configured")
+    existing = SignatureRequest.objects.filter(user=user, purpose=SignatureRequest.Purpose.ENROLL,
+                                               status__in=SignatureRequest.ACTIVE).first()
+    if existing is not None and expire_if_needed(existing).is_active:
+        return existing
+    request = _base_request(user, reason="Registrazione della CIE", location=str(_community()),
+                            purpose=SignatureRequest.Purpose.ENROLL, access_method="nis",
+                            version_sha256=hashlib.sha256(secrets.token_bytes(32)).hexdigest())
+    request.with_timestamp = False
+    request.save()
+    return request
+
+
+def _card_data(data, field, required=True):
+    value = data.get(field) or ""
+    if not value and not required:
+        return None
+    raw = external.unb64(value, "Dati della carta")
+    if not raw or len(raw) > 16384:
+        raise SignatureError("Dati della carta non validi.", "card_data")
+    return raw
+
+
+def _check_pin(enrollment, pin):
+    """PIN FASAS: impronta come le password; dopo 5 errori di seguito la registrazione si blocca."""
+    from django.contrib.auth.hashers import check_password
+
+    if enrollment.pin_locked:
+        raise SignatureError("PIN FASAS bloccato dopo troppi errori: chiedi all'amministratore.", "pin_blocked")
+    if pin and check_password(str(pin), enrollment.pin_hash):
+        if enrollment.pin_failures:
+            CieEnrollment.objects.filter(pk=enrollment.pk).update(pin_failures=0)
+        return
+    with transaction.atomic():  # l'errore resta registrato anche se poi la richiesta fallisce
+        locked = CieEnrollment.objects.select_for_update().get(pk=enrollment.pk)
+        locked.pin_failures += 1
+        locked.save(update_fields=["pin_failures"])
+    left = max(0, CieEnrollment.MAX_PIN_FAILURES - locked.pin_failures)
+    if left == 0:
+        log_event(AuditLog.Action.DENIED, locked, user=enrollment.user, repr_text="PIN FASAS bloccato",
+                  changes={"pin_fasas": [None, "bloccato dopo 5 errori"]})
+        raise SignatureError("PIN FASAS bloccato dopo troppi errori: chiedi all'amministratore.", "pin_blocked")
+    raise SignatureError(f"PIN FASAS errato. Tentativi rimasti: {left}.", "pin_wrong")
+
+
+def submit_nis(request_id, device, nonce, data):
+    """
+    Il telefono ha letto dalla carta NIS, chiave pubblica (e, alla registrazione, il SOD) e ha fatto firmare alla
+    carta la sfida del server. Registrazione: si verificano firma del Ministero e originalità, poi si salva la carta.
+    Accesso: stessa carta registrata, autenticazione interna valida e PIN FASAS corretto.
+    """
+    with transaction.atomic():
+        request = _locked(request_id, device, nonce, states=(Status.AUTHORIZING,))
+    if request.access_method != "nis":
+        raise SignatureError("Richiesta non prevista per la CIE senza PIN.", "bad_state")
+    nis_raw, kpub = _card_data(data, "nis"), _card_data(data, "kpub")
+    response = _card_data(data, "response")
+    challenge = external.unb64(request.prepared.get("challenge", ""))
+    enrollment = None
+    try:
+        if request.purpose == SignatureRequest.Purpose.ENROLL:
+            sod = _card_data(data, "sod")
+            info = nis_protocol.verify_sod(sod, nis_raw, kpub)
+            nis_protocol.verify_internal_auth(kpub, challenge, response)
+        else:
+            enrollment = enrollment_of(request.user)
+            if enrollment is None or not enrollment.is_confirmed:
+                raise SignatureError("La tua CIE non è registrata o non è ancora confermata.", "not_enrolled")
+            if (nis_protocol.nis_hash(nis_raw) != enrollment.nis_hash
+                    or nis_protocol.kpub_hash(kpub) != enrollment.kpub_hash):
+                raise SignatureError("Questa non è la CIE registrata per il tuo utente.", "cert_mismatch")
+            nis_protocol.verify_internal_auth(kpub, challenge, response)
+    except SignatureError as exc:
+        fail(request.pk, exc.code, str(exc))
+        raise
+    if enrollment is not None:
+        try:
+            _check_pin(enrollment, data.get("pin"))
+        except SignatureError as exc:
+            if exc.code != "pin_wrong":
+                fail(request.pk, exc.code, str(exc))
+                raise
+            # PIN errato: la richiesta resta aperta per riprovare (stessa carta, stesso passo)
+            left = max(0, CieEnrollment.MAX_PIN_FAILURES - CieEnrollment.objects.get(pk=enrollment.pk).pin_failures)
+            SignatureRequest.objects.filter(pk=request.pk).update(
+                error_code="pin_wrong", error_message="PIN FASAS errato.", pin_attempts_left=left)
+            exc.attempts_left = left
+            raise
+    with transaction.atomic():
+        request = _locked(request_id, device, nonce, states=(Status.AUTHORIZING,))
+        request.status, request.error_code, request.error_message = Status.VERIFYING, "", ""
+        _rotate_nonce(request)  # la risposta della carta si accetta una sola volta
+        request.save()
+    if request.purpose == SignatureRequest.Purpose.ENROLL:
+        return _save_enrollment(request.pk, nis_raw, kpub, info)
+    return _grant_access(request.pk)
+
+
+def _save_enrollment(request_id, nis_raw, kpub, info):
+    nis_digest = nis_protocol.nis_hash(nis_raw)
+    with transaction.atomic():
+        request = SignatureRequest.objects.select_for_update().get(pk=request_id)
+        if CieEnrollment.objects.filter(nis_hash=nis_digest, revoked_at__isnull=True).exclude(user=request.user).exists():
+            _close(request, Status.FAILED, "card_in_use", "Questa CIE è già registrata per un altro utente.")
+            raise SignatureError("Questa CIE è già registrata per un altro utente.", "card_in_use")
+        now = timezone.now()
+        CieEnrollment.objects.filter(user=request.user, revoked_at__isnull=True).update(
+            revoked_at=now, revoked_reason="Sostituita da una nuova registrazione")
+        enrollment = CieEnrollment.objects.create(
+            user=request.user, nis_hash=nis_digest, kpub=external.b64(nis_protocol.first_tlv(kpub)),
+            kpub_hash=nis_protocol.kpub_hash(kpub), document_signer=info["document_signer"], request=request,
+            enrolled_at=now)
+        request.verification = {**request.verification, "enrolled": True, "level": "CIE registrata"}
+        log_event(AuditLog.Action.CONFIG, enrollment, user=request.user, repr_text="Registrazione della CIE",
+                  changes={"cie": [None, "registrata, da confermare"], "document_signer": [None, info["csca"]]})
+        _close(request, Status.SIGNED)
+    return request
+
+
+def set_fasas_pin(enrollment, pin, by):
+    from django.contrib.auth.hashers import make_password
+
+    enrollment.pin_hash, enrollment.pin_set_at, enrollment.pin_failures = make_password(pin), timezone.now(), 0
+    enrollment.save(update_fields=["pin_hash", "pin_set_at", "pin_failures"])
+    log_event(AuditLog.Action.CONFIG, enrollment, user=by, repr_text="PIN FASAS",
+              changes={"pin_fasas": [None, "impostato"]})
+
+
+def confirm_enrollment(enrollment, by):
+    if by.pk == enrollment.user_id:
+        raise SignatureError("La registrazione della propria CIE la conferma un altro amministratore.", "forbidden")
+    enrollment.confirmed_at, enrollment.confirmed_by = timezone.now(), by
+    enrollment.save(update_fields=["confirmed_at", "confirmed_by"])
+    log_event(AuditLog.Action.PERMISSION, enrollment, user=by, repr_text=f"CIE di {enrollment.user} confermata",
+              changes={"cie": ["da confermare", "confermata (carta e persona viste)"]})
+
+
+def revoke_enrollment(enrollment, by, reason):
+    enrollment.revoked_at, enrollment.revoked_reason = timezone.now(), (reason or "Azzerata")[:255]
+    enrollment.save(update_fields=["revoked_at", "revoked_reason"])
+    log_event(AuditLog.Action.PERMISSION, enrollment, user=by, repr_text=f"CIE di {enrollment.user} azzerata",
+              changes={"cie": ["registrata", "azzerata"]}, reason=enrollment.revoked_reason)
 
 
 def has_document_access(user, guest, document=None):
@@ -419,7 +600,8 @@ def retry_request(request, user):
             return following
         raise SignatureError("Per questa richiesta è già stato fatto un nuovo tentativo.", "bad_state")
     if request.purpose == SignatureRequest.Purpose.ACCESS:
-        new = create_access_request(user, request.access_guest, request.access_document)
+        new = create_access_request(user, request.access_guest, request.access_document,
+                                    request.access_method or "cie")
         if new.pk != request.pk and new.previous_id is None:
             new.previous, new.attempt = request, request.attempt + 1
             new.save(update_fields=["previous", "attempt"])
@@ -446,9 +628,12 @@ def cleanup_stale():
 
 def pending_for(device):
     now = timezone.now()
-    return (SignatureRequest.objects.select_related("version__document")
-            .filter(user=device.user, status=Status.WAITING, expires_at__gt=now)
-            .filter(Q(device__isnull=True) | Q(device=device)).order_by("created_at"))
+    pending = (SignatureRequest.objects.select_related("version__document", "access_document", "access_guest")
+               .filter(user=device.user, status=Status.WAITING, expires_at__gt=now)
+               .filter(Q(device__isnull=True) | Q(device=device)).order_by("created_at"))
+    if device.platform != SignerDevice.Platform.ANDROID:  # la CIE senza PIN oggi la legge solo l'app Android
+        pending = pending.exclude(access_method="nis")
+    return pending
 
 
 def describe(request):
@@ -457,6 +642,8 @@ def describe(request):
         title, version = "Documento di prova (nessun dato sanitario)", None
     elif request.purpose == SignatureRequest.Purpose.ACCEPTANCE:
         title, version = "Accettazione delle condizioni della firma con CIE", None
+    elif request.purpose == SignatureRequest.Purpose.ENROLL:
+        title, version = "Registrazione della tua CIE (senza il suo PIN)", None
     elif request.purpose == SignatureRequest.Purpose.ACCESS:
         title = (request.access_document.title if request.access_document_id
                  else f"tutti i documenti dell'ospite {request.access_guest} (esportazione)")
@@ -467,6 +654,7 @@ def describe(request):
         "id": str(request.id), "purpose": request.purpose, "title": title, "version": version,
         "document_sha256": request.version_sha256, "verify_code": request.verify_code, "reason": request.reason,
         "expires_at": request.expires_at.isoformat(), "status": request.status,
+        "method": request.access_method or "cie",
     }
 
 
@@ -498,6 +686,9 @@ def claim(request_id, device):
     """Il Signer prende in carico la richiesta (dopo la conferma dell'utente): da qui la usa solo questo dispositivo."""
     with transaction.atomic():
         request = _locked(request_id, device, states=(Status.WAITING,))
+        if request.access_method == "nis":  # sfida per l'autenticazione interna della carta (senza PIN della carta)
+            request.prepared = {"challenge": external.b64(secrets.token_bytes(nis_protocol.CHALLENGE_BYTES))}
+            request.status = Status.AUTHORIZING
         request.device = device
         nonce = _rotate_nonce(request)
         request.save()
@@ -573,6 +764,8 @@ def submit_certificate(request_id, device, nonce, certificate_b64):
     """
     with transaction.atomic():
         request = _locked(request_id, device, nonce, states=(Status.WAITING, Status.CARD))
+        if request.access_method == "nis":
+            raise SignatureError("Questa richiesta non usa il PIN della carta.", "bad_state")
         request.status, request.error_code, request.error_message = Status.CARD, "", ""
         request.updated_at = timezone.now()
         request.save()

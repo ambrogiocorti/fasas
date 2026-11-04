@@ -187,6 +187,15 @@ class UserListView(PermRequiredMixin, ListView):
             qs = qs.filter(role=role)
         return qs
 
+    def get_context_data(self, **kwargs):
+        from fasas.signatures.models import CieEnrollment
+
+        context = super().get_context_data(**kwargs)
+        # CIE registrate per l'uso con il PIN FASAS: prima quelle da confermare di persona
+        context["cie_enrollments"] = (CieEnrollment.objects.filter(revoked_at__isnull=True).select_related("user")
+                                      .order_by("confirmed_at", "-enrolled_at")[:100])
+        return context
+
 
 class UserCreateView(PermRequiredMixin, FormPageMixin, CreateView):
     permission_required = "accounts.add_user"

@@ -65,3 +65,36 @@ class CIESignForm(forms.Form):
     reason = forms.CharField(label="Motivo della firma", max_length=200, required=False,
                              help_text="Facoltativo, es. «Approvazione PAI». Resta scritto nella firma.")
     confirm = forms.BooleanField(label="Ho letto il documento e intendo firmarlo con la mia CIE")
+
+
+class FasasPinForm(forms.Form):
+    """PIN FASAS: sostituisce il PIN della carta quando si appoggia la CIE per aprire i documenti."""
+    WEAK = {"123456", "654321", "1234567", "12345678", "87654321", "123123", "121212", "112233"}
+
+    old_pin = forms.CharField(label="PIN FASAS attuale", required=False,
+                              widget=forms.PasswordInput(attrs={"inputmode": "numeric", "autocomplete": "off"}))
+    pin = forms.CharField(label="Nuovo PIN FASAS (6-8 cifre)", min_length=6, max_length=8,
+                          widget=forms.PasswordInput(attrs={"inputmode": "numeric", "autocomplete": "off"}))
+    pin2 = forms.CharField(label="Ripeti il PIN", min_length=6, max_length=8,
+                           widget=forms.PasswordInput(attrs={"inputmode": "numeric", "autocomplete": "off"}))
+
+    def __init__(self, *args, enrollment=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.enrollment = enrollment
+
+    def clean(self):
+        from django.contrib.auth.hashers import check_password
+
+        data = super().clean()
+        pin, pin2 = data.get("pin") or "", data.get("pin2") or ""
+        if self.enrollment is None:
+            raise forms.ValidationError("Prima registra la tua CIE appoggiandola al telefono.")
+        if not pin.isdigit():
+            raise forms.ValidationError("Il PIN FASAS è fatto solo di cifre.")
+        if pin != pin2:
+            raise forms.ValidationError("I due PIN non coincidono.")
+        if len(set(pin)) == 1 or pin in self.WEAK or pin in "0123456789" or pin in "9876543210":
+            raise forms.ValidationError("PIN troppo facile da indovinare: scegline un altro.")
+        if self.enrollment.pin_hash and not check_password(data.get("old_pin") or "", self.enrollment.pin_hash):
+            raise forms.ValidationError("Il PIN FASAS attuale non è corretto.")
+        return data

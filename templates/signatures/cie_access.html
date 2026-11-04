@@ -9,23 +9,44 @@
 </div>
 <div class="card" style="max-width: 760px">
   {% if error %}<div class="alert alert-danger">{% icon "alert-circle" %}<div class="alert-body">{{ error }}</div></div>{% endif %}
-  <ol class="steps-list">
-    <li>Apri l'app <strong>FASAS Signer</strong> sul telefono (o sul computer con il lettore di CIE).</li>
-    <li>Premi «Verifica con CIE» qui sotto: sul telefono compare la richiesta con un <strong>codice di controllo</strong>, che deve coincidere con quello di questa pagina.</li>
-    <li>Digita sul telefono il <strong>PIN della CIE</strong> (8 cifre: 4 sulla ricevuta del Comune, 4 nella lettera arrivata con la carta) e appoggia la carta al retro del telefono finché non compare l'esito.</li>
-  </ol>
-  <p class="muted">La verifica vale {{ minutes }} minuti{% if document %} per questo documento{% else %} per i documenti di questo ospite{% endif %}. Il PIN va solo alla carta: il FASAS non lo riceve. Ogni verifica resta nell'audit.</p>
   {% if not can_use %}
     <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Il tuo utente non può ancora usare la CIE nel FASAS (CIE non attiva sul server o permessi mancanti): chiedi all'amministratore.</div></div>
-  {% elif not fiscal_code %}
-    <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Nel tuo profilo manca il codice fiscale: senza non si può controllare che la carta sia la tua. Chiedilo all'amministratore.</div></div>
   {% elif not devices %}
     <div class="alert alert-warning">{% icon "smartphone" %}<div class="alert-body">Non hai ancora abbinato il telefono: <a href="{% url 'signatures:credential' %}#cie">Impostazioni › Firma digitale › Abbina un nuovo FASAS Signer</a>, poi torna qui.</div></div>
   {% endif %}
+
+  {% if allow_nis %}
+  <h2>{% icon "id-card" %} CIE + PIN FASAS</h2>
+  <ol class="steps-list">
+    <li>Premi «Verifica» qui sotto e apri l'app <strong>FASAS Signer</strong> sul telefono: compare la richiesta con un <strong>codice di controllo</strong>, che deve coincidere con quello della pagina seguente.</li>
+    <li>Digita sul telefono il tuo <strong>PIN FASAS</strong> (quello scelto al primo accesso, non il PIN della carta).</li>
+    <li>Appoggia la CIE al retro del telefono finché non compare l'esito.</li>
+  </ol>
+  {% if not enrollment %}
+    <div class="alert alert-info">{% icon "info" %}<div class="alert-body">Primo accesso: registra la tua CIE e scegli il PIN FASAS in <a href="{% url 'signatures:credential' %}#cie-senza-pin">Impostazioni › Firma digitale</a>; poi l'amministratore conferma di persona.</div></div>
+  {% elif not enrollment.is_confirmed %}
+    <div class="alert alert-info">{% icon "info" %}<div class="alert-body">La tua CIE è registrata: manca la conferma dell'amministratore, che deve vedere la carta di persona.</div></div>
+  {% elif not enrollment.pin_hash %}
+    <div class="alert alert-info">{% icon "info" %}<div class="alert-body">Scegli il PIN FASAS in <a href="{% url 'signatures:credential' %}#cie-senza-pin">Impostazioni › Firma digitale</a>.</div></div>
+  {% elif enrollment.pin_locked %}
+    <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">PIN FASAS bloccato dopo troppi errori: chiedi all'amministratore di azzerare la registrazione e registra di nuovo la carta.</div></div>
+  {% endif %}
   <form method="post" class="form-actions">{% csrf_token %}
     {% if document %}<input type="hidden" name="documento" value="{{ document.pk }}">{% else %}<input type="hidden" name="ospite" value="{{ guest.pk }}">{% endif %}
-    <input type="hidden" name="next" value="{{ next }}">
-    <button class="btn btn-primary" {% if not can_use or not fiscal_code or not devices %}disabled{% endif %}>{% icon "id-card" %}Verifica con CIE</button>
+    <input type="hidden" name="next" value="{{ next }}"><input type="hidden" name="metodo" value="nis">
+    <button class="btn btn-primary" {% if not can_use or not devices or not enrollment.ready %}disabled{% endif %}>{% icon "id-card" %}Verifica con CIE e PIN FASAS</button>
   </form>
+  <h2 style="margin-top:1.4rem">Oppure con il PIN della carta</h2>
+  {% endif %}
+
+  <p class="{% if allow_nis %}muted{% endif %}">Apri FASAS Signer sul telefono (o sul computer con il lettore di CIE), digita il <strong>PIN della CIE</strong> (8 cifre: 4 sulla ricevuta del Comune, 4 nella lettera arrivata con la carta) e appoggia la carta al retro del telefono finché non compare l'esito.</p>
+  {% if not fiscal_code %}<div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Con il PIN della carta serve il codice fiscale nel tuo profilo: chiedilo all'amministratore.</div></div>{% endif %}
+  <form method="post" class="form-actions">{% csrf_token %}
+    {% if document %}<input type="hidden" name="documento" value="{{ document.pk }}">{% else %}<input type="hidden" name="ospite" value="{{ guest.pk }}">{% endif %}
+    <input type="hidden" name="next" value="{{ next }}"><input type="hidden" name="metodo" value="cie">
+    <button class="btn{% if not allow_nis %} btn-primary{% endif %}" {% if not can_use or not cie_ready or not devices %}disabled{% endif %}>{% icon "id-card" %}Verifica con il PIN della carta</button>
+  </form>
+
+  <p class="muted" style="margin-top:1rem">La verifica vale {{ minutes }} minuti{% if document %} per questo documento{% else %} per i documenti di questo ospite{% endif %}. Il PIN della carta va solo alla carta; il PIN FASAS è controllato dal FASAS, che ne conserva solo l'impronta. Ogni verifica resta nell'audit.</p>
 </div>
 {% endblock %}

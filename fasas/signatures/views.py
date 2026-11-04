@@ -24,7 +24,7 @@ from fasas.documents.services import read_version
 from fasas.guests.models import Guest
 
 from . import cie, external, fea_terms
-from .forms import CIESignForm, CredentialForm, RemoteCredentialForm, SendOTPForm, SignForm
+from .forms import CIESignForm, CredentialForm, FasasPinForm, RemoteCredentialForm, SendOTPForm, SignForm
 from .models import FEAAcceptance, SignatureRequest, SignerDevice, SigningCredential
 from .providers import SignatureError, signature_level, verify_pdf
 from .services import register_pkcs12, register_remote, request_otp, sign_version
@@ -64,6 +64,24 @@ def credential_view(request):
                 request.session[PAIRING_KEY] = {"code": code, "expires": (timezone.now() + datetime.timedelta(
                     minutes=settings.FASAS_CIE_PAIRING_MINUTES)).isoformat()}
             return redirect(f"{reverse('signatures:credential')}#cie")
+        if action == "cie-enroll" and can_cie:
+            try:
+                enroll_request = cie.create_enroll_request(user)
+            except SignatureError as exc:
+                messages.error(request, str(exc))
+            else:
+                return redirect("signatures:cie_request", request_id=enroll_request.pk)
+            return redirect(f"{reverse('signatures:credential')}#cie-senza-pin")
+        if action == "fasas-pin" and can_cie:
+            enrollment = cie.enrollment_of(user)
+            pin_form = FasasPinForm(request.POST, enrollment=enrollment)
+            if enrollment is not None and pin_form.is_valid():
+                cie.set_fasas_pin(enrollment, pin_form.cleaned_data["pin"], user)
+                messages.success(request, "PIN FASAS salvato.")
+                return redirect(f"{reverse('signatures:credential')}#cie-senza-pin")
+            for error in pin_form.errors.values():
+                messages.error(request, " ".join(error))
+            return redirect(f"{reverse('signatures:credential')}#cie-senza-pin")
         if action == "cie-revoke" and can_cie:
             device = get_object_or_404(SignerDevice, pk=request.POST.get("device"), user=user, revoked_at__isnull=True)
             cie.revoke_device(device, user)
@@ -108,6 +126,8 @@ def credential_view(request):
         "tests": SignatureRequest.objects.filter(user=user, purpose=SignatureRequest.Purpose.TEST)[:5] if can_cie_sign else [],
         "acceptance": cie.valid_acceptance(user) if can_cie_sign else None,
         "acceptance_required": settings.FASAS_FEA_REQUIRE_ACCEPTANCE, "terms_draft": fea_terms.is_draft(),
+        "nis_enabled": can_cie and request.fasas_config.documents_verification == "nis",
+        "enrollment": cie.enrollment_of(user) if can_cie else None, "pin_form": FasasPinForm(enrollment=None),
     })
 
 
@@ -229,7 +249,24 @@ ACCESS_STEPS = [
     ("signing", "La carta conferma l'identità"), ("verifying", "Verifica del certificato"),
     ("signed", "Identità verificata"),
 ]
+NIS_STEPS = [
+    ("waiting", "In attesa del telefono"), ("authorizing", "CIE appoggiata e PIN FASAS sul telefono"),
+    ("verifying", "Verifica della carta"), ("signed", "Identità verificata"),
+]
+ENROLL_STEPS = [
+    ("waiting", "In attesa del telefono"), ("authorizing", "Appoggia la CIE al telefono"),
+    ("verifying", "Verifica della carta"), ("signed", "CIE registrata"),
+]
 ACCESS_NEXT = "fasas_cie_access_next"
+NO_SIGN_PURPOSES = (SignatureRequest.Purpose.ACCESS, SignatureRequest.Purpose.ENROLL)
+
+
+def _steps(signature_request):
+    if signature_request.purpose == SignatureRequest.Purpose.ENROLL:
+        return ENROLL_STEPS
+    if signature_request.purpose == SignatureRequest.Purpose.ACCESS:
+        return NIS_STEPS if signature_request.access_method == "nis" else ACCESS_STEPS
+    return STEPS
 
 
 def cie_user_required(view):
@@ -266,7 +303,7 @@ def own_request(view):
             cie.deny("Accesso a una richiesta di firma CIE di un altro utente o inesistente.", user=request.user,
                      obj=signature_request, request_id=str(request_id), code="not_found")
             return page_not_found(request, Http404())
-        if not (signature_request.purpose == SignatureRequest.Purpose.ACCESS or request.user.has_perm(cie.PERMISSION)):
+        if not (signature_request.purpose in NO_SIGN_PURPOSES or request.user.has_perm(cie.PERMISSION)):
             raise PermissionDenied
         return view(request, cie.expire_if_needed(signature_request))
 
@@ -309,9 +346,11 @@ def cie_sign_view(request, pk):
 @cie_user_required
 @own_request
 def cie_request_view(request, signature_request):
-    if signature_request.purpose == SignatureRequest.Purpose.ACCESS:
+    if signature_request.purpose in NO_SIGN_PURPOSES:
         return render(request, "signatures/cie_request.html", {
-            "req": signature_request, "steps": ACCESS_STEPS, "access": True, "test": False,
+            "req": signature_request, "steps": _steps(signature_request), "access": True, "test": False,
+            "by_nis": signature_request.access_method == "nis",
+            "enroll": signature_request.purpose == SignatureRequest.Purpose.ENROLL,
             "guest": signature_request.access_guest, "document": signature_request.access_document,
             "status_url": reverse("signatures:cie_status", args=[signature_request.pk]),
             "devices": _devices(request.user), "minutes": request.fasas_config.documents_cie_minutes,
@@ -330,7 +369,8 @@ def cie_request_view(request, signature_request):
 
 
 def status_payload(signature_request, result_url=None):
-    order = [code for code, _ in STEPS]
+    steps = _steps(signature_request)
+    order = [code for code, _ in steps]
     devices = SignerDevice.objects.filter(user=signature_request.user, revoked_at__isnull=True)
     online = any(d.is_online for d in devices)
     payload = {
@@ -344,12 +384,16 @@ def status_payload(signature_request, result_url=None):
         "devices": devices.count(), "device_online": online, "result_url": None,
         "test_card": signature_request.is_test_card,
     }
-    if signature_request.purpose == SignatureRequest.Purpose.ACCESS:
+    if signature_request.purpose in NO_SIGN_PURPOSES:
         payload["access"] = True
-        payload["label"] = {**dict(ACCESS_STEPS), "failed": "Verifica non riuscita"}.get(
+        payload["by_nis"] = signature_request.access_method == "nis"
+        payload["enroll"] = signature_request.purpose == SignatureRequest.Purpose.ENROLL
+        payload["label"] = {**dict(steps), "failed": "Verifica non riuscita"}.get(
             signature_request.status, payload["label"])
     if signature_request.status == SignatureRequest.Status.SIGNED:
-        if signature_request.purpose == SignatureRequest.Purpose.ACCESS:
+        if signature_request.purpose == SignatureRequest.Purpose.ENROLL:
+            payload["result_url"] = reverse("signatures:credential") + "#cie-senza-pin"
+        elif signature_request.purpose == SignatureRequest.Purpose.ACCESS:
             payload["result_url"] = result_url
         elif signature_request.signature_id:
             payload["result_url"] = signature_request.version.document.get_absolute_url()
@@ -431,9 +475,11 @@ def cie_access(request):
     if cie.has_document_access(request.user, guest, document):
         return redirect(next_url)
     error = None
+    methods = cie.access_methods()
     if request.method == "POST":
+        method = request.POST.get("metodo") if request.POST.get("metodo") in methods else methods[0]
         try:
-            signature_request = cie.create_access_request(request.user, guest, document)
+            signature_request = cie.create_access_request(request.user, guest, document, method)
         except SignatureError as exc:
             error = str(exc)
         else:
@@ -442,11 +488,33 @@ def cie_access(request):
             saved[str(signature_request.pk)] = next_url
             request.session[ACCESS_NEXT] = saved
             return redirect("signatures:cie_request", request_id=signature_request.pk)
+    enrollment = cie.enrollment_of(request.user)
     return render(request, "signatures/cie_access.html", {
         "document": document, "guest": guest, "next": next_url, "error": error,
         "can_use": cie.can_use_device(request.user), "devices": _devices(request.user),
         "fiscal_code": request.user.fiscal_code, "minutes": request.fasas_config.documents_cie_minutes,
+        "allow_nis": "nis" in methods, "enrollment": enrollment,
+        "cie_ready": bool(request.user.fiscal_code) and bool(external.trust_roots()),
     })
+
+
+@require_POST
+@permission_required("accounts.change_user", raise_exception=True)
+def enrollment_action(request, pk):
+    """Amministratore: conferma la CIE registrata (dopo aver visto carta e persona) oppure la azzera."""
+    from .models import CieEnrollment
+
+    enrollment = get_object_or_404(CieEnrollment.objects.select_related("user"), pk=pk, revoked_at__isnull=True)
+    try:
+        if request.POST.get("action") == "confirm":
+            cie.confirm_enrollment(enrollment, request.user)
+            messages.success(request, f"CIE di {enrollment.user} confermata.")
+        else:
+            cie.revoke_enrollment(enrollment, request.user, "Azzerata dall'amministratore (es. PIN FASAS dimenticato)")
+            messages.info(request, f"Registrazione della CIE di {enrollment.user} azzerata: dovrà registrarla di nuovo.")
+    except SignatureError as exc:
+        messages.error(request, str(exc))
+    return redirect("accounts:user_list")
 
 
 @require_POST

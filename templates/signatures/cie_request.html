@@ -1,10 +1,17 @@
 {% extends "base.html" %}{% load fasas_tags static %}
-{% block title %}{% if access %}Verifica con CIE{% else %}Firma con CIE{% endif %}{% endblock %}
+{% block title %}{% if enroll %}Registrazione della CIE{% elif access %}Verifica con CIE{% else %}Firma con CIE{% endif %}{% endblock %}
 {% block content %}
 {% if guest %}{% include "guests/_header.html" with compact=True %}{% endif %}
-{% if access %}
+{% if enroll %}
 <div class="page-head">
-  <div><h1>{% icon "lock" %} Verifica con CIE</h1>
+  <div><h1>{% icon "id-card" %} Registrazione della tua CIE</h1>
+    <span class="subtitle">Appoggia la carta al telefono: non serve il suo PIN. Poi sceglierai il PIN FASAS.</span></div>
+  <div class="actions"><a class="btn" href="{% url 'signatures:credential' %}#cie-senza-pin">{% icon "arrow-left" %}Impostazioni firma</a></div>
+</div>
+<div class="sign-layout sign-layout-single">
+{% elif access %}
+<div class="page-head">
+  <div><h1>{% icon "lock" %} Verifica con CIE{% if by_nis %} e PIN FASAS{% endif %}</h1>
     <span class="subtitle">{% if document %}Per aprire «{{ document.title }}»{% else %}Per i documenti dell'ospite{% endif %} · vale {{ minutes }} minuti{% if req.attempt > 1 %} · tentativo {{ req.attempt }}{% endif %}</span></div>
   <div class="actions"><a class="btn" href="{% url 'documents:guest_list' guest.pk %}">{% icon "arrow-left" %}Documenti dell'ospite</a></div>
 </div>
@@ -21,7 +28,7 @@
     <iframe src="{{ preview_url }}" title="Anteprima del documento da firmare" class="pdf-frame"></iframe>
   </div>
 {% endif %}
-  <div class="card" id="cie-panel" data-status-url="{{ status_url }}" data-status="{{ req.status }}"{% if access %} data-access="1"{% endif %}>
+  <div class="card" id="cie-panel" data-status-url="{{ status_url }}" data-status="{{ req.status }}"{% if access %} data-access="1"{% endif %}{% if by_nis %} data-nis="1"{% endif %}{% if enroll %} data-enroll="1"{% endif %}>
     <div class="verify-code"><span class="muted">Codice di controllo</span><strong class="mono">{{ req.verify_code }}</strong>
       <small class="muted">Deve coincidere con quello mostrato da FASAS Signer{% if access %} sul telefono{% endif %}.</small></div>
     <ol class="sign-steps" aria-live="polite">
@@ -34,7 +41,7 @@
     <div class="form-actions">
       <form method="post" action="{% url 'signatures:cie_cancel' req.pk %}" data-role="cancel">{% csrf_token %}<button class="btn">{% icon "x" %}{% if access %}Annulla{% else %}Annulla la firma{% endif %}</button></form>
       <form method="post" action="{% url 'signatures:cie_retry' req.pk %}" data-role="retry" hidden>{% csrf_token %}<button class="btn btn-primary">{% icon "refresh" %}Riprova</button></form>
-      <a class="btn btn-primary" data-role="result" href="#" hidden>{% if access %}Apri il documento{% else %}Vai al documento firmato{% endif %}</a>
+      <a class="btn btn-primary" data-role="result" href="#" hidden>{% if enroll %}Scegli il PIN FASAS{% elif access %}Apri il documento{% else %}Vai al documento firmato{% endif %}</a>
     </div>
     <noscript><p>Ricarica la pagina per aggiornare lo stato: <strong>{{ req.get_status_display }}</strong>.</p></noscript>
   </div>

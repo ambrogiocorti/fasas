@@ -51,6 +51,34 @@ class SigningFlow(private val api: FasasApi) {
         signingReported = false
     }
 
+    /** CIE senza il suo PIN: presa in carico e sfida (16 byte) per l'autenticazione interna della carta. */
+    fun acceptNis(request: SignRequest): ByteArray {
+        val claimed = api.claim(request.id)
+        if (claimed.getString("verify_code") != request.verifyCode || !claimed.has("challenge")) {
+            api.error(request.id, claimed.getString("nonce"), "device_error")
+            throw ServerException(0, "verify_code", "Richiesta incoerente ricevuta dal server: operazione interrotta.")
+        }
+        nonce = claimed.getString("nonce")
+        return Base64Codec.decode(claimed.getString("challenge"))
+    }
+
+    /**
+     * Invia i dati letti dalla carta e (per aprire i documenti) il PIN FASAS. Con un PIN FASAS errato la richiesta
+     * resta aperta: si chiede di nuovo il PIN e si reinviano gli stessi dati, senza riappoggiare la carta.
+     */
+    fun submitNis(request: SignRequest, card: NisCardData, pin: String?): Outcome {
+        val current = nonce ?: return Outcome.Failed("bad_state", "Richiesta non presa in carico.")
+        return try {
+            val result = api.nis(request.id, current, card, pin)
+            nonce = null
+            Outcome.Signed(result.optJSONObject("verification")?.optString("level") ?: "")
+        } catch (e: ServerException) {
+            if (e.code == "pin_wrong") return Outcome.PinWrong(e.attemptsLeft)
+            nonce = null
+            Outcome.Failed(e.code, e.message ?: e.code)
+        }
+    }
+
     fun refuse(request: SignRequest) {
         val claimed = api.claim(request.id)
         api.error(request.id, claimed.getString("nonce"), "cancelled")

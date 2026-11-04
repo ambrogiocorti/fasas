@@ -20,6 +20,8 @@
   if (!panel) return;
   const url = panel.dataset.statusUrl;
   const access = panel.dataset.access === "1";  // verifica di identità per aprire un documento
+  const nis = panel.dataset.nis === "1";        // CIE appoggiata + PIN FASAS (senza il PIN della carta)
+  const enroll = panel.dataset.enroll === "1";  // registrazione della CIE
   const steps = Array.from(panel.querySelectorAll("[data-step]"));
   const box = (role) => panel.querySelector(`[data-role="${role}"]`);
   const setBox = (role, text) => {
@@ -41,6 +43,21 @@
       if (s.error_code === "card_absent") return "Appoggia la CIE sul lettore e tienila ferma.";
       return s.device ? "Richiesta presa in carico da " + s.device + ": appoggia la CIE sul lettore."
         : "Conferma la richiesta su FASAS Signer (controlla che il codice coincida).";
+    }
+    if (nis || enroll) {
+      if (s.status === "waiting") {
+        if (!s.devices) return "Nessun telefono abbinato: abbinalo in Impostazioni › Firma digitale.";
+        return "Apri l'app FASAS Signer sul telefono: la richiesta comparirà lì (controlla che il codice coincida).";
+      }
+      if (s.status === "authorizing") {
+        if (s.error_code === "pin_wrong") {
+          return "PIN FASAS errato." + (s.pin_attempts_left != null ? " Tentativi rimasti: " + s.pin_attempts_left + "." : "") +
+            " Riprova sul telefono.";
+        }
+        return enroll ? "Appoggia la CIE al retro del telefono e tienila ferma (non serve il suo PIN)."
+          : "Sul telefono: digita il PIN FASAS e appoggia la CIE al retro del telefono.";
+      }
+      if (s.status === "verifying") return "Controllo della carta…";
     }
     if (access) {
       if (s.status === "card") return "Carta rilevata: tienila ferma sul telefono…";
@@ -69,7 +86,9 @@
     setBox("hint", s.active ? hintFor(s) : "");
     setBox("error", failed ? s.label + (s.error ? ": " + s.error : "") : "");
     let done = "";
-    if (s.status === "signed" && access) {
+    if (s.status === "signed" && enroll) {
+      done = "CIE registrata. Ora scegli il PIN FASAS; poi l'amministratore conferma la registrazione vedendo la carta.";
+    } else if (s.status === "signed" && access) {
       done = "Identità verificata" + (s.test_card ? " (CARTA DI PROVA, solo per le prove)" : " con la CIE") +
         ": apertura del documento…";
       if (s.result_url && !panel.dataset.redirected) {
@@ -91,7 +110,7 @@
     result.hidden = !s.result_url;
     if (s.result_url) {
       result.href = s.result_url;
-      result.textContent = access ? "Apri il documento" : s.version ? "Vai al documento firmato" : "Scarica il PDF di prova firmato";
+      result.textContent = enroll ? "Scegli il PIN FASAS" : access ? "Apri il documento" : s.version ? "Vai al documento firmato" : "Scarica il PDF di prova firmato";
     }
     box("expiry").textContent = s.active && s.expires_in > 0
       ? "La richiesta scade tra " + Math.floor(s.expires_in / 60) + ":" + String(s.expires_in % 60).padStart(2, "0") + "." : "";

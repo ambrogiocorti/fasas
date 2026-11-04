@@ -273,6 +273,8 @@ FASAS_CSC_PROVIDER_NAME = os.environ.get("FASAS_CSC_PROVIDER_NAME", "")  # nome 
 FASAS_CIE_ENABLED = env_bool("FASAS_CIE_ENABLED", True)
 FASAS_CIE_TRUST_ROOTS = os.environ.get("FASAS_CIE_TRUST_ROOTS", "")  # PEM con le CA della CIE (Ministero dell'Interno)
 FASAS_CIE_INTERMEDIATES = os.environ.get("FASAS_CIE_INTERMEDIATES", "")  # PEM con eventuali CA intermedie
+# CIE senza PIN della carta (protocollo NIS): certificati della CSCA italiana, https://csca-ita.interno.gov.it
+FASAS_CIE_CSCA = os.environ.get("FASAS_CIE_CSCA", "")
 FASAS_CIE_REVOCATION = os.environ.get("FASAS_CIE_REVOCATION", "soft-fail")  # soft-fail | hard-fail | off
 FASAS_CIE_TIMESTAMP = env_bool("FASAS_CIE_TIMESTAMP", True)  # marca temporale se è configurata una TSA reale
 FASAS_CIE_REQUEST_MINUTES = int(os.environ.get("FASAS_CIE_REQUEST_MINUTES", "5"))

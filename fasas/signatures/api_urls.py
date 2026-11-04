@@ -13,5 +13,6 @@ urlpatterns = [
     path("richieste/<uuid:request_id>/stato/", api.state, name="state"),
     path("richieste/<uuid:request_id>/certificato/", api.certificate, name="certificate"),
     path("richieste/<uuid:request_id>/firma/", api.sign, name="sign"),
+    path("richieste/<uuid:request_id>/cie-senza-pin/", api.nis, name="nis"),
     path("richieste/<uuid:request_id>/errore/", api.error, name="error"),
 ]

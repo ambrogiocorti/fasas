@@ -6,16 +6,23 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /** Errore restituito dal FASAS (o rete assente: status 0). */
-class ServerException(val status: Int, val code: String, message: String) : Exception(message)
+class ServerException(val status: Int, val code: String, message: String, val attemptsLeft: Int? = null) : Exception(message)
 
 data class SignRequest(
     val id: String, val title: String, val version: Int?, val documentSha256: String,
     val verifyCode: String, val reason: String,
-    /** «document», «test», «acceptance» oppure «access» (verifica di identità prima di aprire un documento) */
+    /** «document», «test», «acceptance», «access» (verifica prima di aprire un documento) o «enroll» */
     val purpose: String = "document",
+    /** «cie» (CIE con il suo PIN) oppure «nis» (CIE appoggiata senza il suo PIN + PIN FASAS) */
+    val method: String = "cie",
 ) {
     val isAccess get() = purpose == "access"
+    val isEnroll get() = purpose == "enroll"
+    val withoutCardPin get() = method == "nis"
 }
+
+/** Dati letti dalla CIE senza il suo PIN (protocollo NIS del Ministero) e risposta della carta alla sfida. */
+class NisCardData(val nis: ByteArray, val kpub: ByteArray, val response: ByteArray, val sod: ByteArray? = null)
 
 data class Prepared(val nonce: String, val toBeSigned: ByteArray, val digestInfo: ByteArray, val verifyCode: String)
 
@@ -69,7 +76,8 @@ class FasasApi(baseUrl: String, var token: String = "", allowLanHttp: Boolean = 
             val json = try { JSONObject(text) } catch (e: Exception) { JSONObject() }
             if (status >= 400) {
                 throw ServerException(status, json.optString("error", "http_error"),
-                    json.optString("message", "Errore del server ($status)."))
+                    json.optString("message", "Errore del server ($status)."),
+                    if (json.has("attempts_left") && !json.isNull("attempts_left")) json.getInt("attempts_left") else null)
             }
             return json
         } catch (e: IOException) {
@@ -96,11 +104,20 @@ class FasasApi(baseUrl: String, var token: String = "", allowLanHttp: Boolean = 
             val r = items.getJSONObject(i)
             SignRequest(r.getString("id"), r.getString("title"), if (r.isNull("version")) null else r.getInt("version"),
                 r.getString("document_sha256"), r.getString("verify_code"), r.optString("reason"),
-                r.optString("purpose", "document"))
+                r.optString("purpose", "document"), r.optString("method", "cie"))
         }
     }
 
     fun claim(id: String): JSONObject = call("POST", "richieste/$id/prendi/")
+
+    /** CIE senza il suo PIN: NIS, chiave pubblica, (alla registrazione) SOD, risposta della carta e PIN FASAS. */
+    fun nis(id: String, nonce: String, card: NisCardData, pin: String?): JSONObject {
+        val body = JSONObject(mapOf("nonce" to nonce, "nis" to Base64Codec.encode(card.nis),
+            "kpub" to Base64Codec.encode(card.kpub), "response" to Base64Codec.encode(card.response)))
+        card.sod?.let { body.put("sod", Base64Codec.encode(it)) }
+        pin?.let { body.put("pin", it) }
+        return call("POST", "richieste/$id/cie-senza-pin/", body)
+    }
 
     fun state(id: String, nonce: String, state: String, attemptsLeft: Int? = null): String {
         val body = JSONObject(mapOf("nonce" to nonce, "state" to state))

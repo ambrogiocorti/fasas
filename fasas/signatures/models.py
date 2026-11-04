@@ -173,6 +173,7 @@ class SignatureRequest(models.Model):
         TEST = "test", "Prova di funzionamento"
         ACCEPTANCE = "acceptance", "Accettazione delle condizioni della FEA"
         ACCESS = "access", "Verifica di identità per aprire i documenti"
+        ENROLL = "enroll", "Registrazione della CIE per l'uso senza il suo PIN"
 
     ACTIVE = ("waiting", "card", "authorizing", "signing", "verifying")
     CANCELLABLE = ("waiting", "card", "authorizing", "signing")
@@ -187,6 +188,8 @@ class SignatureRequest(models.Model):
                                         related_name="cie_access_requests")
     access_guest = models.ForeignKey("guests.Guest", on_delete=models.CASCADE, null=True, blank=True,
                                      related_name="cie_access_requests")
+    access_method = models.CharField("metodo di verifica", max_length=10, blank=True, choices=[
+        ("cie", "CIE con il suo PIN"), ("nis", "CIE appoggiata + PIN FASAS")])
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="signature_requests")
     device = models.ForeignKey(SignerDevice, on_delete=models.PROTECT, null=True, blank=True, related_name="requests")
     status = models.CharField("stato", max_length=12, choices=Status.choices, default=Status.WAITING, db_index=True)
@@ -262,6 +265,8 @@ class CieAccess(models.Model):
     granted_at = models.DateTimeField("verificato il", default=timezone.now)
     expires_at = models.DateTimeField("valido fino al", db_index=True)
     certificate_subject = models.CharField("titolare certificato", max_length=255, blank=True)
+    method = models.CharField("metodo", max_length=10, default="cie", choices=[
+        ("cie", "CIE con il suo PIN"), ("nis", "CIE appoggiata + PIN FASAS")])
 
     class Meta:
         verbose_name = "accesso ai documenti verificato con CIE"
@@ -270,6 +275,59 @@ class CieAccess(models.Model):
 
     def __str__(self):
         return f"Accesso CIE di {self.user} fino al {timezone.localtime(self.expires_at):%d/%m %H:%M}"
+
+
+class CieEnrollment(models.Model):
+    """
+    CIE registrata per l'uso senza il suo PIN (protocollo NIS del Ministero): la carta appoggiata al telefono dimostra
+    di essere originale e il PIN FASAS, scelto dall'utente, prende il posto del PIN della carta. Si conservano solo
+    l'impronta del NIS e la chiave pubblica della carta; il PIN FASAS solo come impronta (come le password).
+    La registrazione vale dopo la conferma di un amministratore che ha visto la carta e la persona.
+    """
+    MAX_PIN_FAILURES = 5
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="cie_enrollments")
+    nis_hash = models.CharField("impronta del NIS", max_length=64)
+    kpub = models.TextField("chiave pubblica della carta (base64)")
+    kpub_hash = models.CharField("impronta della chiave pubblica", max_length=64)
+    document_signer = models.CharField("Document Signer", max_length=255, blank=True)
+    request = models.OneToOneField(SignatureRequest, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="cie_enrollment")
+    enrolled_at = models.DateTimeField("registrata il", default=timezone.now)
+    confirmed_at = models.DateTimeField("confermata il", null=True, blank=True)
+    confirmed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                                     related_name="+")
+    pin_hash = models.CharField("impronta del PIN FASAS", max_length=255, blank=True)
+    pin_set_at = models.DateTimeField("PIN scelto il", null=True, blank=True)
+    pin_failures = models.PositiveSmallIntegerField("PIN errati di seguito", default=0)
+    revoked_at = models.DateTimeField("revocata il", null=True, blank=True)
+    revoked_reason = models.CharField("motivo della revoca", max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = "CIE registrata (senza PIN della carta)"
+        verbose_name_plural = "CIE registrate (senza PIN della carta)"
+        ordering = ["-enrolled_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["user"], condition=models.Q(revoked_at__isnull=True),
+                                    name="one_active_cie_enrollment_per_user"),
+            models.UniqueConstraint(fields=["nis_hash"], condition=models.Q(revoked_at__isnull=True),
+                                    name="one_active_enrollment_per_card"),
+        ]
+
+    def __str__(self):
+        return f"CIE registrata di {self.user}"
+
+    @property
+    def is_confirmed(self):
+        return self.confirmed_at is not None and self.revoked_at is None
+
+    @property
+    def pin_locked(self):
+        return self.pin_failures >= self.MAX_PIN_FAILURES
+
+    @property
+    def ready(self):
+        return self.is_confirmed and bool(self.pin_hash) and not self.pin_locked
 
 
 class FEAAcceptance(models.Model):

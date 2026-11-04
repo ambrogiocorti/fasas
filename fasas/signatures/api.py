@@ -150,7 +150,10 @@ def pending(request, device):
 @device_api
 def claim(request, device, request_id):
     signature_request, nonce = cie.claim(request_id, device)
-    return _json({**cie.describe(signature_request), "nonce": nonce})
+    data = {**cie.describe(signature_request), "nonce": nonce}
+    if signature_request.access_method == "nis":  # sfida per l'autenticazione interna della carta
+        data["challenge"] = signature_request.prepared.get("challenge", "")
+    return _json(data)
 
 
 @require_POST
@@ -186,6 +189,21 @@ def sign(request, device, request_id):
                   "version": signature_request.signature.signed_version.number if signature_request.signature else None,
                   "verification": {k: signature_request.verification.get(k) for k in
                                    ("intact", "valid", "trusted", "level", "timestamped")}})
+
+
+@require_POST
+@device_api
+def nis(request, device, request_id):
+    """CIE senza il suo PIN: dati letti dalla carta, risposta alla sfida e (per aprire i documenti) PIN FASAS."""
+    try:
+        signature_request = cie.submit_nis(request_id, device, _body(request).get("nonce"), _body(request))
+    except SignatureError as exc:
+        if exc.code != "pin_wrong":
+            raise
+        return _json({"error": exc.code, "message": str(exc), "attempts_left": getattr(exc, "attempts_left", None)},
+                     status=400)
+    return _json({"status": signature_request.status, "version": None,
+                  "verification": {"level": signature_request.verification.get("level")}})
 
 
 @require_POST

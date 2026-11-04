@@ -82,6 +82,7 @@ class FakeFasas : AutoCloseable {
     private var nonce = "n0"
     private var counter = 0
     val calls = mutableListOf<String>()
+    val nisBodies = mutableListOf<org.json.JSONObject>()
     lateinit var publicKey: java.security.PublicKey
     val toBeSigned = "attributi firmati di prova".toByteArray()
     var signedOk = false
@@ -101,7 +102,17 @@ class FakeFasas : AutoCloseable {
                 nonce = "n${++counter}"
                 reply.put("nonce", nonce)
                 when (step) {
-                    "prendi" -> reply.put("verify_code", "ABCD-EFGH")
+                    "prendi" -> reply.put("verify_code", "ABCD-EFGH").put("challenge", Base64Codec.encode(toBeSigned.copyOf(16)))
+                    "cie-senza-pin" -> {
+                        nisBodies += body
+                        if (body.optString("pin") != "482913") {
+                            nonce = body.getString("nonce")  // PIN errato: la richiesta resta allo stesso passo
+                            status = 400
+                            reply.put("error", "pin_wrong").put("message", "PIN FASAS errato.").put("attempts_left", 4)
+                        } else {
+                            reply.put("verification", org.json.JSONObject().put("level", "Verifica di identità"))
+                        }
+                    }
                     "certificato" -> {
                         val digest = MessageDigest.getInstance("SHA-256").digest(toBeSigned)
                         reply.put("to_be_signed", Base64Codec.encode(toBeSigned))
@@ -152,6 +163,23 @@ class CardMovedTest {
             assertTrue(fake.signedOk)
             // certificato inviato una volta sola, nessun errore segnalato al server: la richiesta è proseguita
             assertEquals(listOf("prendi", "stato", "certificato", "stato", "firma"), fake.calls)
+        }
+    }
+
+    @Test
+    fun cardWithoutItsPinAndFasasPin() {
+        FakeFasas().use { fake ->
+            val flow = SigningFlow(FasasApi(fake.url))
+            val request = SignRequest("r3", "Relazione", null, "00", "ABCD-EFGH", "", purpose = "access", method = "nis")
+            assertTrue(request.withoutCardPin)
+            val challenge = flow.acceptNis(request)
+            assertEquals(16, challenge.size)
+            val card = NisCardData("123456789012".toByteArray(), byteArrayOf(0x30, 0x00), ByteArray(256) { 1 })
+            val wrong = flow.submitNis(request, card, "000001")
+            assertIs<Outcome.PinWrong>(wrong).also { assertEquals(4, it.attemptsLeft) }
+            assertIs<Outcome.Signed>(flow.submitNis(request, card, "482913"))  // stessi dati, nessun nuovo appoggio
+            assertEquals(listOf("prendi", "cie-senza-pin", "cie-senza-pin"), fake.calls)
+            assertEquals(Base64Codec.encode(card.nis), fake.nisBodies.last().getString("nis"))
         }
     }
 

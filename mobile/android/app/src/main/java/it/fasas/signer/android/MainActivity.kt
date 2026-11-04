@@ -24,6 +24,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import it.fasas.signer.CardException
 import it.fasas.signer.FasasApi
+import it.fasas.signer.NisCardData
 import it.fasas.signer.Outcome
 import it.fasas.signer.ServerException
 import it.fasas.signer.SignRequest
@@ -206,7 +207,7 @@ class MainActivity : Activity() {
     }
 
     /** Collega la carta: CardException con un messaggio chiaro se non è una CIE o se il telefono non è adatto. */
-    private fun connect(tag: Tag): IsoDep {
+    private fun connect(tag: Tag, requireExtended: Boolean = true): IsoDep {
         val isoDep = IsoDep.get(tag) ?: throw CardException("not_cie", IasCieSession.NOT_CIE)
         try {
             isoDep.connect()
@@ -214,7 +215,7 @@ class MainActivity : Activity() {
             throw CardException("card_removed", IasCieSession.MOVED)
         }
         isoDep.timeout = 10_000
-        if (!isoDep.isExtendedLengthApduSupported) {
+        if (requireExtended && !isoDep.isExtendedLengthApduSupported) {
             runCatching { isoDep.close() }
             throw CardException("nfc_unsupported", "Questo telefono non supporta i comandi NFC lunghi (extended APDU) " +
                 "che servono alla CIE: usare un altro telefono o il lettore del computer.")
@@ -259,6 +260,7 @@ class MainActivity : Activity() {
 
     private fun confirm(client: FasasApi, request: SignRequest) {
         val flow = SigningFlow(client)
+        if (request.withoutCardPin) return confirmWithoutCardPin(flow, request)
         val version = request.version?.let { " – versione $it" } ?: ""
         val builder = AlertDialog.Builder(this).setCancelable(false)
         if (request.isAccess) {
@@ -282,6 +284,105 @@ class MainActivity : Activity() {
         }
             .setNegativeButton("Rifiuta") { _, _ -> worker.execute { runCatching { flow.refuse(request) }; busy.set(false) } }
             .show()
+    }
+
+    // --- CIE senza il suo PIN: registrazione della carta e apertura dei documenti con il PIN FASAS ------------
+
+    private fun confirmWithoutCardPin(flow: SigningFlow, request: SignRequest) {
+        val builder = AlertDialog.Builder(this).setCancelable(false)
+        if (request.isEnroll) {
+            builder.setTitle("Registrazione della CIE")
+                .setMessage("Registra la tua CIE per aprire i documenti con il PIN FASAS.\n\nCodice di controllo:\n" +
+                    "${request.verifyCode}\n\nNon serve il PIN della carta. Conferma solo se il codice coincide con " +
+                    "quello mostrato nella pagina del FASAS.")
+        } else {
+            builder.setTitle("Verifica di identità")
+                .setMessage("Per aprire: ${request.title}\n\nCodice di controllo:\n${request.verifyCode}\n\n" +
+                    "Conferma solo se il codice coincide con quello mostrato nella pagina del FASAS.")
+        }
+        builder.setPositiveButton(if (request.isEnroll) "Registra" else "Continua") { _, _ ->
+            worker.execute {
+                val challenge = try {
+                    flow.acceptNis(request)
+                } catch (e: ServerException) {
+                    runOnUiThread { finish(e.message ?: "Errore") }
+                    return@execute
+                }
+                runOnUiThread {
+                    if (request.isEnroll) readCardWithoutPin(flow, request, challenge, null)
+                    else askFasasPin(flow, request, challenge, null, null)
+                }
+            }
+        }
+            .setNegativeButton("Rifiuta") { _, _ -> worker.execute { runCatching { flow.refuse(request) }; busy.set(false) } }
+            .show()
+    }
+
+    /** PIN FASAS (scelto al primo accesso). Dopo un PIN errato si reinviano i dati già letti: niente nuovo appoggio. */
+    private fun askFasasPin(flow: SigningFlow, request: SignRequest, challenge: ByteArray, message: String?, card: NisCardData?) {
+        val field = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            filters = arrayOf(InputFilter.LengthFilter(8))
+            gravity = Gravity.CENTER
+            hint = "6-8 cifre"
+        }
+        AlertDialog.Builder(this).setTitle("PIN FASAS")
+            .setMessage((message?.let { "$it\n\n" } ?: "") + "Il PIN che hai scelto nel FASAS al primo accesso: " +
+                "non è il PIN della carta né quello del telefono.")
+            .setView(field).setCancelable(false)
+            .setPositiveButton("Avanti") { _, _ ->
+                val pin = field.text.toString()
+                field.text.clear()
+                when {
+                    pin.length < 6 -> askFasasPin(flow, request, challenge, "Il PIN FASAS ha da 6 a 8 cifre.", card)
+                    card != null -> worker.execute { handleNisOutcome(flow, request, challenge, card, pin, flow.submitNis(request, card, pin)) }
+                    else -> readCardWithoutPin(flow, request, challenge, pin)
+                }
+            }
+            .setNegativeButton("Annulla") { _, _ -> worker.execute { flow.cancel(request); busy.set(false) } }
+            .show()
+    }
+
+    private fun readCardWithoutPin(flow: SigningFlow, request: SignRequest, challenge: ByteArray, pin: String?) {
+        listen("Appoggia la CIE al retro del telefono e tienila ferma fino alla fine (non serve il suo PIN).\n\n$CARD_TIPS") { tag ->
+            if (tag == null) {
+                worker.execute { flow.cancel(request); busy.set(false) }
+                runOnUiThread { status.text = idleText() }
+                return@listen
+            }
+            val card = try {
+                val isoDep = connect(tag, requireExtended = false)
+                try {
+                    NisSession(isoDep, ::progress).read(challenge, withSod = request.isEnroll)
+                } finally {
+                    runCatching { isoDep.close() }
+                }
+            } catch (e: CardException) {
+                if (e.code == "card_removed") {
+                    runOnUiThread { status.text = "${e.message}\nRiappoggiala e tienila ferma."; cardBusy.set(false) }
+                    return@listen
+                }
+                flow.abort(request, e.code)
+                runOnUiThread { stopListening(); finish("Lettura non riuscita: ${e.message}") }
+                return@listen
+            }
+            runOnUiThread { stopListening(); status.text = "Carta letta: controllo in corso…" }
+            handleNisOutcome(flow, request, challenge, card, pin, flow.submitNis(request, card, pin))
+        }
+    }
+
+    private fun handleNisOutcome(flow: SigningFlow, request: SignRequest, challenge: ByteArray, card: NisCardData,
+                                 pin: String?, outcome: Outcome) = runOnUiThread {
+        when (outcome) {
+            is Outcome.Signed -> finish(if (request.isEnroll)
+                "CIE registrata. Ora nel FASAS scegli il PIN FASAS (Impostazioni › Firma digitale); poi l'amministratore " +
+                    "conferma la registrazione vedendo la carta."
+            else "Identità verificata: torna al FASAS, il documento si apre.")
+            is Outcome.PinWrong -> askFasasPin(flow, request, challenge,
+                "PIN FASAS errato." + (outcome.attemptsLeft?.let { " Tentativi rimasti: $it." } ?: ""), card)
+            is Outcome.Failed -> finish("Non riuscito: ${outcome.message}")
+            is Outcome.CardMoved -> finish(outcome.message)
+        }
     }
 
     private fun pinField() = EditText(this).apply {

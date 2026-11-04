@@ -154,3 +154,88 @@ def record_acceptance(user):
     return FEAAcceptance.objects.create(user=user, request=request, terms_version="test", terms_sha256="0" * 64,
                                         signed_storage="", signed_sha256="0" * 64, certificate="",
                                         certificate_subject="test", certificate_serial="0", retain_until=now.date())
+
+
+class TestCSCA:
+    """CSCA e Document Signer di prova al posto di quelli del Ministero (solo nei test)."""
+
+    def __init__(self, name="Prova"):
+        self.key = _key()
+        self.name = _name(c="IT", o=f"FASAS {name} (solo test)", cn=f"CSCA di prova {name}")
+        self.cert = _build(self.name, self.name, self.key.public_key(), self.key, ca=True, days=(-30, 3650))
+        self.ds_key = _key()
+        self.ds_name = _name(c="IT", o=f"FASAS {name} (solo test)", cn=f"Document Signer CIE di prova {name}")
+        self.ds_cert = _build(self.ds_name, self.name, self.ds_key.public_key(), self.key, days=(-10, 3000))
+        self.dir = tempfile.mkdtemp(prefix="fasas-csca-")
+        self.path = os.path.join(self.dir, "csca.pem")
+        with open(self.path, "wb") as fh:
+            fh.write(self.cert.public_bytes(serialization.Encoding.PEM))
+
+    def card(self, nis=None):
+        return TestNisCard(self, nis or os.urandom(6).hex().encode())
+
+
+class TestNisCard:
+    """CIE senza PIN: NIS, chiave dell'autenticazione interna e SOD firmato dal Document Signer di prova."""
+
+    def __init__(self, csca, nis):
+        from asn1crypto import core
+
+        self.csca, self.nis = csca, nis
+        self.key = _key()
+        numbers = self.key.public_key().public_numbers()
+        body = core.Integer(numbers.n).dump() + core.Integer(numbers.e).dump()
+        seq = b"\x30\x82" + len(body).to_bytes(2, "big") + body
+        self.kpub = seq + b"\x00" * 7  # il file sulla carta ha byte di riempimento dopo la struttura
+
+    def sod(self, nis=None, kpub=None, signer=None):
+        import hashlib
+
+        from asn1crypto import cms
+        from asn1crypto import x509 as ax509
+
+        from fasas.signatures.nis import LDS_OID, _lds_classes, first_tlv
+
+        ds_cert, ds_key = signer or (self.csca.ds_cert, self.csca.ds_key)
+        lds = _lds_classes()({
+            "version": 0, "hash_algorithm": {"algorithm": "sha256"},
+            "hashes": [{"number": -95, "value": hashlib.sha256(nis or self.nis).digest()},       # 0xA1
+                       {"number": -91, "value": hashlib.sha256(first_tlv(kpub or self.kpub)).digest()}],  # 0xA5
+        }).dump()
+        attrs = cms.CMSAttributes([
+            {"type": "content_type", "values": [LDS_OID]},
+            {"type": "message_digest", "values": [hashlib.sha256(lds).digest()]},
+        ])
+        cert = ax509.Certificate.load(ds_cert.public_bytes(serialization.Encoding.DER))
+        signer_info = cms.SignerInfo({
+            "version": "v1",
+            "sid": cms.SignerIdentifier({"issuer_and_serial_number": {
+                "issuer": cert.issuer, "serial_number": cert.serial_number}}),
+            "digest_algorithm": {"algorithm": "sha256"}, "signed_attrs": attrs,
+            "signature_algorithm": {"algorithm": "sha256_rsa"},
+            "signature": ds_key.sign(attrs.dump(), padding.PKCS1v15(), hashes.SHA256()),
+        })
+        signed = cms.SignedData({
+            "version": "v3", "digest_algorithms": [{"algorithm": "sha256"}],
+            "encap_content_info": {"content_type": LDS_OID, "content": lds},
+            "certificates": [cert], "signer_infos": [signer_info],
+        })
+        info = cms.ContentInfo({"content_type": "signed_data", "content": signed}).dump()
+        return b"\x77\x82" + len(info).to_bytes(2, "big") + info  # come EF.SOD: contenitore attorno al ContentInfo
+
+    def respond(self, challenge):
+        """INTERNAL AUTHENTICATE: RSA con la chiave privata della carta su un blocco che termina con la sfida."""
+        numbers = self.key.private_numbers()
+        size = (numbers.public_numbers.n.bit_length() + 7) // 8
+        block = b"\x00\x01" + b"\xff" * (size - 3 - len(challenge)) + b"\x00" + challenge
+        value = pow(int.from_bytes(block, "big"), numbers.d, numbers.public_numbers.n)
+        return value.to_bytes(size, "big")
+
+    def payload(self, challenge_b64, *, with_sod=False, pin=None, response=None):
+        data = {"nis": base64.b64encode(self.nis).decode(), "kpub": base64.b64encode(self.kpub).decode(),
+                "response": base64.b64encode(response or self.respond(base64.b64decode(challenge_b64))).decode()}
+        if with_sod:
+            data["sod"] = base64.b64encode(self.sod()).decode()
+        if pin is not None:
+            data["pin"] = pin
+        return data

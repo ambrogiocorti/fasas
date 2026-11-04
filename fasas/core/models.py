@@ -113,6 +113,16 @@ class SystemConfig(models.Model):
         help_text="Serve per trascrivere il foglio di emergenza dopo un'interruzione. La riapertura spetta al "
                   "coordinatore, resta nell'audit e il turno si richiude da solo dopo 12 ore.")
 
+    class DocumentVerification(models.TextChoices):
+        NIS = "nis", "CIE appoggiata al telefono + PIN FASAS scelto al primo accesso (non serve il PIN della carta)"
+        CIE = "cie", "CIE con il suo PIN di 8 cifre"
+
+    documents_verification = models.CharField(
+        "come ci si verifica", max_length=10, choices=DocumentVerification.choices,
+        default=DocumentVerification.NIS,
+        help_text="In entrambi i casi si appoggia la CIE al telefono. Con il PIN FASAS ognuno registra la propria carta "
+                  "una volta e sceglie un PIN; un amministratore conferma la registrazione vedendo carta e persona. "
+                  "Chi ricorda il PIN della carta può usare anche quello.")
     documents_cie_required = models.BooleanField(
         "verifica con CIE per aprire, scaricare o modificare i documenti", default=False,
         help_text="Anche i documenti già firmati. Ogni utente deve avere il codice fiscale nel profilo e un telefono "
