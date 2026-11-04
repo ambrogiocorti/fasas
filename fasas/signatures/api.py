@@ -121,15 +121,7 @@ def pair(request):
 def me(request, device):
     return _json({"device": device.pk, "name": device.name, "user": str(device.user),
                   "fiscal_code_configured": bool(device.user.fiscal_code),
-                  "trust_configured": bool(external.trust_roots()), "device_key": bool(device.device_key)})
-
-
-@require_POST
-@device_api
-def device_key(request, device):
-    """Il telefono registra la chiave pubblica della verifica con impronta, volto o PIN del telefono."""
-    cie.register_device_key(device, str(_body(request).get("public_key", "")))
-    return _json({"device_key": True}, status=201)
+                  "trust_configured": bool(external.trust_roots())})
 
 
 @require_POST
@@ -158,20 +150,7 @@ def pending(request, device):
 @device_api
 def claim(request, device, request_id):
     signature_request, nonce = cie.claim(request_id, device)
-    data = {**cie.describe(signature_request), "nonce": nonce}
-    if signature_request.access_method == "device":  # da firmare con la chiave del telefono dopo l'impronta
-        data["challenge"] = signature_request.prepared.get("signed_attrs", "")
-    return _json(data)
-
-
-@require_POST
-@device_api
-def confirm(request, device, request_id):
-    """Conferma con impronta, volto o PIN del telefono: firma ECDSA della sfida con la chiave del telefono."""
-    data = _body(request)
-    signature_request = cie.submit_device_signature(request_id, device, data.get("nonce"), data.get("signature", ""))
-    return _json({"status": signature_request.status, "version": None,
-                  "verification": {"level": signature_request.verification.get("level")}})
+    return _json({**cie.describe(signature_request), "nonce": nonce})
 
 
 @require_POST

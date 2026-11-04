@@ -51,32 +51,6 @@ class SigningFlow(private val api: FasasApi) {
         signingReported = false
     }
 
-    /**
-     * Verifica con il telefono: presa in carico e sfida da firmare con la chiave del chip sicuro del telefono,
-     * che si sblocca solo con impronta, volto o PIN del telefono (lo fa l'app, non questo flusso).
-     */
-    fun acceptDevice(request: SignRequest): ByteArray {
-        val claimed = api.claim(request.id)
-        if (claimed.getString("verify_code") != request.verifyCode || !claimed.has("challenge")) {
-            api.error(request.id, claimed.getString("nonce"), "device_error")
-            throw ServerException(0, "verify_code", "Richiesta incoerente ricevuta dal server: verifica interrotta.")
-        }
-        nonce = claimed.getString("nonce")
-        return Base64Codec.decode(claimed.getString("challenge"))
-    }
-
-    fun confirmDevice(request: SignRequest, signature: ByteArray): Outcome {
-        val current = nonce ?: return Outcome.Failed("bad_state", "Richiesta non presa in carico.")
-        return try {
-            val result = api.confirm(request.id, current, signature)
-            Outcome.Signed(result.optJSONObject("verification")?.optString("level") ?: "Verifica di identità")
-        } catch (e: ServerException) {
-            Outcome.Failed(e.code, e.message ?: e.code)
-        } finally {
-            nonce = null
-        }
-    }
-
     fun refuse(request: SignRequest) {
         val claimed = api.claim(request.id)
         api.error(request.id, claimed.getString("nonce"), "cancelled")

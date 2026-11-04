@@ -1,43 +1,31 @@
 {% extends "base.html" %}{% load fasas_tags %}
-{% block title %}Verifica di identità{% endblock %}
+{% block title %}Verifica con CIE{% endblock %}
 {% block content %}
 {% include "guests/_header.html" with compact=True %}
 <div class="page-head">
-  <div><h1>{% icon "lock" %} Verifica di identità</h1>
-    <span class="subtitle">{% if document %}Per aprire, scaricare o modificare «{{ document.title }}»{% else %}Per esportare la cartella con tutti i documenti dell'ospite{% endif %} conferma che sei tu.</span></div>
+  <div><h1>{% icon "lock" %} Verifica con CIE</h1>
+    <span class="subtitle">{% if document %}Per aprire, scaricare o modificare «{{ document.title }}»{% else %}Per esportare la cartella con tutti i documenti dell'ospite{% endif %} conferma la tua identità con la Carta d'Identità Elettronica.</span></div>
   <div class="actions"><a class="btn" href="{% url 'documents:guest_list' guest.pk %}">{% icon "arrow-left" %}Documenti dell'ospite</a></div>
 </div>
 <div class="card" style="max-width: 760px">
   {% if error %}<div class="alert alert-danger">{% icon "alert-circle" %}<div class="alert-body">{{ error }}</div></div>{% endif %}
-  {% if not can_use %}
-    <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Il tuo utente non può ancora verificarsi nel FASAS (FASAS Signer non attivo sul server o permessi mancanti): chiedi all'amministratore.</div></div>
-  {% elif not devices %}
-    <div class="alert alert-warning">{% icon "smartphone" %}<div class="alert-body">Prima abbina il tuo telefono con l'app FASAS Signer: <a href="{% url 'signatures:credential' %}#cie">Impostazioni › Firma digitale › Abbina un nuovo FASAS Signer</a>, poi torna qui.</div></div>
-  {% endif %}
-
-  {% if allow_device %}
-  <h2>{% icon "smartphone" %} Con il telefono</h2>
   <ol class="steps-list">
-    <li>Premi «Conferma con il telefono»: sul tuo telefono, nell'app <strong>FASAS Signer</strong>, compare la richiesta con un <strong>codice di controllo</strong>, che deve coincidere con quello della pagina seguente.</li>
-    <li>Conferma con l'<strong>impronta</strong>, il <strong>volto</strong> o il <strong>PIN del telefono</strong> (quello con cui lo sblocchi).</li>
+    <li>Apri l'app <strong>FASAS Signer</strong> sul telefono (o sul computer con il lettore di CIE).</li>
+    <li>Premi «Verifica con CIE» qui sotto: sul telefono compare la richiesta con un <strong>codice di controllo</strong>, che deve coincidere con quello di questa pagina.</li>
+    <li>Digita sul telefono il <strong>PIN della CIE</strong> (8 cifre: 4 sulla ricevuta del Comune, 4 nella lettera arrivata con la carta) e appoggia la carta al retro del telefono finché non compare l'esito.</li>
   </ol>
-  {% if devices and not device_ready %}<div class="alert alert-info">{% icon "info" %}<div class="alert-body">Il telefono abbinato non ha ancora attivato la conferma con impronta: aggiorna l'app FASAS Signer e aprila una volta.</div></div>{% endif %}
-  <form method="post" class="form-actions">{% csrf_token %}
-    {% if document %}<input type="hidden" name="documento" value="{{ document.pk }}">{% else %}<input type="hidden" name="ospite" value="{{ guest.pk }}">{% endif %}
-    <input type="hidden" name="next" value="{{ next }}"><input type="hidden" name="metodo" value="device">
-    <button class="btn btn-primary" {% if not can_use or not device_ready %}disabled{% endif %}>{% icon "smartphone" %}Conferma con il telefono</button>
-  </form>
+  <p class="muted">La verifica vale {{ minutes }} minuti{% if document %} per questo documento{% else %} per i documenti di questo ospite{% endif %}. Il PIN va solo alla carta: il FASAS non lo riceve. Ogni verifica resta nell'audit.</p>
+  {% if not can_use %}
+    <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Il tuo utente non può ancora usare la CIE nel FASAS (CIE non attiva sul server o permessi mancanti): chiedi all'amministratore.</div></div>
+  {% elif not fiscal_code %}
+    <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Nel tuo profilo manca il codice fiscale: senza non si può controllare che la carta sia la tua. Chiedilo all'amministratore.</div></div>
+  {% elif not devices %}
+    <div class="alert alert-warning">{% icon "smartphone" %}<div class="alert-body">Non hai ancora abbinato il telefono: <a href="{% url 'signatures:credential' %}#cie">Impostazioni › Firma digitale › Abbina un nuovo FASAS Signer</a>, poi torna qui.</div></div>
   {% endif %}
-
-  <h2 {% if allow_device %}style="margin-top:1.4rem"{% endif %}>{% icon "id-card" %} {% if allow_device %}Oppure con la CIE{% else %}Con la CIE{% endif %}</h2>
-  <p class="muted">Apri FASAS Signer sul telefono (o sul computer con il lettore di CIE), digita il <strong>PIN della CIE</strong> (8 cifre: 4 sulla ricevuta del Comune, 4 nella lettera arrivata con la carta) e appoggia la carta al retro del telefono finché non compare l'esito.</p>
-  {% if not fiscal_code %}<div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Per la CIE serve il codice fiscale nel tuo profilo: chiedilo all'amministratore.</div></div>{% endif %}
   <form method="post" class="form-actions">{% csrf_token %}
     {% if document %}<input type="hidden" name="documento" value="{{ document.pk }}">{% else %}<input type="hidden" name="ospite" value="{{ guest.pk }}">{% endif %}
-    <input type="hidden" name="next" value="{{ next }}"><input type="hidden" name="metodo" value="cie">
-    <button class="btn{% if not allow_device %} btn-primary{% endif %}" {% if not can_use or not cie_ready or not devices %}disabled{% endif %}>{% icon "id-card" %}Verifica con la CIE</button>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="btn btn-primary" {% if not can_use or not fiscal_code or not devices %}disabled{% endif %}>{% icon "id-card" %}Verifica con CIE</button>
   </form>
-
-  <p class="muted" style="margin-top:1rem">La verifica vale {{ minutes }} minuti{% if document %} per questo documento{% else %} per i documenti di questo ospite{% endif %}. Impronta, volto e PIN restano sul telefono o sulla carta: il FASAS non li riceve. Ogni verifica resta nell'audit.</p>
 </div>
 {% endblock %}

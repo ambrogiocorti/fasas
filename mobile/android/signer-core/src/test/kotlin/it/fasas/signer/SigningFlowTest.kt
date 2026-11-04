@@ -101,14 +101,7 @@ class FakeFasas : AutoCloseable {
                 nonce = "n${++counter}"
                 reply.put("nonce", nonce)
                 when (step) {
-                    "prendi" -> reply.put("verify_code", "ABCD-EFGH").put("challenge", Base64Codec.encode(toBeSigned))
-                    "conferma" -> {
-                        signedOk = Signature.getInstance("SHA256withECDSA").run {
-                            initVerify(publicKey); update(toBeSigned); verify(Base64Codec.decode(body.getString("signature")))
-                        }
-                        if (!signedOk) status = 400
-                        reply.put("verification", org.json.JSONObject().put("level", "Verifica di identità"))
-                    }
+                    "prendi" -> reply.put("verify_code", "ABCD-EFGH")
                     "certificato" -> {
                         val digest = MessageDigest.getInstance("SHA-256").digest(toBeSigned)
                         reply.put("to_be_signed", Base64Codec.encode(toBeSigned))
@@ -159,25 +152,6 @@ class CardMovedTest {
             assertTrue(fake.signedOk)
             // certificato inviato una volta sola, nessun errore segnalato al server: la richiesta è proseguita
             assertEquals(listOf("prendi", "stato", "certificato", "stato", "firma"), fake.calls)
-        }
-    }
-
-    @Test
-    fun phoneConfirmationSignsTheChallenge() {
-        // chiave EC P-256 come quella del chip sicuro del telefono (qui in memoria: solo per il test)
-        val pair = java.security.KeyPairGenerator.getInstance("EC").apply {
-            initialize(java.security.spec.ECGenParameterSpec("secp256r1"))
-        }.genKeyPair()
-        FakeFasas().use { fake ->
-            fake.publicKey = pair.public
-            val flow = SigningFlow(FasasApi(fake.url))
-            val request = SignRequest("r2", "Relazione", null, "00", "ABCD-EFGH", "", purpose = "access", method = "device")
-            assertTrue(request.byDevice)
-            val challenge = flow.acceptDevice(request)
-            val signature = Signature.getInstance("SHA256withECDSA").run { initSign(pair.private); update(challenge); sign() }
-            assertIs<Outcome.Signed>(flow.confirmDevice(request, signature))
-            assertTrue(fake.signedOk)
-            assertEquals(listOf("prendi", "conferma"), fake.calls)
         }
     }
 

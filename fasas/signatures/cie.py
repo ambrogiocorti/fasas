@@ -288,47 +288,27 @@ def create_acceptance_request(user):
     return request
 
 
-def access_methods():
-    """Metodi ammessi per aprire i documenti: il telefono (impronta, volto o PIN del telefono) e/o la CIE."""
-    from fasas.core.models import SystemConfig
-
-    return ["device", "cie"] if SystemConfig.get().documents_verification == "device" else ["cie"]
-
-
-def has_device_key(user):
-    return SignerDevice.objects.filter(user=user, revoked_at__isnull=True).exclude(device_key="").exists()
-
-
-def create_access_request(user, guest, document=None, method="cie"):
+def create_access_request(user, guest, document=None):
     """
-    Verifica di identità prima di aprire, scaricare o modificare un documento (o, senza documento, tutti i documenti
-    dell'ospite per l'esportazione della cartella). Con la CIE la carta firma una sfida casuale del server; con il
-    telefono la firma la chiave del chip sicuro del telefono, dopo impronta, volto o PIN del telefono. Non è la
-    firma di un documento e non ne crea una nuova versione.
+    Verifica di identità con la CIE prima di aprire, scaricare o modificare un documento (o, senza documento, tutti
+    i documenti dell'ospite per l'esportazione della cartella). La carta firma una sfida casuale del server: non è
+    la firma di un documento e non ne crea una nuova versione.
     """
     if not can_use_device(user) or not user.has_perm("documents.view_document"):
-        raise SignatureError("Non puoi verificarti per aprire i documenti: chiedi all'amministratore.", "forbidden")
-    if method not in access_methods():
-        raise SignatureError("Metodo di verifica non ammesso dalla configurazione.", "forbidden")
-    if method == "device":
-        if not has_device_key(user):
-            raise SignatureError("Il telefono abbinato non ha ancora attivato la verifica con impronta: aggiorna e apri "
-                                 "l'app FASAS Signer.", "no_device_key")
-    else:
-        if not external.trust_roots():
-            raise SignatureError("Verifica con CIE non ancora attivabile: l'amministratore deve configurare le CA della "
-                                 "CIE (FASAS_CIE_TRUST_ROOTS).", "trust_not_configured")
-        if not user.fiscal_code:
-            raise SignatureError("Nel tuo profilo manca il codice fiscale: chiedilo all'amministratore.",
-                                 "missing_fiscal_code")
+        raise SignatureError("Non puoi usare la CIE per aprire i documenti: chiedi all'amministratore.", "forbidden")
+    if not external.trust_roots():
+        raise SignatureError("Verifica con CIE non ancora attivabile: l'amministratore deve configurare le CA della "
+                             "CIE (FASAS_CIE_TRUST_ROOTS).", "trust_not_configured")
+    if not user.fiscal_code:
+        raise SignatureError("Nel tuo profilo manca il codice fiscale: chiedilo all'amministratore.", "missing_fiscal_code")
     existing = SignatureRequest.objects.filter(
         user=user, purpose=SignatureRequest.Purpose.ACCESS, access_guest=guest, access_document=document,
-        access_method=method, status__in=SignatureRequest.ACTIVE).first()
+        status__in=SignatureRequest.ACTIVE).first()
     if existing is not None and expire_if_needed(existing).is_active:
         return existing
     request = _base_request(user, reason="Verifica di identità per aprire i documenti", location=str(_community()),
                             purpose=SignatureRequest.Purpose.ACCESS, access_guest=guest, access_document=document,
-                            access_method=method, version_sha256=hashlib.sha256(secrets.token_bytes(32)).hexdigest())
+                            version_sha256=hashlib.sha256(secrets.token_bytes(32)).hexdigest())
     request.with_timestamp = False
     request.save()
     return request
@@ -354,69 +334,19 @@ def _grant_access(request_id):
         if request.status != Status.VERIFYING:
             raise SignatureError("Richiesta chiusa durante la verifica.", "bad_state")
         now = timezone.now()
-        by_device = request.access_method == "device"
         access = CieAccess.objects.create(
             user=request.user, guest=request.access_guest, document=request.access_document, request=request,
-            granted_at=now, certificate_subject=request.certificate_subject, method="device" if by_device else "cie",
+            granted_at=now, certificate_subject=request.certificate_subject,
             expires_at=now + datetime.timedelta(minutes=SystemConfig.get().documents_cie_minutes),
         )
         request.verification = {**request.verification, "identity_verified": True, "level": "Verifica di identità"}
-        method_text = (f"telefono «{request.device.name}»" if by_device
-                       else "CIE" if not request.is_test_card else "carta di prova")
         log_event(AuditLog.Action.PERMISSION, access, user=request.user, guest=request.access_guest,
-                  repr_text="Accesso ai documenti verificato con " + ("il telefono" if by_device else "CIE"),
-                  changes={"verifica": [None, method_text],
+                  repr_text="Accesso ai documenti verificato con CIE",
+                  changes={"verifica": [None, "CIE" if not request.is_test_card else "carta di prova"],
                            "documento": [None, str(request.access_document_id or "tutti")],
                            "valido_fino": [None, timezone.localtime(access.expires_at).strftime("%d/%m/%Y %H:%M")]})
         _close(request, Status.SIGNED)
     return request
-
-
-def register_device_key(device, public_key_b64):
-    """Chiave pubblica EC P-256 creata nel chip sicuro del telefono (si usa solo dopo impronta, volto o PIN)."""
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric import ec
-
-    try:
-        key = serialization.load_der_public_key(external.unb64(public_key_b64, "Chiave pubblica"))
-    except (ValueError, TypeError) as exc:
-        raise SignatureError("Chiave pubblica non valida.", "bad_request") from exc
-    if not isinstance(key, ec.EllipticCurvePublicKey) or not isinstance(key.curve, ec.SECP256R1):
-        raise SignatureError("Serve una chiave EC P-256.", "bad_request")
-    replaced = bool(device.device_key)
-    device.device_key = external.b64(key.public_bytes(serialization.Encoding.DER,
-                                                      serialization.PublicFormat.SubjectPublicKeyInfo))
-    device.device_key_at = timezone.now()
-    device.save(update_fields=["device_key", "device_key_at"])
-    log_event(AuditLog.Action.CONFIG, device, user=device.user, repr_text=f"Verifica con impronta: {device.name}",
-              changes={"chiave del telefono": ["sostituita" if replaced else None, "registrata"]})
-    return device
-
-
-def submit_device_signature(request_id, device, nonce, signature_b64):
-    """Il telefono ha firmato la sfida con la sua chiave dopo impronta, volto o PIN: si verifica e si apre l'accesso."""
-    from cryptography.exceptions import InvalidSignature
-    from cryptography.hazmat.primitives import hashes, serialization
-    from cryptography.hazmat.primitives.asymmetric import ec
-
-    with transaction.atomic():
-        request = _locked(request_id, device, nonce, states=(Status.AUTHORIZING,))
-        if request.access_method != "device" or not device.device_key:
-            raise SignatureError("Richiesta non confermabile con il telefono.", "bad_state")
-        request.status, request.error_code, request.error_message = Status.VERIFYING, "", ""
-        _rotate_nonce(request)  # la conferma si accetta una sola volta
-        request.save()
-    try:
-        key = serialization.load_der_public_key(external.unb64(device.device_key))
-        challenge = external.PreparedSignature.from_dict(request.prepared).to_be_signed
-        try:
-            key.verify(external.unb64(signature_b64, "Firma"), challenge, ec.ECDSA(hashes.SHA256()))
-        except InvalidSignature as exc:
-            raise SignatureError("La conferma del telefono non corrisponde alla richiesta.", "bad_signature") from exc
-    except SignatureError as exc:
-        fail(request.pk, exc.code, str(exc))
-        raise
-    return _grant_access(request.pk)
 
 
 def has_document_access(user, guest, document=None):
@@ -489,8 +419,7 @@ def retry_request(request, user):
             return following
         raise SignatureError("Per questa richiesta è già stato fatto un nuovo tentativo.", "bad_state")
     if request.purpose == SignatureRequest.Purpose.ACCESS:
-        new = create_access_request(user, request.access_guest, request.access_document,
-                                    request.access_method or "cie")
+        new = create_access_request(user, request.access_guest, request.access_document)
         if new.pk != request.pk and new.previous_id is None:
             new.previous, new.attempt = request, request.attempt + 1
             new.save(update_fields=["previous", "attempt"])
@@ -517,12 +446,9 @@ def cleanup_stale():
 
 def pending_for(device):
     now = timezone.now()
-    pending = (SignatureRequest.objects.select_related("version__document", "access_document", "access_guest")
-               .filter(user=device.user, status=Status.WAITING, expires_at__gt=now)
-               .filter(Q(device__isnull=True) | Q(device=device)).order_by("created_at"))
-    if not device.device_key:  # senza chiave del telefono (es. computer): solo richieste con la CIE
-        pending = pending.exclude(access_method="device")
-    return pending
+    return (SignatureRequest.objects.select_related("version__document")
+            .filter(user=device.user, status=Status.WAITING, expires_at__gt=now)
+            .filter(Q(device__isnull=True) | Q(device=device)).order_by("created_at"))
 
 
 def describe(request):
@@ -541,7 +467,6 @@ def describe(request):
         "id": str(request.id), "purpose": request.purpose, "title": title, "version": version,
         "document_sha256": request.version_sha256, "verify_code": request.verify_code, "reason": request.reason,
         "expires_at": request.expires_at.isoformat(), "status": request.status,
-        "method": request.access_method or "cie",
     }
 
 
@@ -573,11 +498,6 @@ def claim(request_id, device):
     """Il Signer prende in carico la richiesta (dopo la conferma dell'utente): da qui la usa solo questo dispositivo."""
     with transaction.atomic():
         request = _locked(request_id, device, states=(Status.WAITING,))
-        if request.access_method == "device":
-            if not device.device_key:
-                raise SignatureError("Questo dispositivo non ha la chiave per la verifica con impronta.", "no_device_key")
-            request.prepared = _access_challenge(request).to_dict()
-            request.status = Status.AUTHORIZING  # si aspetta l'impronta, il volto o il PIN sul telefono
         request.device = device
         nonce = _rotate_nonce(request)
         request.save()
@@ -653,8 +573,6 @@ def submit_certificate(request_id, device, nonce, certificate_b64):
     """
     with transaction.atomic():
         request = _locked(request_id, device, nonce, states=(Status.WAITING, Status.CARD))
-        if request.access_method == "device":
-            raise SignatureError("Questa richiesta si conferma con il telefono, non con la carta.", "bad_state")
         request.status, request.error_code, request.error_message = Status.CARD, "", ""
         request.updated_at = timezone.now()
         request.save()

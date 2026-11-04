@@ -234,24 +234,11 @@ riprende dal punto raggiunto. Nella schermata principale:
 Per aggiornare l'APK di prova bisogna prima disinstallare quello vecchio (ogni compilazione ha una firma di prova
 diversa) e poi abbinare di nuovo il telefono.
 
-## 8b. Verifica di identità per aprire i documenti (telefono o CIE)
+## 8b. Verifica con CIE per aprire i documenti
 
-In *Configurazione generale* la direzione può attivare **«verifica di identità per aprire, scaricare o modificare i
-documenti»** (spenta per default) e scegliere **come ci si verifica**:
-
-- **impronta, volto o PIN del telefono abbinato** (predefinito; chi vuole può usare anche la CIE): all'abbinamento
-  l'app FASAS Signer crea nel chip sicuro del telefono (Keystore Android, StrongBox se c'è) una chiave EC P-256 non
-  esportabile, usabile solo subito dopo lo sblocco dell'utente con impronta o volto (classe «forte») o con il PIN
-  del telefono; il FASAS ne conserva solo la chiave pubblica. Per aprire un documento il telefono firma una sfida
-  casuale del server dopo lo sblocco. Se sul telefono si aggiunge una nuova impronta la chiave si invalida e l'app
-  ne registra un'altra (nell'audit). Non serve il codice fiscale né il PIN della CIE. Limiti: dimostra il possesso
-  del telefono abbinato e lo sblocco, non l'identità anagrafica come la CIE; il telefono dev'essere personale
-  (chiunque abbia un'impronta registrata o conosca il PIN di quel telefono può confermare); l'attestazione
-  hardware della chiave non è verificata dal server; serve Android 9 o più recente (iPhone: app non aggiornata);
-- **solo CIE con il suo PIN**: come descritto sotto.
-
-Con la verifica attiva, prima di mostrare o cambiare un documento dell'ospite (anche già firmato) il FASAS chiede
-di confermare l'identità:
+In *Configurazione generale* la direzione può attivare **«verifica con CIE per aprire, scaricare o modificare i
+documenti»** (spenta per default). Con la verifica attiva, prima di mostrare o cambiare un documento dell'ospite
+(anche già firmato) il FASAS chiede di confermare l'identità con la CIE:
 
 | Dove | Cosa serve |
 |---|---|

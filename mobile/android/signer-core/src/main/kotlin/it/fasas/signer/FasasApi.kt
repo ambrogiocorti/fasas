@@ -13,11 +13,8 @@ data class SignRequest(
     val verifyCode: String, val reason: String,
     /** «document», «test», «acceptance» oppure «access» (verifica di identità prima di aprire un documento) */
     val purpose: String = "document",
-    /** «cie» (carta e PIN della carta) oppure «device» (impronta, volto o PIN del telefono, solo per «access») */
-    val method: String = "cie",
 ) {
     val isAccess get() = purpose == "access"
-    val byDevice get() = isAccess && method == "device"
 }
 
 data class Prepared(val nonce: String, val toBeSigned: ByteArray, val digestInfo: ByteArray, val verifyCode: String)
@@ -99,19 +96,11 @@ class FasasApi(baseUrl: String, var token: String = "", allowLanHttp: Boolean = 
             val r = items.getJSONObject(i)
             SignRequest(r.getString("id"), r.getString("title"), if (r.isNull("version")) null else r.getInt("version"),
                 r.getString("document_sha256"), r.getString("verify_code"), r.optString("reason"),
-                r.optString("purpose", "document"), r.optString("method", "cie"))
+                r.optString("purpose", "document"))
         }
     }
 
     fun claim(id: String): JSONObject = call("POST", "richieste/$id/prendi/")
-
-    /** Chiave pubblica (X.509 SubjectPublicKeyInfo DER) della verifica con impronta, volto o PIN del telefono. */
-    fun registerDeviceKey(publicKey: ByteArray): JSONObject =
-        call("POST", "dispositivo/chiave/", JSONObject(mapOf("public_key" to Base64Codec.encode(publicKey))))
-
-    /** Conferma con il telefono: firma ECDSA (DER) della sfida ricevuta con la presa in carico. */
-    fun confirm(id: String, nonce: String, signature: ByteArray): JSONObject =
-        call("POST", "richieste/$id/conferma/", JSONObject(mapOf("nonce" to nonce, "signature" to Base64Codec.encode(signature))))
 
     fun state(id: String, nonce: String, state: String, attemptsLeft: Int? = null): String {
         val body = JSONObject(mapOf("nonce" to nonce, "state" to state))

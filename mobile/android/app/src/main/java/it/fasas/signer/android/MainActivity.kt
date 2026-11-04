@@ -5,14 +5,10 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
-import android.hardware.biometrics.BiometricManager
-import android.hardware.biometrics.BiometricPrompt
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.nfc.tech.IsoDep
-import android.os.Build
 import android.os.Bundle
-import android.os.CancellationSignal
 import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
@@ -34,7 +30,6 @@ import it.fasas.signer.SignRequest
 import it.fasas.signer.SigningFlow
 import java.io.ByteArrayInputStream
 import java.io.IOException
-import java.security.Signature
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.text.SimpleDateFormat
@@ -125,8 +120,7 @@ class MainActivity : Activity() {
         try {
             val client = FasasApi(server, allowLanHttp = testBuild)
             val data = client.pair(code.trim(), android.os.Build.MODEL ?: "Telefono")
-            prefs.edit().putString("server", server.trim()).putString("token", client.token)
-                .putBoolean("device_key_sent", false).apply()
+            prefs.edit().putString("server", server.trim()).putString("token", client.token).apply()
             runOnUiThread { render(); show("Abbinato all'utente ${data.getString("user")}.") }
         } catch (e: Exception) {
             runOnUiThread { show(e.message ?: "Abbinamento non riuscito.") }
@@ -240,7 +234,6 @@ class MainActivity : Activity() {
         val client = api ?: return
         if (!polling.compareAndSet(false, true)) return
         poller.execute {
-            ensureDeviceKey(client)
             runCatching {
                 client.reportStatus(mapOf("middleware_found" to true, "middleware" to "IAS su NFC (prototipo)",
                     "readers" to listOf("NFC del telefono"), "nfc" to if (nfc?.isEnabled == true) "attivo" else "spento"))
@@ -266,7 +259,6 @@ class MainActivity : Activity() {
 
     private fun confirm(client: FasasApi, request: SignRequest) {
         val flow = SigningFlow(client)
-        if (request.byDevice) return confirmWithPhone(client, flow, request)
         val version = request.version?.let { " – versione $it" } ?: ""
         val builder = AlertDialog.Builder(this).setCancelable(false)
         if (request.isAccess) {
@@ -290,103 +282,6 @@ class MainActivity : Activity() {
         }
             .setNegativeButton("Rifiuta") { _, _ -> worker.execute { runCatching { flow.refuse(request) }; busy.set(false) } }
             .show()
-    }
-
-    // --- Verifica con impronta, volto o PIN del telefono (solo per aprire i documenti) -----------------------
-
-    /** Crea la chiave nel chip sicuro (se manca) e ne registra la parte pubblica sul FASAS. Thread di rete. */
-    private fun ensureDeviceKey(client: FasasApi) {
-        if (!DeviceKey.supported) return
-        if (prefs.getBoolean("device_key_sent", false) && DeviceKey.exists()) return
-        try {
-            client.registerDeviceKey(DeviceKey.publicKey())
-            prefs.edit().putBoolean("device_key_sent", true).apply()
-        } catch (e: ServerException) {
-            // si riprova al prossimo avvio
-        } catch (e: Exception) {
-            runOnUiThread {
-                status.text = "Per confermare con l'impronta o il volto imposta sul telefono un blocco schermo " +
-                    "(PIN, impronta o volto), poi riapri l'app."
-            }
-        }
-    }
-
-    private fun confirmWithPhone(client: FasasApi, flow: SigningFlow, request: SignRequest) {
-        if (!DeviceKey.supported) {
-            worker.execute { runCatching { flow.refuse(request) }; busy.set(false) }
-            return show("Questo telefono non permette la conferma con impronta o volto (serve Android 9 o più recente): " +
-                "nel FASAS scegli «Verifica con la CIE».")
-        }
-        AlertDialog.Builder(this).setTitle("Verifica di identità").setCancelable(false)
-            .setMessage("Per aprire: ${request.title}\n\nCodice di controllo:\n${request.verifyCode}\n\n" +
-                "Conferma solo se il codice coincide con quello mostrato nella pagina del FASAS.")
-            .setPositiveButton("Conferma") { _, _ ->
-                worker.execute {
-                    val challenge = try {
-                        flow.acceptDevice(request)
-                    } catch (e: ServerException) {
-                        runOnUiThread { finish(e.message ?: "Errore") }
-                        return@execute
-                    }
-                    val signature = DeviceKey.signature() ?: run {
-                        // nuova impronta aggiunta al telefono: nuova chiave, registrata sul FASAS
-                        DeviceKey.delete()
-                        prefs.edit().putBoolean("device_key_sent", false).apply()
-                        ensureDeviceKey(client)
-                        DeviceKey.signature()
-                    }
-                    if (signature == null) {
-                        flow.abort(request, "device_error")
-                        runOnUiThread { finish("La chiave del telefono non è utilizzabile: chiudi e riapri l'app.") }
-                        return@execute
-                    }
-                    runOnUiThread { askBiometric(flow, request, challenge, signature) }
-                }
-            }
-            .setNegativeButton("Rifiuta") { _, _ -> worker.execute { runCatching { flow.refuse(request) }; busy.set(false) } }
-            .show()
-    }
-
-    private fun askBiometric(flow: SigningFlow, request: SignRequest, challenge: ByteArray, signature: Signature) {
-        val builder = BiometricPrompt.Builder(this)
-            .setTitle("Verifica di identità")
-            .setSubtitle("Per aprire: ${request.title}")
-            .setDescription("Codice di controllo: ${request.verifyCode}")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            builder.setAllowedAuthenticators(
-                BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
-        } else {
-            builder.setNegativeButton("Annulla", mainExecutor) { _, _ ->
-                worker.execute { flow.cancel(request); busy.set(false) }
-                status.text = idleText()
-            }
-        }
-        builder.build().authenticate(BiometricPrompt.CryptoObject(signature), CancellationSignal(), mainExecutor,
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    val signed = runCatching {
-                        result.cryptoObject.signature.run { update(challenge); sign() }
-                    }.getOrNull()
-                    worker.execute {
-                        val outcome = if (signed == null) {
-                            flow.abort(request, "device_error")
-                            Outcome.Failed("device_error", "il telefono non ha firmato la conferma.")
-                        } else {
-                            flow.confirmDevice(request, signed)
-                        }
-                        runOnUiThread {
-                            finish(if (outcome is Outcome.Signed) "Identità verificata: torna al FASAS, il documento si apre."
-                                   else "Verifica non riuscita: ${(outcome as? Outcome.Failed)?.message ?: "riprova"}")
-                        }
-                    }
-                }
-
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    worker.execute { flow.cancel(request); busy.set(false) }
-                    status.text = idleText()
-                    show("Verifica annullata: $errString")
-                }
-            })
     }
 
     private fun pinField() = EditText(this).apply {

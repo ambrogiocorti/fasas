@@ -20,7 +20,6 @@
   if (!panel) return;
   const url = panel.dataset.statusUrl;
   const access = panel.dataset.access === "1";  // verifica di identità per aprire un documento
-  const byDevice = panel.dataset.device === "1";  // con impronta, volto o PIN del telefono
   const steps = Array.from(panel.querySelectorAll("[data-step]"));
   const box = (role) => panel.querySelector(`[data-role="${role}"]`);
   const setBox = (role, text) => {
@@ -42,14 +41,6 @@
       if (s.error_code === "card_absent") return "Appoggia la CIE sul lettore e tienila ferma.";
       return s.device ? "Richiesta presa in carico da " + s.device + ": appoggia la CIE sul lettore."
         : "Conferma la richiesta su FASAS Signer (controlla che il codice coincida).";
-    }
-    if (byDevice) {
-      if (s.status === "waiting") {
-        if (!s.devices) return "Nessun telefono abbinato: abbinalo in Impostazioni › Firma digitale.";
-        return "Apri l'app FASAS Signer sul telefono: la richiesta comparirà lì (controlla che il codice coincida).";
-      }
-      if (s.status === "authorizing") return "Conferma sul telefono con l'impronta, il volto o il PIN del telefono.";
-      if (s.status === "verifying") return "Controllo della conferma…";
     }
     if (access) {
       if (s.status === "card") return "Carta rilevata: tienila ferma sul telefono…";
@@ -79,8 +70,8 @@
     setBox("error", failed ? s.label + (s.error ? ": " + s.error : "") : "");
     let done = "";
     if (s.status === "signed" && access) {
-      done = "Identità verificata" + (byDevice ? " con il telefono" : s.test_card
-        ? " (CARTA DI PROVA, solo per le prove)" : " con la CIE") + ": apertura del documento…";
+      done = "Identità verificata" + (s.test_card ? " (CARTA DI PROVA, solo per le prove)" : " con la CIE") +
+        ": apertura del documento…";
       if (s.result_url && !panel.dataset.redirected) {
         panel.dataset.redirected = "1";
         setTimeout(function () { window.location.href = s.result_url; }, 800);

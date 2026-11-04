@@ -115,10 +115,6 @@ class SignerDevice(models.Model):
     revoked_at = models.DateTimeField("revocato il", null=True, blank=True)
     status = models.JSONField("stato componenti", default=dict, blank=True)
     status_at = models.DateTimeField("stato aggiornato il", null=True, blank=True)
-    # Verifica con impronta, volto o PIN del telefono: chiave EC P-256 creata nel chip sicuro del telefono e usabile
-    # solo dopo lo sblocco biometrico (o il PIN del telefono). Il server conserva solo la chiave pubblica.
-    device_key = models.TextField("chiave pubblica del telefono (DER base64)", blank=True)
-    device_key_at = models.DateTimeField("chiave registrata il", null=True, blank=True)
 
     class Meta:
         verbose_name = "dispositivo di firma"
@@ -191,8 +187,6 @@ class SignatureRequest(models.Model):
                                         related_name="cie_access_requests")
     access_guest = models.ForeignKey("guests.Guest", on_delete=models.CASCADE, null=True, blank=True,
                                      related_name="cie_access_requests")
-    access_method = models.CharField("metodo di verifica", max_length=10, blank=True,
-                                     choices=[("cie", "CIE con PIN"), ("device", "Impronta, volto o PIN del telefono")])
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="signature_requests")
     device = models.ForeignKey(SignerDevice, on_delete=models.PROTECT, null=True, blank=True, related_name="requests")
     status = models.CharField("stato", max_length=12, choices=Status.choices, default=Status.WAITING, db_index=True)
@@ -268,8 +262,6 @@ class CieAccess(models.Model):
     granted_at = models.DateTimeField("verificato il", default=timezone.now)
     expires_at = models.DateTimeField("valido fino al", db_index=True)
     certificate_subject = models.CharField("titolare certificato", max_length=255, blank=True)
-    method = models.CharField("metodo", max_length=10, default="cie",
-                              choices=[("cie", "CIE con PIN"), ("device", "Impronta, volto o PIN del telefono")])
 
     class Meta:
         verbose_name = "accesso ai documenti verificato con CIE"
