@@ -25,7 +25,7 @@ abstract class ScreensTest(night: Boolean) {
     private val ui get() = Ui(paparazzi.context)
 
     private fun home(paired: Boolean, test: Boolean = false) = HomeScreen(ui,
-        if (paired) Paired("https://fasas-insieme.duckdns.org/", "Carlo Coordinatore") else null, test, true, animate = false)
+        if (paired) Paired("https://casarosa-fasas.duckdns.org/", "Carlo Coordinatore") else null, test, true, animate = false)
 
     /** Il contenuto di un dialogo dentro un riquadro come quello vero, su fondo scurito. */
     private fun asDialog(content: View, title: String? = null): View {

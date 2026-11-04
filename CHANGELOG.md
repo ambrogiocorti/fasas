@@ -121,6 +121,9 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
   quello). Protocollo NIS del Ministero: SOD verificato con la CSCA italiana e autenticazione interna della carta su
   una sfida del server; registrazione confermata di persona da un amministratore; PIN FASAS solo come impronta,
   bloccato dopo 5 errori. Firmare con la CIE richiede ancora il PIN della carta.
+- App Android FASAS Signer 0.2: aspetto della piattaforma (colori, icone, schede, tema chiaro e scuro, icona
+  dell'app), riquadro di stato con i passi della lettura, dialoghi con il codice di controllo in evidenza, PIN e
+  esiti chiari, «Scollega questo telefono». Schermate controllate senza telefono con Paparazzi nella CI.
 - Modalità senza rete anche per il medico, in **sola lettura** (terapie, allergie, contatti): nessuna registrazione.
 - CIE già registrata e registrata di nuovo dallo stesso utente (es. app reinstallata): restano PIN FASAS e conferma;
   messaggio più chiaro se la carta è registrata per un altro utente. Nell'app, il dialogo del PIN della carta
