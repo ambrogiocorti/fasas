@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#1d5fa0">
   <title>FASAS · modalità senza rete</title>
   <link rel="stylesheet" href="{% static 'css/fasas.css' %}">
-  <link rel="icon" href="{% static 'img/icon-192.png' %}">
+  {% include "partials/favicon.html" %}
   <script>try{if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.dataset.theme='dark'}catch(e){}</script>
 </head>
 <body class="offline-page">

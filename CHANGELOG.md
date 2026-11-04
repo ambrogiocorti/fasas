@@ -124,6 +124,9 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
 - App Android FASAS Signer 0.2: aspetto della piattaforma (colori, icone, schede, tema chiaro e scuro, icona
   dell'app), riquadro di stato con i passi della lettura, dialoghi con il codice di controllo in evidenza, PIN e
   esiti chiari, «Scollega questo telefono». Schermate controllate senza telefono con Paparazzi nella CI.
+- Logo FASAS (fascicolo con il tracciato del battito) in favicon, web app installata, iPhone, notifiche, menu e
+  pagina di accesso; l'app FASAS Signer ha la stessa icona con il segno «appoggia la carta», anche monocromatica.
+  Tutto generato da `scripts/genera_icone.py`.
 - Modalità senza rete anche per il medico, in **sola lettura** (terapie, allergie, contatti): nessuna registrazione.
 - CIE già registrata e registrata di nuovo dallo stesso utente (es. app reinstallata): restano PIN FASAS e conferma;
   messaggio più chiaro se la carta è registrata per un altro utente. Nell'app, il dialogo del PIN della carta

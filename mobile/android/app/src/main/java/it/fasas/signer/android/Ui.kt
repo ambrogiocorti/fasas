@@ -177,10 +177,8 @@ internal class Ui(val context: Context) {
     fun brandMark(sizeDp: Int = 44) = FrameLayout(context).apply {
         setBackgroundResource(R.drawable.brand_mark)
         layoutParams = LinearLayout.LayoutParams(dp(sizeDp), dp(sizeDp))
-        addView(ImageView(context).apply {
-            setImageResource(R.drawable.ic_activity)
-            imageTintList = ColorStateList.valueOf(0xFFFFFFFF.toInt())
-        }, FrameLayout.LayoutParams(dp(sizeDp / 2 + 2), dp(sizeDp / 2 + 2), Gravity.CENTER))
+        addView(ImageView(context).apply { setImageResource(R.drawable.ic_logo) },
+            FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
     }
 
     fun scroll(content: View) = ScrollView(context).apply {

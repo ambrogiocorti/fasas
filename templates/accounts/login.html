@@ -6,6 +6,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>Accesso · FASAS Digitale</title>
   <link rel="stylesheet" href="{% static 'css/fasas.css' %}">
+  {% include "partials/favicon.html" %}
   <script>try{if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.dataset.theme='dark'}catch(e){}</script>
 </head>
 <body>
@@ -13,7 +14,7 @@
 <div class="auth">
   <section class="auth-brand">
     <div>
-      <span class="brand-mark">{% icon "activity" %}</span>
+      <span class="brand-mark"><img src="{% static 'img/fasas-mark.svg' %}" alt=""></span>
       <h1>FASAS Digitale</h1>
       <p>Il fascicolo socio assistenziale sanitario della comunità: terapie, turni, protocolli e documenti in un unico posto, sempre tracciati.</p>
       <ul>

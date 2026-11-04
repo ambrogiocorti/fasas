@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import redirect
+from django.templatetags.static import static
 from django.urls import include, path
 
 from fasas.offline import views as offline_views
@@ -17,6 +18,11 @@ def _admin_login(request, extra_context=None):
 
 
 admin.site.login = _admin_login
+
+
+def _favicon(request):
+    """I browser chiedono /favicon.ico da soli (es. aprendo un PDF): rimanda al file statico."""
+    return redirect(static("img/favicon.ico"))
 
 urlpatterns = [
     path("", include("fasas.core.urls")),
@@ -43,6 +49,7 @@ urlpatterns = [
     path("turni/", include("fasas.staffing.urls")),
     path("sw.js", offline_views.service_worker, name="service_worker"),
     path("manifest.webmanifest", offline_views.manifest, name="manifest"),
+    path("favicon.ico", _favicon, name="favicon"),
     path("api/firma/v1/", include("fasas.signatures.api_urls")),
     path("api/", include("fasas.api.urls")),
     path("gestione-tecnica/", admin.site.urls),

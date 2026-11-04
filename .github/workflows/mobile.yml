@@ -47,7 +47,7 @@ jobs:
           if-no-files-found: ignore
 
   schermate:
-    # Due schermate in un foglio piccolo stampato nel log (base64): si controlla l'aspetto senza scaricare l'archivio
+    # Le schermate in un foglio piccolo stampato nel log (base64): si controlla l'aspetto senza scaricare l'archivio
     needs: android
     runs-on: ubuntu-latest
     steps:
@@ -59,7 +59,12 @@ jobs:
         run: |
           command -v montage > /dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick > /dev/null)
           cd schermate
-          montage $(ls *Light*pronto*) $(ls *Dark*richiesta*) -tile 2x1 -geometry 240x+4+4 -background '#808080' /tmp/f.png
+          montage $(ls *Light*abbinamento* *Light*pronto* *Light*avvicina* *Light*lettura*) \
+            $(ls *Dark*pronto* *Dark*richiesta* *Dark*pin-fasas* *Dark*esito*) -tile 4x2 -geometry 240x+4+4 \
+            -background '#808080' /tmp/f.png
+          montage $(ls *Light*icona*) $(ls *Dark*icona*) -tile 1x2 -geometry +4+4 -background '#808080' /tmp/i.png
+          convert /tmp/i.png -colors 64 PNG8:/tmp/i8.png
+          echo "==ICONA $(stat -c %s /tmp/i8.png)"; base64 -w0 /tmp/i8.png; echo; echo "==FINE"
           convert /tmp/f.png -colors 48 PNG8:/tmp/f8.png
           echo "==FOGLIO $(stat -c %s /tmp/f8.png)"; base64 -w0 /tmp/f8.png; echo; echo "==FINE"
 

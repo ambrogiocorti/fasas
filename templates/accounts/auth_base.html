@@ -6,6 +6,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>{% block title %}Accesso{% endblock %} · FASAS Digitale</title>
   <link rel="stylesheet" href="{% static 'css/fasas.css' %}">
+  {% include "partials/favicon.html" %}
   <script>try{if(window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.dataset.theme='dark'}catch(e){}</script>
 </head>
 <body>
@@ -13,7 +14,7 @@
 <div class="auth">
   <section class="auth-brand">
     <div>
-      <span class="brand-mark">{% icon "activity" %}</span>
+      <span class="brand-mark"><img src="{% static 'img/fasas-mark.svg' %}" alt=""></span>
       <h1>FASAS Digitale</h1>
       <p>Verifica in due passaggi: oltre alla password serve il codice dell'app sul tuo telefono. Così una password rubata da sola non apre le cartelle degli ospiti.</p>
       <ul>

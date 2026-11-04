@@ -2,7 +2,10 @@ package it.fasas.signer.android
 
 import android.view.View
 import android.view.ViewGroup
+import android.content.res.ColorStateList
 import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.resources.Density
@@ -73,6 +76,24 @@ abstract class ScreensTest(night: Boolean) {
     @Test fun pin() = paparazzi.snapshot(asDialog(Dialogs.pin(ui, "PIN FASAS errato. Tentativi rimasti: 4.",
         "Il PIN che hai scelto nel FASAS al primo accesso: non è il PIN della carta né quello del telefono.", 8,
         "6-8 cifre").first, "PIN FASAS"), "pin-fasas")
+
+    /** Icona dell'app: adattiva (la forma la sceglie il telefono) e monocromatica (icone a tema di Android 13+). */
+    @Test fun icon() = paparazzi.snapshot(ui.row(28).apply {
+        val u = ui
+        setPadding(u.dp(24), u.dp(24), u.dp(24), u.dp(24))
+        setBackgroundColor(u.color(R.color.fasas_bg))
+        for (res in listOf(R.mipmap.ic_launcher, R.mipmap.ic_launcher_round)) {
+            addView(ImageView(context).apply { setImageResource(res) }, LinearLayout.LayoutParams(u.dp(96), u.dp(96)))
+        }
+        addView(FrameLayout(context).apply {
+            background = u.rounded(0xFFD6E4F5.toInt(), 48)
+            addView(ImageView(context).apply {
+                setImageResource(R.drawable.ic_launcher_monochrome)
+                imageTintList = ColorStateList.valueOf(0xFF1D3B5C.toInt())
+                scaleX = 1.5f; scaleY = 1.5f
+            }, FrameLayout.LayoutParams(u.dp(96), u.dp(96)))
+        }, LinearLayout.LayoutParams(u.dp(96), u.dp(96)))
+    }, "icona")
 
     @Test fun result() = paparazzi.snapshot(asDialog(Dialogs.result(ui, true, "Identità verificata",
         "Torna al FASAS: il documento si apre.")), "esito")

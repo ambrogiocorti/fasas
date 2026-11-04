@@ -225,6 +225,13 @@ class PushTests(FasasTestCase):
         manifest = self.client.get("/manifest.webmanifest")
         self.assertEqual(json.loads(manifest.content)["display"], "standalone")
 
+    def test_favicon_is_public(self):
+        """I browser chiedono /favicon.ico anche senza accesso (es. aprendo un PDF): niente rimando al login."""
+        from django.test import Client
+
+        response = Client().get("/favicon.ico")
+        self.assertRedirects(response, "/static/img/favicon.ico", fetch_redirect_response=False)
+
 
 class OfflineTests(FasasTestCase):
     def setUp(self):
