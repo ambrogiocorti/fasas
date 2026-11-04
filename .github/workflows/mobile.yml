@@ -38,8 +38,15 @@ jobs:
           FASAS_SCREENSHOTS: "1"
         run: |
           gradle --no-daemon :app:recordPaparazziDebug
-          # anche nel log, in base64, per controllarle senza scaricare l'archivio
-          for f in app/src/test/snapshots/images/*.png; do echo "==SCHERMATA $(basename "$f")"; base64 -w0 "$f"; echo; done
+          ls -la app/src/test/snapshots/images/
+          # un foglio compatto per tema anche nel log (base64), per controllarle senza scaricare l'archivio
+          command -v montage > /dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick > /dev/null)
+          cd app/src/test/snapshots/images
+          for theme in Light Dark; do
+            montage *${theme}ScreensTest* -tile 4x2 -geometry 260x+6+6 -background '#888888' /tmp/foglio-$theme.jpg
+            convert /tmp/foglio-$theme.jpg -quality 60 /tmp/foglio-$theme.jpg
+            echo "==FOGLIO $theme $(stat -c %s /tmp/foglio-$theme.jpg)"; base64 -w0 /tmp/foglio-$theme.jpg; echo; echo "==FINE $theme"
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: fasas-signer-android-schermate
