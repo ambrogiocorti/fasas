@@ -26,6 +26,9 @@
 **Correzioni**: dopo 24 ore le modifiche chiedono una motivazione, che resta nell'audit. Le registrazioni sbagliate
 si **annullano con motivo**, non si cancellano.
 
+**Dopo un'interruzione** (foglio di emergenza): *Chiusura turni* → turno → «Riapri turno» con la motivazione proposta;
+gli operatori inseriscono i dati con l'ora reale; poi «Richiudi il turno» (si richiude comunque da solo dopo 12 ore).
+
 **Personale**: *Calendario turni* (pennello, ripeti, pubblica), *Ferie e cambi turno* da approvare.
 
 **Impostazioni** (menu *Impostazioni*): scale di valutazione in uso e frequenza, checklist di turno, tipi di

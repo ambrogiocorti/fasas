@@ -83,12 +83,19 @@ def reopen_shift(closure, user, reason):
     return closure
 
 
+REOPEN_HOURS = 12  # un turno riaperto in via straordinaria si richiude da solo dopo queste ore
+
+
 def auto_close_shifts(now=None):
-    """Job: chiude i turni terminati da più dei minuti di tolleranza configurati."""
+    """Job: chiude i turni terminati da più dei minuti di tolleranza configurati e richiude quelli riaperti da tempo."""
     config = SystemConfig.get()
-    if not config.auto_close_shifts:
-        return {"closed": 0}
     now = now or timezone.now()
+    reclosed = 0
+    for closure in ShiftClosure.objects.filter(reopened_at__lt=now - datetime.timedelta(hours=REOPEN_HOURS)):
+        close_shift(closure.date, closure.shift, automatic=True)
+        reclosed += 1
+    if not config.auto_close_shifts:
+        return {"closed": 0, "reclosed": reclosed}
     grace = datetime.timedelta(minutes=config.auto_close_grace_minutes)
     closed = 0
     day, shift = resolve_shift(now, config)
@@ -102,7 +109,7 @@ def auto_close_shifts(now=None):
                 closed += 1
             except IntegrityError:
                 pass
-    return {"closed": closed}
+    return {"closed": closed, "reclosed": reclosed}
 
 
 # --- Evacuazioni ------------------------------------------------------------------------------

@@ -27,6 +27,7 @@ app.conf.beat_schedule = {
     "medicazioni-in-ritardo": {"task": "fasas.run_job", "schedule": crontab(hour=7, minute=10), "args": ("wounds",)},
     "report-programmati": {"task": "fasas.run_job", "schedule": crontab(hour=1, minute=15), "args": ("reports",)},
     "pulizia-report-scaduti": {"task": "fasas.run_job", "schedule": crontab(hour=1, minute=45), "args": ("report_retention",)},
+    "gruppo-di-continuita": {"task": "fasas.run_job", "schedule": crontab(), "args": ("ups",)},
     "copia-continua": {"task": "fasas.run_job", "schedule": crontab(minute="*/5"), "args": ("continuity",)},
     "backup-giornaliero": {"task": "fasas.run_job", "schedule": crontab(hour=2, minute=30), "args": ("backup",)},
     # prima del backup, così il backup e la sua copia fuori sede contengono il punto di controllo della notte

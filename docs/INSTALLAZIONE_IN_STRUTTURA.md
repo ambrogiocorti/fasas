@@ -525,6 +525,37 @@ Lo script del passo 9 ha già configurato:
 Per cambiare una risposta basta rilanciare `cd /opt/fasas && sudo ./scripts/prepara_server.sh`: le chiavi non
 vengono toccate.
 
+### Passo 15b. Gruppo di continuità: avvisi e spegnimento automatico
+
+Con il cavo USB del gruppo di continuità collegato al server, il FASAS:
+
+- quando manca la corrente avvisa operatori, coordinatori e amministratori (notifica anche sul telefono): il turno
+  prepara i tablet per la modalità senza rete e il foglio di emergenza;
+- quando la batteria scende sotto il 40% (o restano meno di 3 minuti) ferma il FASAS in modo ordinato e spegne il
+  server, prima che si spenga di colpo;
+- al ritorno della corrente il gruppo riaccende le prese e il server riparte da solo (BIOS, passo 2).
+
+```bash
+cd /opt/fasas && sudo ./scripts/gruppo_continuita.sh --elenca
+```
+
+```bash
+cd /opt/fasas && sudo ./scripts/gruppo_continuita.sh --configura
+```
+
+```bash
+cd /opt/fasas && sudo docker compose up -d
+```
+
+Controllo: `sudo ./scripts/gruppo_continuita.sh --stato` deve dire «alimentato dalla rete elettrica» e mostrare carica
+e autonomia stimata. Per più margine: `--configura --soglia 50`.
+
+**Prova vera, fuori dall'orario di maggior lavoro** (è l'unico modo di sapere che funziona con il vostro gruppo):
+avvisare il turno, staccare la spina del gruppo dalla presa a muro, controllare che arrivi l'avviso «Corrente
+assente» e attendere lo spegnimento del server; poi riattaccare la spina e controllare che il server riparta da
+solo entro qualche minuto (se non riparte: impostazione del BIOS del passo 2). Annotare la durata nel registro del
+piano di continuità.
+
 ### Passo 16. Controllo gratuito dall'esterno
 
 Il FASAS avvisa da solo l'amministratore di backup falliti, errori e problemi dell'audit. Se però il server è

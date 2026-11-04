@@ -6,14 +6,13 @@ giusti e rifiutano quelli sbagliati, i permessi dei ruoli sono rispettati.
 import datetime
 from decimal import Decimal
 
-from django.contrib.auth.models import Permission
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 
 from fasas.clinical.models import ClinicalEvent, ParameterReading, ParameterType, Restraint, Therapy
 from fasas.core.models import SystemConfig
-from fasas.core.shifts import resolve_shift
+from fasas.core.shifts import resolve_shift, shift_bounds
 from fasas.daily.models import (
     ChecklistCheck,
     ChecklistItem,
@@ -270,17 +269,39 @@ class DailyScreenTests(ScreenTestCase):
                              fetch_redirect_response=False)
         detail = reverse("daily:closure_detail", args=[closure.pk])
         self.get_ok(detail, contains="Tutto tranquillo")
+        self.login(self.operator)
         self.client.post(detail, {"reason": "Registrazione dimenticata"})
         closure.refresh_from_db()
-        self.assertTrue(closure.is_closed)  # senza il permesso straordinario non si riapre
-        self.coordinator.user_permissions.add(Permission.objects.get(codename="reopen_shift"))
+        self.assertTrue(closure.is_closed)  # l'operatore non può riaprire
         config = SystemConfig.get()
-        config.allow_admin_reopen = True
+        config.allow_admin_reopen = False
         config.save()
         self.login(self.coordinator)
-        self.client.post(detail, {"reason": "Registrazione dimenticata"})
+        self.assertNotContains(self.client.get(detail), "Riapri turno")  # disattivata dalla direzione
+        config.allow_admin_reopen = True
+        config.save()
+        self.assertContains(self.client.get(detail), "Trascrizione dal foglio di emergenza")
+        self.client.post(detail, {"reason": "Trascrizione dal foglio di emergenza"})
         closure.refresh_from_db()
         self.assertFalse(closure.is_closed)
+        self.assertContains(self.client.get(detail), "Richiudi il turno")
+        self.login(self.operator)
+        start, _ = shift_bounds(day, shift)
+        moment = max(start, timezone.now() - datetime.timedelta(minutes=30))
+        response = self.client.post(reverse("daily:record_create", args=[self.guest.pk]), {
+            "category": "note", "occurred_at": timezone.localtime(moment).strftime("%Y-%m-%dT%H:%M"),
+            "description": "Trascritto dal foglio di emergenza"})
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(DailyRecord.objects.filter(description="Trascritto dal foglio di emergenza").exists())
+        from fasas.daily.services import REOPEN_HOURS, auto_close_shifts
+
+        auto_close_shifts(now=timezone.now() + datetime.timedelta(hours=REOPEN_HOURS - 1))
+        closure.refresh_from_db()
+        self.assertFalse(closure.is_closed)
+        result = auto_close_shifts(now=timezone.now() + datetime.timedelta(hours=REOPEN_HOURS + 1))
+        closure.refresh_from_db()
+        self.assertTrue(closure.is_closed)  # dimenticato aperto: si richiude da solo
+        self.assertEqual(result["reclosed"], 1)
 
 
 class ClinicalScreenTests(ScreenTestCase):

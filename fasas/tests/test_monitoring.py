@@ -45,7 +45,7 @@ class HealthTests(FasasTestCase):
         self.assertNotIn("restore_test", checks["job"]["detail"])  # trimestrale: non ancora dovuta
         for job in ("close_shifts", "protocols", "appointments", "stock", "documents", "pai_reviews", "reports",
                     "report_retention", "backup", "audit_verify", "imports_cleanup", "cie_cleanup", "assessments",
-                    "wounds", "continuity"):
+                    "wounds", "continuity", "ups"):
             run_job(job)
         checks = self.client.get("/salute/?token=segreto-di-monitoraggio").json()["checks"]
         self.assertEqual(checks["job"]["status"], "ok", checks["job"])

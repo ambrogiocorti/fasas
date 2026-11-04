@@ -39,7 +39,7 @@ all'ATS insieme alla presentazione del fascicolo digitale.
 
 | Evento | Cosa fa il turno | Cosa fa l'amministratore di sistema |
 |---|---|---|
-| **Manca la corrente** | continua sui tablet (a batteria) in modalità senza rete; se si scaricano, foglio di emergenza | se il blackout dura più dell'autonomia del gruppo di continuità, spegnere il server prima che la batteria finisca (lo spegnimento automatico dalla porta USB del gruppo non è ancora configurato); al ritorno della corrente il server si riaccende da solo: controllare *Stato del sistema* |
+| **Manca la corrente** | arriva l'avviso «Corrente assente»: si continua sui tablet (a batteria) in modalità senza rete; se si scaricano, foglio di emergenza | se la corrente non torna, il server si spegne da solo in modo ordinato sotto il 40% di batteria (guida, passo 15b) e riparte da solo al ritorno della corrente: controllare *Stato del sistema* |
 | **Cade la linea internet** | in struttura nulla cambia (con il DNS locale); da casa non si entra | segnalare il guasto all'operatore telefonico |
 | **Il FASAS non risponde** (guasto del server) | modalità senza rete sui tablet, poi foglio di emergenza; annotare a mano ciò che non si registra | avvisato dal servizio di controllo esterno; se il server non riparte: PC sostitutivo, ripristino dal disco di continuità (guida, passo 14b) |
 | **Avviso «copia continua NON riuscita»** | nulla | ricollegare il disco di continuità: `disco_continuita.sh --rimonta` |
@@ -51,9 +51,10 @@ all'ATS insieme alla presentazione del fascicolo digitale.
 
 1. Le registrazioni fatte sui tablet senza rete partono da sole, con l'ora reale in cui sono state fatte.
 2. Quanto scritto sul foglio di emergenza si inserisce nel FASAS con l'ora reale. Se nel frattempo il turno è stato
-   chiuso (anche in automatico, al riavvio del server), l'amministratore lo riapre in via straordinaria con la
-   motivazione «registrazioni dal foglio di emergenza», si inseriscono i dati e lo si richiude. La riapertura va
-   abilitata in anticipo in *Configurazione generale*: è una decisione della direzione da prendere ora.
+   chiuso (anche in automatico, al riavvio del server), il **coordinatore** lo riapre da *Chiusura turni* con la
+   motivazione già proposta («Trascrizione dal foglio di emergenza»), gli operatori inseriscono i dati e il
+   coordinatore lo richiude con «Richiudi il turno». Se ci si dimentica, il turno si richiude da solo dopo 12 ore.
+   Tutto resta nell'audit. La direzione può disattivare la riapertura in *Configurazione generale*.
 3. Il coordinatore controlla in **Turno › Senza rete** gli esiti diversi da «Registrata».
 4. Si compila il registro delle interruzioni.
 

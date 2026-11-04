@@ -56,6 +56,8 @@ OPERATOR = VIEW_CARE + [
 # informazioni sanitarie, autorizza le modifiche oltre la finestra. Lavora anche in turno come l'operatore.
 COORDINATOR = OPERATOR + [
     "core.edit_after_window",
+    # Riapertura straordinaria di un turno chiuso (es. trascrizione del foglio di emergenza), con motivazione
+    "daily.reopen_shift",
     # Firma elettronica avanzata con la propria CIE (es. PAI, consensi, verbali)
     "signatures.sign_with_cie",
     "guests.add_guest", "guests.change_guest", "guests.archive_guest", "guests.export_guest",

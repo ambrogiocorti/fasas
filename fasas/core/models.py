@@ -109,8 +109,9 @@ class SystemConfig(models.Model):
         "minuti di tolleranza dopo fine turno prima della chiusura", default=120
     )
     allow_admin_reopen = models.BooleanField(
-        "consenti all'amministratore la riapertura straordinaria di un turno (con motivazione)", default=False
-    )
+        "consenti la riapertura straordinaria di un turno chiuso (con motivazione)", default=True,
+        help_text="Serve per trascrivere il foglio di emergenza dopo un'interruzione. La riapertura spetta al "
+                  "coordinatore, resta nell'audit e il turno si richiude da solo dopo 12 ore.")
 
     max_upload_mb = models.PositiveIntegerField(
         "dimensione massima file (MB)", default=20, validators=[MinValueValidator(1), MaxValueValidator(500)]

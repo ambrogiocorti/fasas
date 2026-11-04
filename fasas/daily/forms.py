@@ -74,7 +74,8 @@ class CloseShiftForm(forms.Form):
 
 
 class ReopenShiftForm(forms.Form):
-    reason = forms.CharField(label="Motivo della riapertura straordinaria", widget=forms.Textarea(attrs={"rows": 3}))
+    reason = forms.CharField(label="Motivo della riapertura straordinaria", widget=forms.Textarea(attrs={"rows": 3}),
+                             initial="Trascrizione dal foglio di emergenza dopo un'interruzione del FASAS")
 
 
 class ChecklistTemplateForm(forms.ModelForm):

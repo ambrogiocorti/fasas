@@ -332,11 +332,14 @@ def closure_detail(request, pk):
     if request.method == "POST" and form.is_valid():
         try:
             services.reopen_shift(closure, request.user, form.cleaned_data["reason"])
-            messages.warning(request, "Turno riaperto in via straordinaria. Ricordare di richiuderlo.")
+            messages.warning(request, f"Turno riaperto: inserire le registrazioni con l'ora reale, poi richiuderlo. "
+                                      f"Si richiude comunque da solo dopo {services.REOPEN_HOURS} ore.")
         except services.ShiftClosedError as exc:
             messages.error(request, str(exc))
         return redirect("daily:closure_detail", pk=closure.pk)
     return render(request, "daily/closure_detail.html", {
         "closure": closure, "form": form,
         "can_reopen": config.allow_admin_reopen and request.user.has_perm("daily.reopen_shift") and closure.is_closed,
+        "can_reclose": not closure.is_closed and request.user.has_perm("daily.close_shift"),
+        "reclose_hours": services.REOPEN_HOURS,
     })

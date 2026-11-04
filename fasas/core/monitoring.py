@@ -27,7 +27,7 @@ NOTIFY_AT = {1, 10, 100, 1000}
 JOB_INTERVALS = {
     "close_shifts": 15, "protocols": 30, "appointments": 60, "stock": 12 * 60, "documents": 24 * 60,
     "pai_reviews": 24 * 60, "assessments": 24 * 60, "wounds": 24 * 60, "reports": 24 * 60,
-    "report_retention": 24 * 60, "backup": 24 * 60, "continuity": 5,
+    "report_retention": 24 * 60, "backup": 24 * 60, "continuity": 5, "ups": 1,
     "audit_verify": 24 * 60, "imports_cleanup": 24 * 60, "cie_cleanup": 10, "restore_test": 95 * 24 * 60,
 }
 
@@ -189,6 +189,12 @@ def checks():
             results.append(("copia_continua", "warning", f"ultima copia {timezone.localtime(last):%d/%m %H:%M}"))
         else:
             results.append(("copia_continua", "ok", f"ultima copia {timezone.localtime(last):%H:%M}"))
+
+    from .power import health as power_health
+
+    power = power_health()
+    if power is not None:
+        results.append(("gruppo_continuita", *power))
 
     checkpoint = AuditCheckpoint.objects.first()
     if checkpoint is None or checkpoint.created_at < now - datetime.timedelta(hours=26):

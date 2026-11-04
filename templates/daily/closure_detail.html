@@ -10,9 +10,13 @@
     <tr><th>Consegne</th><td>{{ closure.handover_notes|linebreaksbr|default:"—" }}</td></tr>
   </tbody></table>
   {% if closure.summary.missing %}<h3>Attività mancanti alla chiusura</h3><ul>{% for m in closure.summary.missing %}<li>{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% if can_reclose %}
+    <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Turno riaperto: inserire le registrazioni (es. dal foglio di emergenza) con l'ora reale in cui sono state fatte, poi richiuderlo. Si richiude da solo {{ reclose_hours }} ore dopo la riapertura.</div></div>
+    <div class="form-actions"><a class="btn btn-primary" href="{% url 'daily:close_shift' %}?date={{ closure.date|date:'Y-m-d' }}&shift={{ closure.shift }}">{% icon "lock" %}Richiudi il turno</a></div>
+  {% endif %}
   {% if can_reopen %}
     <hr><h3>Riapertura straordinaria</h3>
-    <p class="muted">Consentita solo all'amministratore, con motivazione registrata nell'audit log.</p>
+    <p class="muted">Per trascrivere il foglio di emergenza dopo un'interruzione o correggere un'omissione: la motivazione resta nell'audit log e il turno si richiude da solo dopo {{ reclose_hours }} ore.</p>
     <form method="post">{% csrf_token %}{% include "partials/form_fields.html" %}<div class="form-actions"><button class="btn btn-danger" data-confirm="Riaprire il turno? L'operazione è tracciata.">Riapri turno</button></div></form>
   {% endif %}
 </div>

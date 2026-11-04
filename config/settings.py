@@ -218,6 +218,8 @@ FASAS_ENCRYPTION_KEYS = [k.strip() for k in env_secret("FASAS_ENCRYPTION_KEYS").
 FASAS_BACKUP_KEY = env_secret("FASAS_BACKUP_KEY")
 FASAS_BACKUP_DIR = Path(os.environ.get("FASAS_BACKUP_DIR", BASE_DIR / "backups"))
 # Copia fuori sede su object storage compatibile S3 in UE, con blocco delle modifiche (docs/BACKUP.md)
+# Gruppo di continuità: file di stato scritto da NUT (scripts/gruppo_continuita.sh); vuoto = non configurato
+FASAS_UPS_STATUS_FILE = os.environ.get("FASAS_UPS_STATUS_FILE", "")
 # Disco di continuità: SSD esterno sempre collegato, copia cifrata ogni 5 minuti (docs/BACKUP.md)
 FASAS_CONTINUITY_DIR = os.environ.get("FASAS_CONTINUITY_DIR", "")
 FASAS_CONTINUITY_KEEP_HOURS = int(os.environ.get("FASAS_CONTINUITY_KEEP_HOURS", "24"))

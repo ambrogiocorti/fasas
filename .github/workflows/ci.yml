@@ -138,6 +138,23 @@ jobs:
           sudo ./scripts/disco_continuita.sh --stato
           sudo find /srv/fasas-continuita/database -name 'fasas-continua-*.fbk' | grep -q .
           sudo docker compose exec -T web python manage.py fasas_ripristina_continuita --elenca | grep -q fasas-continua-
+      - name: Gruppo di continuità (NUT con un gruppo simulato al posto di quello USB)
+        run: |
+          sudo ./scripts/gruppo_continuita.sh --configura --simulato
+          sudo grep -q '^FASAS_UPS_STATUS_FILE=/ups/stato.json$' .env
+          for i in $(seq 1 30); do sudo ./scripts/gruppo_continuita.sh --stato | grep -q "rete elettrica" && break; sleep 2; done
+          sudo ./scripts/gruppo_continuita.sh --stato
+          # manca la corrente: evento scritto per il FASAS e avviso letto dal job
+          printf 'battery.charge: 90\nbattery.runtime: 1500\nups.status: OB\n' | sudo tee /etc/nut/fasas-prova.dev
+          for i in $(seq 1 30); do sudo grep -q ONBATT /srv/fasas-ups/stato.json && break; sleep 2; done
+          sudo grep -q ONBATT /srv/fasas-ups/stato.json
+          sudo docker compose up -d
+          for i in $(seq 1 60); do sudo docker compose exec -T worker true 2>/dev/null && break; sleep 2; done
+          sudo docker compose exec -T worker python manage.py fasas_jobs ups | grep -q ONBATT
+          # batteria sotto la soglia: spegnimento ordinato (qui simulato con un file)
+          printf 'battery.charge: 30\nbattery.runtime: 900\nups.status: OB\n' | sudo tee /etc/nut/fasas-prova.dev
+          for i in $(seq 1 30); do test -f /run/fasas-spegnimento-simulato && break; sleep 2; done
+          test -f /run/fasas-spegnimento-simulato
       - name: Log in caso di errore
         if: failure()
         run: sudo docker compose logs --tail 100

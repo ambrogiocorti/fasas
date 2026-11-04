@@ -28,6 +28,7 @@ class NotificationKind(models.TextChoices):
     ASSESSMENT_DUE = "assessment_due", "Valutazione da ripetere"
     WOUND_NEW = "wound_new", "Nuova lesione segnalata"
     DRESSING_DUE = "dressing_due", "Medicazione o rivalutazione di una lesione in ritardo"
+    POWER = "power", "Corrente assente o tornata (gruppo di continuità)"
 
 
 DEFAULT_ROLES = {
@@ -56,6 +57,7 @@ DEFAULT_ROLES = {
     NotificationKind.ASSESSMENT_DUE: ["coordinator"],
     NotificationKind.WOUND_NEW: ["coordinator", "doctor"],
     NotificationKind.DRESSING_DUE: ["coordinator"],
+    NotificationKind.POWER: ["admin", "coordinator", "operator"],
 }
 
 # Tipi inviati di default anche come notifica push sui dispositivi iscritti (modificabile dall'amministratore).
@@ -63,7 +65,7 @@ DEFAULT_PUSH = {
     NotificationKind.PROTOCOL, NotificationKind.EMERGENCY, NotificationKind.CRITICAL_EVENT,
     NotificationKind.SOS_VALIDATION, NotificationKind.APPOINTMENT_TODAY, NotificationKind.BACKUP,
     NotificationKind.AUDIT_BROKEN, NotificationKind.ROTA_CHANGED, NotificationKind.ROTA_ANSWER,
-    NotificationKind.ROTA_PUBLISHED,
+    NotificationKind.ROTA_PUBLISHED, NotificationKind.POWER,
 }
 
 # Una notifica arriva solo a chi può aprire ciò a cui rimanda, qualunque ruolo sia configurato.

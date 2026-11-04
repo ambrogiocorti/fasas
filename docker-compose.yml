@@ -18,6 +18,9 @@ x-app: &app
     - fasas-data:/data
     # disco di continuità (SSD esterno sempre collegato): preparato con scripts/disco_continuita.sh
     - ${FASAS_CONTINUITY_HOST_DIR:-/srv/fasas-continuita}:/continuita
+    # stato del gruppo di continuità scritto da NUT: scripts/gruppo_continuita.sh
+    - ${FASAS_UPS_HOST_DIR:-/srv/fasas-ups}:/ups:ro
+  stop_grace_period: 30s
   restart: unless-stopped
   depends_on:
     db:
@@ -40,6 +43,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    stop_grace_period: 60s  # il database si chiude in modo ordinato (anche allo spegnimento col gruppo di continuità)
     restart: unless-stopped
 
   redis:
@@ -53,6 +57,7 @@ services:
       - fasas-data:/data
       - fasas-static:/static
       - ${FASAS_CONTINUITY_HOST_DIR:-/srv/fasas-continuita}:/continuita
+      - ${FASAS_UPS_HOST_DIR:-/srv/fasas-ups}:/ups:ro
 
   worker:
     <<: *app

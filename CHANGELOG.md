@@ -98,6 +98,17 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
   sessione che passa dal Wi-Fi ai dati mobili si chiude e l'API non accetta token. Alternativa semplice alla VPN
   per chi non usa il FASAS da casa.
 
+### Corrente e foglio di emergenza
+- Gruppo di continuità con NUT (`scripts/gruppo_continuita.sh`): quando manca la corrente il FASAS avvisa
+  operatori, coordinatori e amministratori (anche sul telefono); sotto il 40% di batteria (o 3 minuti di
+  autonomia) ferma il FASAS in modo ordinato e spegne il server, che riparte da solo al ritorno della corrente.
+  Stato nel controllo di salute. Provato nella CI con un gruppo simulato; con il gruppo vero va fatta la prova
+  del passo 15b.
+- Database e servizi con tempi di arresto adeguati (60 e 30 secondi) per chiudersi in modo ordinato.
+- Riapertura dei turni per trascrivere il foglio di emergenza: ora la fa il coordinatore, con la motivazione
+  proposta; il turno riaperto si richiude da solo dopo 12 ore. Abilitata per default (la direzione può
+  disattivarla).
+
 ### Correzioni
 - Evacuazioni: un «non avvenuta» registrato dopo mezzanotte ora vale per il giorno appena iniziato (prima veniva
   attribuito alla notte del giorno precedente e il conteggio dei giorni non documentati sbagliava di uno).

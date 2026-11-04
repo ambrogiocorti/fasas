@@ -23,6 +23,7 @@ JOBS = {
     "report_retention": ("fasas.reports.services.purge_expired_reports", "Eliminazione report oltre la conservazione"),
     "backup": ("fasas.backups.services.scheduled_backup", "Backup cifrato giornaliero e verifica"),
     "continuity": ("fasas.backups.continuity.continuous_copy", "Copia continua sul disco esterno (ogni 5 minuti)"),
+    "ups": ("fasas.core.power.check_events", "Avvisi del gruppo di continuità (corrente assente o tornata)"),
     "audit_verify": ("fasas.audit.services.scheduled_chain_verification", "Verifica integrità audit log"),
     "restore_test": ("fasas.backups.restore_test.scheduled_restore_test", "Prova di ripristino con verbale (trimestrale)"),
     "imports_cleanup": ("fasas.imports.documents.cleanup_stale", "Cancellazione dei file di importazioni non confermate"),
