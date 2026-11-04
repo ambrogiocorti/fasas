@@ -113,11 +113,19 @@ class SystemConfig(models.Model):
         help_text="Serve per trascrivere il foglio di emergenza dopo un'interruzione. La riapertura spetta al "
                   "coordinatore, resta nell'audit e il turno si richiude da solo dopo 12 ore.")
 
+    class DocumentVerification(models.TextChoices):
+        DEVICE = "device", "Impronta, volto o PIN del telefono abbinato (chi vuole può usare anche la CIE)"
+        CIE = "cie", "Solo CIE con il suo PIN"
+
     documents_cie_required = models.BooleanField(
-        "verifica con CIE per aprire, scaricare o modificare i documenti", default=False,
-        help_text="Anche i documenti già firmati. Ogni utente deve avere il codice fiscale nel profilo e un telefono "
-                  "(o un PC con lettore) abbinato in Impostazioni › Firma digitale: chi non ha la CIE non apre i "
-                  "documenti. Richiede la CIE attivata sul server (docs/FIRMA_CIE.md).")
+        "verifica di identità per aprire, scaricare o modificare i documenti", default=False,
+        help_text="Anche i documenti già firmati. Ogni utente abbina il proprio telefono in Impostazioni › Firma "
+                  "digitale (app FASAS Signer). Richiede la CIE attivata sul server (docs/FIRMA_CIE.md).")
+    documents_verification = models.CharField(
+        "come ci si verifica", max_length=10, choices=DocumentVerification.choices,
+        default=DocumentVerification.DEVICE,
+        help_text="Con il telefono basta l'impronta, il volto o il PIN del telefono: la chiave resta nel chip sicuro del "
+                  "telefono. Con la CIE servono la carta e il suo PIN di 8 cifre, e il codice fiscale nel profilo.")
     documents_cie_minutes = models.PositiveIntegerField(
         "dopo la verifica, lo stesso documento resta aperto per (minuti)", default=10,
         validators=[MinValueValidator(1), MaxValueValidator(480)])

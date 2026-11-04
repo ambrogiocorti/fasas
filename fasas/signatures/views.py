@@ -101,6 +101,7 @@ def credential_view(request):
         "can_cie": can_cie, "can_cie_sign": can_cie_sign, "remote_configured": bool(settings.FASAS_CSC_SERVICE_URL),
         "documents_cie_required": cie.documents_gate_on() and cie.is_enabled(),
         "documents_cie_minutes": request.fasas_config.documents_cie_minutes, "fiscal_code": user.fiscal_code,
+        "documents_by_device": request.fasas_config.documents_verification == "device",
         "provider_name": settings.FASAS_CSC_PROVIDER_NAME, "level": level, "level_error": level_error,
         "tsa": bool(settings.FASAS_SIGNATURE_TSA_URL), "cie": cie_readiness(user, devices) if can_cie else None,
         "devices": devices, "pairing": pairing, "server_url": request.build_absolute_uri("/"),
@@ -229,7 +230,15 @@ ACCESS_STEPS = [
     ("signing", "La carta conferma l'identità"), ("verifying", "Verifica del certificato"),
     ("signed", "Identità verificata"),
 ]
+ACCESS_DEVICE_STEPS = [
+    ("waiting", "In attesa del telefono"), ("authorizing", "Conferma con impronta, volto o PIN del telefono"),
+    ("verifying", "Verifica"), ("signed", "Identità verificata"),
+]
 ACCESS_NEXT = "fasas_cie_access_next"
+
+
+def _access_steps(signature_request):
+    return ACCESS_DEVICE_STEPS if signature_request.access_method == "device" else ACCESS_STEPS
 
 
 def cie_user_required(view):
@@ -311,7 +320,8 @@ def cie_sign_view(request, pk):
 def cie_request_view(request, signature_request):
     if signature_request.purpose == SignatureRequest.Purpose.ACCESS:
         return render(request, "signatures/cie_request.html", {
-            "req": signature_request, "steps": ACCESS_STEPS, "access": True, "test": False,
+            "req": signature_request, "steps": _access_steps(signature_request), "access": True, "test": False,
+            "by_device": signature_request.access_method == "device",
             "guest": signature_request.access_guest, "document": signature_request.access_document,
             "status_url": reverse("signatures:cie_status", args=[signature_request.pk]),
             "devices": _devices(request.user), "minutes": request.fasas_config.documents_cie_minutes,
@@ -330,7 +340,8 @@ def cie_request_view(request, signature_request):
 
 
 def status_payload(signature_request, result_url=None):
-    order = [code for code, _ in STEPS]
+    steps = _access_steps(signature_request) if signature_request.purpose == SignatureRequest.Purpose.ACCESS else STEPS
+    order = [code for code, _ in steps]
     devices = SignerDevice.objects.filter(user=signature_request.user, revoked_at__isnull=True)
     online = any(d.is_online for d in devices)
     payload = {
@@ -346,7 +357,8 @@ def status_payload(signature_request, result_url=None):
     }
     if signature_request.purpose == SignatureRequest.Purpose.ACCESS:
         payload["access"] = True
-        payload["label"] = {**dict(ACCESS_STEPS), "failed": "Verifica non riuscita"}.get(
+        payload["by_device"] = signature_request.access_method == "device"
+        payload["label"] = {**dict(steps), "failed": "Verifica non riuscita"}.get(
             signature_request.status, payload["label"])
     if signature_request.status == SignatureRequest.Status.SIGNED:
         if signature_request.purpose == SignatureRequest.Purpose.ACCESS:
@@ -431,9 +443,11 @@ def cie_access(request):
     if cie.has_document_access(request.user, guest, document):
         return redirect(next_url)
     error = None
+    methods = cie.access_methods()
     if request.method == "POST":
+        method = request.POST.get("metodo") if request.POST.get("metodo") in methods else methods[0]
         try:
-            signature_request = cie.create_access_request(request.user, guest, document)
+            signature_request = cie.create_access_request(request.user, guest, document, method)
         except SignatureError as exc:
             error = str(exc)
         else:
@@ -442,9 +456,12 @@ def cie_access(request):
             saved[str(signature_request.pk)] = next_url
             request.session[ACCESS_NEXT] = saved
             return redirect("signatures:cie_request", request_id=signature_request.pk)
+    devices = _devices(request.user)
     return render(request, "signatures/cie_access.html", {
         "document": document, "guest": guest, "next": next_url, "error": error,
-        "can_use": cie.can_use_device(request.user), "devices": _devices(request.user),
+        "can_use": cie.can_use_device(request.user), "devices": devices,
+        "device_ready": any(d.device_key for d in devices), "allow_device": "device" in methods,
+        "cie_ready": bool(request.user.fiscal_code) and bool(external.trust_roots()),
         "fiscal_code": request.user.fiscal_code, "minutes": request.fasas_config.documents_cie_minutes,
     })
 

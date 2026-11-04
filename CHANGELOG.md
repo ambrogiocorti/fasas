@@ -116,6 +116,9 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
   per default): la carta firma una sfida casuale, il certificato deve essere della CIE e intestato all'utente;
   accesso a quel documento per pochi minuti, nell'audit. Vale anche per l'esportazione della cartella con i
   documenti. Chi non firma può abbinare il telefono solo per verificarsi (docs/FIRMA_CIE.md, sezione 8b).
+- Verifica per i documenti anche con **impronta, volto o PIN del telefono** (predefinita, scelta in Configurazione
+  generale): chiave nel chip sicuro del telefono, usabile solo dopo lo sblocco; il server ne ha solo la parte
+  pubblica e verifica la firma di una sfida casuale. Il PIN della CIE resta necessario per firmare con la CIE.
 - App Android: la lettura della CIE resta attiva fino all'esito (prima poteva restare ferma su «Avvicina la CIE»),
   messaggi a ogni passo, carta spostata = si riappoggia e si riprende; «Prova la lettura della CIE» senza FASAS
   (anche del PIN, con il codice fiscale letto dalla carta) e spiegazione di dove trovare il PIN.

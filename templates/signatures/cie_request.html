@@ -1,10 +1,10 @@
 {% extends "base.html" %}{% load fasas_tags static %}
-{% block title %}{% if access %}Verifica con CIE{% else %}Firma con CIE{% endif %}{% endblock %}
+{% block title %}{% if access %}Verifica di identità{% else %}Firma con CIE{% endif %}{% endblock %}
 {% block content %}
 {% if guest %}{% include "guests/_header.html" with compact=True %}{% endif %}
 {% if access %}
 <div class="page-head">
-  <div><h1>{% icon "lock" %} Verifica con CIE</h1>
+  <div><h1>{% icon "lock" %} Verifica di identità {% if by_device %}con il telefono{% else %}con la CIE{% endif %}</h1>
     <span class="subtitle">{% if document %}Per aprire «{{ document.title }}»{% else %}Per i documenti dell'ospite{% endif %} · vale {{ minutes }} minuti{% if req.attempt > 1 %} · tentativo {{ req.attempt }}{% endif %}</span></div>
   <div class="actions"><a class="btn" href="{% url 'documents:guest_list' guest.pk %}">{% icon "arrow-left" %}Documenti dell'ospite</a></div>
 </div>
@@ -21,7 +21,7 @@
     <iframe src="{{ preview_url }}" title="Anteprima del documento da firmare" class="pdf-frame"></iframe>
   </div>
 {% endif %}
-  <div class="card" id="cie-panel" data-status-url="{{ status_url }}" data-status="{{ req.status }}"{% if access %} data-access="1"{% endif %}>
+  <div class="card" id="cie-panel" data-status-url="{{ status_url }}" data-status="{{ req.status }}"{% if access %} data-access="1"{% endif %}{% if by_device %} data-device="1"{% endif %}>
     <div class="verify-code"><span class="muted">Codice di controllo</span><strong class="mono">{{ req.verify_code }}</strong>
       <small class="muted">Deve coincidere con quello mostrato da FASAS Signer{% if access %} sul telefono{% endif %}.</small></div>
     <ol class="sign-steps" aria-live="polite">

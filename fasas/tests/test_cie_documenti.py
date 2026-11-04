@@ -76,8 +76,9 @@ class CieDocumentAccessTests(FasasTestCase):
         self.assertEqual(status, 201, data)
         next_url = next_url or reverse("documents:view", args=[document.current_version.pk])
         page = self.client.get(reverse("signatures:cie_access"), {"documento": document.pk, "next": next_url})
-        self.assertContains(page, "Verifica con CIE")
-        response = self.client.post(reverse("signatures:cie_access"), {"documento": document.pk, "next": next_url})
+        self.assertContains(page, "Verifica con la CIE")
+        response = self.client.post(reverse("signatures:cie_access"), {"documento": document.pk, "next": next_url,
+                                                                      "metodo": "cie"})
         request = SignatureRequest.objects.get(user=self.operator, purpose=SignatureRequest.Purpose.ACCESS,
                                                access_document=document, status="waiting")
         self.assertRedirects(response, reverse("signatures:cie_request", args=[request.pk]))
@@ -182,3 +183,122 @@ class CieDocumentAccessTests(FasasTestCase):
             self.assertIn("documents_cie_required", form.errors)
         form = SystemConfigForm(data, instance=config)
         self.assertTrue(form.is_valid(), form.errors)
+
+
+def phone_key():
+    """La chiave che il telefono crea nel suo chip sicuro (qui in memoria, solo per i test)."""
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    return ec.generate_private_key(ec.SECP256R1())
+
+
+def public_b64(key):
+    import base64
+
+    from cryptography.hazmat.primitives import serialization
+
+    return base64.b64encode(key.public_key().public_bytes(
+        serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)).decode()
+
+
+def sign_b64(key, challenge_b64):
+    import base64
+
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    return base64.b64encode(key.sign(base64.b64decode(challenge_b64), ec.ECDSA(hashes.SHA256()))).decode()
+
+
+@override_settings(**PKI.settings(FASAS_CIE_ENABLED=True))
+class PhoneVerificationTests(FasasTestCase):
+    """Verifica con impronta, volto o PIN del telefono: la chiave resta nel telefono, il server ne ha solo la pubblica."""
+
+    def setUp(self):
+        cache.clear()
+        self.document = create_document(self.guest, Document.Category.MEDICAL_REPORT, "Relazione clinica",
+                                        user=self.doctor, data=sample_pdf(), filename="relazione.pdf")
+        config = SystemConfig.get()
+        config.documents_cie_required, config.documents_verification = True, "device"
+        config.save()
+        self.login(self.operator)  # senza codice fiscale: con il telefono non serve
+        self.key = phone_key()
+        self.phone = DeviceClient(self.client_class())
+        status, data = self.phone.pair(cie.create_pairing(self.operator), "Telefono", "android")
+        self.assertEqual(status, 201, data)
+
+    def start(self):
+        url = reverse("documents:view", args=[self.document.current_version.pk])
+        self.assert_redirects_to_gate(url)
+        response = self.client.post(reverse("signatures:cie_access"),
+                                    {"documento": self.document.pk, "next": url, "metodo": "device"})
+        request = SignatureRequest.objects.get(user=self.operator, access_method="device", status="waiting")
+        self.assertRedirects(response, reverse("signatures:cie_request", args=[request.pk]))
+        return request, url
+
+    def assert_redirects_to_gate(self, url):
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response["Location"].startswith(reverse("signatures:cie_access")))
+
+    def test_phone_confirmation_opens_the_document(self):
+        page = self.client.get(reverse("signatures:cie_access"), {"documento": self.document.pk})
+        self.assertContains(page, "Conferma con il telefono")
+        status, data = self.phone.post("dispositivo/chiave/", {"public_key": public_b64(self.key)})
+        self.assertEqual(status, 201, data)
+        request, url = self.start()
+        status, pending = self.phone.get("richieste/?attesa=0")
+        self.assertEqual(pending["requests"][0]["method"], "device")
+        status, claimed = self.phone.post(f"richieste/{request.pk}/prendi/")
+        self.assertEqual(status, 200, claimed)
+        self.assertIn("challenge", claimed)
+        self.assertEqual(self.client.get(reverse("signatures:cie_status", args=[request.pk])).json()["label"],
+                         "Conferma con impronta, volto o PIN del telefono")
+        # la carta non c'entra: la via del certificato è chiusa per questa richiesta
+        status, data = self.phone.post(f"richieste/{request.pk}/certificato/", {"nonce": claimed["nonce"],
+                                                                                "certificate": "AAAA"})
+        self.assertEqual(status, 409)
+        status, data = self.phone.post(f"richieste/{request.pk}/conferma/", {
+            "nonce": claimed["nonce"], "signature": sign_b64(self.key, claimed["challenge"])})
+        self.assertEqual(status, 200, data)
+        self.assertEqual(self.client.get(url).status_code, 200)
+        access = CieAccess.objects.get()
+        self.assertEqual(access.method, "device")
+        self.assertTrue(AuditLog.objects.filter(object_repr="Accesso ai documenti verificato con il telefono").exists())
+        # la stessa conferma non si riusa
+        status, data = self.phone.post(f"richieste/{request.pk}/conferma/", {
+            "nonce": claimed["nonce"], "signature": sign_b64(self.key, claimed["challenge"])})
+        self.assertNotEqual(status, 200)
+
+    def test_wrong_key_or_no_key_is_refused(self):
+        page = self.client.post(reverse("signatures:cie_access"), {"documento": self.document.pk, "metodo": "device"})
+        self.assertContains(page, "non ha ancora attivato")  # telefono abbinato ma senza chiave
+        self.phone.post("dispositivo/chiave/", {"public_key": public_b64(self.key)})
+        request, url = self.start()
+        status, claimed = self.phone.post(f"richieste/{request.pk}/prendi/")
+        status, data = self.phone.post(f"richieste/{request.pk}/conferma/", {
+            "nonce": claimed["nonce"], "signature": sign_b64(phone_key(), claimed["challenge"])})
+        self.assertEqual(status, 400)
+        self.assertEqual(data["error"], "bad_signature")
+        self.assertFalse(CieAccess.objects.exists())
+        self.assert_redirects_to_gate(url)
+        status, data = self.phone.post("dispositivo/chiave/", {"public_key": "bm9u"})
+        self.assertEqual(status, 400)
+
+    def test_a_computer_without_phone_key_does_not_see_phone_requests(self):
+        self.phone.post("dispositivo/chiave/", {"public_key": public_b64(self.key)})
+        computer = DeviceClient(self.client_class())
+        computer.pair(cie.create_pairing(self.operator), "PC", "windows")
+        self.start()
+        status, pending = computer.get("richieste/?attesa=0")
+        self.assertEqual(pending["requests"], [])
+
+    def test_cie_only_configuration_refuses_the_phone(self):
+        self.phone.post("dispositivo/chiave/", {"public_key": public_b64(self.key)})
+        config = SystemConfig.get()
+        config.documents_verification = "cie"
+        config.save()
+        page = self.client.get(reverse("signatures:cie_access"), {"documento": self.document.pk})
+        self.assertNotContains(page, "Conferma con il telefono")
+        with self.assertRaises(SignatureError):
+            cie.create_access_request(self.operator, self.guest, self.document, "device")

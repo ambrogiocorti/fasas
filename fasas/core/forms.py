@@ -18,13 +18,17 @@ class SystemConfigForm(forms.ModelForm):
         m, a, n = cleaned.get("morning_start"), cleaned.get("afternoon_start"), cleaned.get("night_start")
         if m and a and n and not (m < a < n):
             raise forms.ValidationError("Gli orari dei turni devono essere in ordine: mattina < pomeriggio < notte.")
-        if cleaned.get("documents_cie_required") and not (self.instance.pk and self.instance.documents_cie_required):
+        if cleaned.get("documents_cie_required"):
             from fasas.signatures import cie, external
 
-            if not cie.is_enabled() or not external.trust_roots():
-                self.add_error("documents_cie_required", "Prima va attivata la CIE sul server (FASAS_CIE_ENABLED e "
-                               "certificati delle CA della CIE, docs/FIRMA_CIE.md): altrimenti nessuno aprirebbe "
-                               "più i documenti.")
+            changed = not (self.instance.pk and self.instance.documents_cie_required
+                           and self.instance.documents_verification == cleaned.get("documents_verification"))
+            if changed and not cie.is_enabled():
+                self.add_error("documents_cie_required", "Prima va attivato FASAS Signer sul server "
+                               "(FASAS_CIE_ENABLED, docs/FIRMA_CIE.md): altrimenti nessuno aprirebbe più i documenti.")
+            elif changed and cleaned.get("documents_verification") == "cie" and not external.trust_roots():
+                self.add_error("documents_verification", "Per la sola CIE servono i certificati delle CA della CIE "
+                               "(FASAS_CIE_TRUST_ROOTS): altrimenti nessuno aprirebbe più i documenti.")
         return cleaned
 
 
