@@ -15,10 +15,10 @@
 </div>
 
 <div class="grid grid-4">
-  <div class="card stat {% if protocols %}tone-danger{% endif %}">
+  {% if modules.protocols %}<div class="card stat {% if protocols %}tone-danger{% endif %}">
     <span class="label">Protocolli attivi <span class="stat-icon">{% icon "flag" %}</span></span>
     <span class="value"><a href="{% url 'protocols:activations' %}">{{ protocols|length }}</a></span>
-    <small>{% if protocols %}da seguire{% else %}nessuno{% endif %}</small></div>
+    <small>{% if protocols %}da seguire{% else %}nessuno{% endif %}</small></div>{% endif %}
   <div class="card stat {% if sos_pending %}tone-warn{% endif %}">
     <span class="label">SOS da validare <span class="stat-icon">{% icon "shield-check" %}</span></span>
     <span class="value"><a href="{% url 'clinical:sos_pending' %}">{{ sos_pending|length }}</a></span>
@@ -62,33 +62,33 @@
     </tbody></table>
   </div>
 
-  <div class="card">
+  {% if modules.pai %}<div class="card">
     <div class="card-head"><h2>PAI</h2></div>
     <ul class="list-plain">
       {% for p in pai_due %}<li><span class="pill {% if p.review_due < day %}pill-danger{% else %}pill-warn{% endif %}">{{ p.review_due|date:"d/m/Y" }}</span> <a href="{{ p.get_absolute_url }}">{{ p.guest }} – revisione PAI v{{ p.version }}</a></li>{% endfor %}
       {% for g in without_pai %}<li><span class="pill pill-danger">senza PAI</span> <a href="{% url 'pai:guest' g.pk %}">{{ g }}</a></li>{% endfor %}
       {% if not pai_due and not without_pai %}<li class="muted">Tutti i PAI sono in regola.</li>{% endif %}
     </ul>
-  </div>
+  </div>{% endif %}
 
-  <div class="card">
+  {% if modules.stock %}<div class="card">
     <div class="card-head"><h2>Magazzino</h2><div class="actions"><a class="btn btn-sm" href="{% url 'pharmacy:stock' %}">Apri</a></div></div>
     {% if stock_expiring %}<div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">{{ stock_expiring }} lotti scaduti o in scadenza.</div></div>{% endif %}
     <ul class="list-plain">{% for r in stock_low %}<li><strong>{{ r.drug }}</strong> – giacenza {{ r.total|floatformat:"-2" }} {{ r.drug.stock_unit }} <small class="muted">(soglia {{ r.drug.min_stock|floatformat:"-2" }})</small></li>{% empty %}<li class="muted">Nessun farmaco sotto soglia.</li>{% endfor %}</ul>
-  </div>
+  </div>{% endif %}
 
-  <div class="card">
+  {% if modules.appointments %}<div class="card">
     <div class="card-head"><h2>Visite oggi e domani</h2><div class="actions">{% if perms.appointments.add_appointment %}<a class="btn btn-sm" href="{% url 'appointments:create' %}">{% icon "plus" %}Visita</a>{% endif %}</div></div>
     <ul class="list-plain">
       {% for a in appointments %}<li><span class="pill mono">{{ a.scheduled_at|date:"D H:i" }}</span> <a href="{{ a.get_absolute_url }}">{{ a.guest }} – {{ a.title }}</a><br><small class="muted">{{ a.location }}{% if a.companion_display %} · accompagna {{ a.companion_display }}{% else %} · <span style="color:var(--warn)">accompagnatore da assegnare</span>{% endif %}</small></li>
       {% empty %}<li class="muted">Nessuna visita.</li>{% endfor %}
     </ul>
-  </div>
+  </div>{% endif %}
 
-  <div class="card">
+  {% if modules.staffing %}<div class="card">
     <div class="card-head"><h2>Personale previsto</h2><div class="actions">{% if rota_coverage.pending %}<a class="btn btn-sm btn-primary" href="{% url 'staffing:requests' %}">{{ rota_coverage.pending }} richieste</a>{% endif %}<a class="btn btn-sm" href="{% url 'staffing:rota' %}">Calendario</a></div></div>
     <ul class="list-plain">{% for r in rota_coverage.rows %}<li><span class="pill {% if r.ok %}pill-ok{% else %}pill-danger{% endif %}">{{ r.day|date:"D" }} {{ r.label|lower }} {{ r.names|length }}/{{ r.min }}</span> {{ r.names|join:", "|default:"nessuno pianificato" }}</li>{% endfor %}</ul>
-  </div>
+  </div>{% endif %}
 
   {% if therapy_alerts or documents_expiring %}
   <div class="card span-2">

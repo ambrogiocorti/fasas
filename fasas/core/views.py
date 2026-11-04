@@ -41,6 +41,38 @@ def system_config(request):
     return render(request, "core/config.html", {"form": form, "community_form": community_form})
 
 
+@permission_required("core.change_systemconfig", raise_exception=True)
+def modules_view(request):
+    """Moduli accendibili: uno per uno, oppure tutti insieme («configurazione per il pilota», «accendi tutto»)."""
+    from . import modules
+
+    config = SystemConfig.get()
+    if request.method == "POST":
+        action = request.POST.get("action")
+        before = modules.disabled(config)
+        if action == "pilot":
+            off = set(modules.PILOT_OFF)
+        elif action == "all":
+            off = set()
+        else:
+            chosen = set(request.POST.getlist("on"))
+            off = {m.key for m in modules.MODULES if m.key not in chosen}
+        if off != before:
+            config.disabled_modules = sorted(off)
+            config.save(update_fields=["disabled_modules", "updated_at"])
+            log_event(AuditLog.Action.CONFIG, config, changes={"moduli spenti": [
+                ", ".join(sorted(before)) or None, ", ".join(sorted(off)) or None]})
+            messages.success(request, "Moduli aggiornati." if off else "Tutti i moduli sono accesi.")
+        else:
+            messages.info(request, "Nessuna modifica.")
+        return redirect("core:modules")
+    off = modules.disabled(config)
+    return render(request, "core/modules.html", {
+        "modules_list": [{"module": m, "on": m.key not in off} for m in modules.MODULES],
+        "pilot_off": [m for m in modules.MODULES if not m.pilot],
+    })
+
+
 @transaction.non_atomic_requests  # deve rispondere 503 anche quando il database non c'è
 def health(request):
     """

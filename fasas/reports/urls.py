@@ -12,6 +12,7 @@ urlpatterns = [
     path("", views.report_list, name="list"),
     path("<int:pk>/scarica/", views.report_download, name="download"),
     path("ospite/<int:guest_pk>/cartella/", views.guest_export, name="guest_export"),
+    path("ispezione/", views.inspection, name="inspection"),
 ] + config_urls(
     "programmati", "schedule", ReportSchedule, ReportScheduleForm,
     ("name", "report_type", "template", "format", "frequency", "interval_days", "guest", "retention_years", "active",

@@ -169,6 +169,9 @@ class SystemConfig(models.Model):
         "promemoria: interazioni dalla tabella validata dal medico della struttura", default=False,
         help_text="Attivare solo dopo il parere sul regolamento dei dispositivi medici (docs/DISPOSITIVO_MEDICO.md).")
 
+    # Moduli spenti (fasas.core.modules): nascosti, pagine «funzione spenta», promemoria fermi; i dati restano.
+    disabled_modules = models.JSONField("moduli spenti", default=list, blank=True)
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

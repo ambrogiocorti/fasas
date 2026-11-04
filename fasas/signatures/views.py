@@ -97,7 +97,7 @@ def credential_view(request):
             else:
                 messages.success(request, "Certificato di firma registrato e cifrato.")
                 return redirect("signatures:credential")
-        elif "remote-remote_user_id" in request.POST and remote_form.is_valid():
+        elif "remote-remote_user_id" in request.POST and remote_on() and remote_form.is_valid():
             data = remote_form.cleaned_data
             try:
                 register_remote(user, data["remote_user_id"], data["password"], data["credential_id"])
@@ -116,7 +116,7 @@ def credential_view(request):
     devices = _devices(user) if can_cie else []
     return render(request, "signatures/credential.html", {
         "credential": credential, "form": form, "remote_form": remote_form, "can_certificate": can_certificate,
-        "can_cie": can_cie, "can_cie_sign": can_cie_sign, "remote_configured": bool(settings.FASAS_CSC_SERVICE_URL),
+        "can_cie": can_cie, "can_cie_sign": can_cie_sign, "remote_configured": remote_on(),
         "documents_cie_required": cie.documents_gate_on() and cie.is_enabled(),
         "documents_cie_minutes": request.fasas_config.documents_cie_minutes, "fiscal_code": user.fiscal_code,
         "provider_name": settings.FASAS_CSC_PROVIDER_NAME, "level": level, "level_error": level_error,
@@ -129,6 +129,13 @@ def credential_view(request):
         "nis_enabled": can_cie and request.fasas_config.documents_verification == "nis",
         "enrollment": cie.enrollment_of(user) if can_cie else None, "pin_form": FasasPinForm(enrollment=None),
     })
+
+
+def remote_on():
+    """Firma remota qualificata: prestatore configurato sul server e modulo acceso."""
+    from fasas.core.modules import is_on
+
+    return bool(settings.FASAS_CSC_SERVICE_URL) and is_on("remote_signature")
 
 
 def cie_readiness(user, devices):
@@ -188,6 +195,9 @@ def sign_version_view(request, pk):
         return gate
     credential = SigningCredential.objects.filter(user=request.user).first()
     remote = credential is not None and credential.kind == SigningCredential.Kind.REMOTE
+    if remote and not remote_on():
+        messages.error(request, "La firma remota qualificata è spenta in questa struttura (Configurazione › Moduli).")
+        return redirect(version.document.get_absolute_url())
     token = _session_token(request, credential) if remote else None
 
     if request.method == "POST" and request.POST.get("action") == "send_otp" and remote:

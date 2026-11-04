@@ -28,6 +28,23 @@ def is_day_closed(day):
 
 
 @transaction.atomic
+def dose_summary(day, shift):
+    """Dosi programmate del turno al momento della chiusura: registrate, mancanti, registrate in ritardo (oltre 60
+    minuti dall'orario). Restano nel riepilogo della chiusura: gli indicatori del pilota non dipendono da come
+    cambiano le terapie dopo."""
+    from fasas.clinical.services import scheduled_doses
+
+    doses = scheduled_doses(day, shift)
+    documented = [d for d in doses if d.done]
+    late = [d for d in documented
+            if d.administration.occurred_at > d.moment + datetime.timedelta(minutes=LATE_MINUTES)]
+    return {"doses_total": len(doses), "doses_documented": len(documented),
+            "doses_missing": len(doses) - len(documented), "doses_late": len(late)}
+
+
+LATE_MINUTES = 60
+
+
 def close_shift(day, shift, user=None, automatic=False, handover_notes=""):
     """Chiude il turno: da questo momento i dati del turno non sono più modificabili."""
     lock_audit_chain()
@@ -39,6 +56,7 @@ def close_shift(day, shift, user=None, automatic=False, handover_notes=""):
         "checklist_total": status["total"],
         "checklist_done": status["done"],
         "missing": [f"{m['guest']}: {m['item']}" for m in status["missing"]][:200],
+        **dose_summary(day, shift),
     }
     if existing:  # turno riaperto in via straordinaria che viene richiuso
         existing.reopened_at = None

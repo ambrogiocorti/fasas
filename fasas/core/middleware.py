@@ -116,6 +116,27 @@ class LoginRequiredMiddleware:
         return self.get_response(request)
 
 
+class ModuleSwitchMiddleware:
+    """Le pagine di un modulo spento (Configurazione › Moduli) rispondono «funzione spenta»."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        return self.get_response(request)
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        from django.shortcuts import render
+
+        from . import modules
+
+        match = request.resolver_match
+        module = modules.for_view(match.namespace, match.url_name) if match else None
+        if module is None or modules.is_on(module.key, getattr(request, "fasas_config", None)):
+            return None
+        return render(request, "core/module_off.html", {"module": module}, status=404)
+
+
 class ApiSwitchMiddleware:
     """API REST /api/v1/ spenta di default (FASAS_API_ENABLED): risponde 404 come se non esistesse."""
 

@@ -31,10 +31,10 @@
     <span class="label">Evacuazioni <span class="stat-icon">{% icon "timer" %}</span></span>
     <span class="value"><a href="{% url 'daily:evacuations' %}">{% if evacuation_mode == 'A' %}{{ evacuation_missing|length }}{% else %}{{ evacuation_alerts|length }}{% endif %}</a></span>
     <small>{% if evacuation_mode == 'A' %}ospiti da registrare oggi{% else %}ospiti oltre la soglia{% endif %}</small></div>
-  <div class="card stat {% if protocols %}tone-danger{% endif %}">
+  {% if modules.protocols %}<div class="card stat {% if protocols %}tone-danger{% endif %}">
     <span class="label">Protocolli da eseguire <span class="stat-icon">{% icon "flag" %}</span></span>
     <span class="value"><a href="{% url 'protocols:activations' %}">{{ protocols|length }}</a></span>
-    <small>{% if protocols %}azioni richieste{% else %}nessuna azione richiesta{% endif %}</small></div>
+    <small>{% if protocols %}azioni richieste{% else %}nessuna azione richiesta{% endif %}</small></div>{% endif %}
 </div>
 
 <div class="grid grid-2">
@@ -99,10 +99,10 @@
     </ul>
   </div>
 
-  <div class="card">
+  {% if modules.staffing %}<div class="card">
     <div class="card-head"><h2>I miei prossimi turni</h2><div class="actions">{% if perms.staffing.add_leaverequest %}<a class="btn btn-sm" href="{% url 'staffing:my' %}">{% icon "calendar-days" %}I miei turni</a>{% endif %}</div></div>
     <ul class="list-plain">{% for e in my_shifts %}<li><span class="pill mono">{{ e.date|date:"D d/m" }}</span> <span class="att code-{{ e.code }}">{{ e.code }}</span> {{ e.get_code_display }}{% if e.is_lead %} <span class="pill pill-info">responsabile</span>{% endif %}</li>{% empty %}<li class="muted">Nessun turno pubblicato nei prossimi giorni.</li>{% endfor %}</ul>
-  </div>
+  </div>{% endif %}
 
   <div class="card">
     <h2>In servizio</h2>

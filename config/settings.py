@@ -94,6 +94,7 @@ INSTALLED_APPS = [
     "fasas.offline",
     "fasas.billing",
     "fasas.staffing",
+    "fasas.feedback",
     "fasas.api",
 ]
 
@@ -112,6 +113,7 @@ MIDDLEWARE = [
     "fasas.audit.middleware.AuditContextMiddleware",
     "fasas.core.middleware.RemoteAccessMiddleware",
     "fasas.core.middleware.LoginRequiredMiddleware",
+    "fasas.core.middleware.ModuleSwitchMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"

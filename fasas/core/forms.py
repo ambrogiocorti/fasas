@@ -6,7 +6,7 @@ from .models import Community, SystemConfig
 class SystemConfigForm(forms.ModelForm):
     class Meta:
         model = SystemConfig
-        exclude = ["community"]
+        exclude = ["community", "disabled_modules"]
         widgets = {
             "morning_start": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
             "afternoon_start": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),

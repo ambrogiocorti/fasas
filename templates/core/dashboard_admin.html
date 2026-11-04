@@ -74,9 +74,9 @@
   <div class="card">
     <div class="card-head"><h2>Protocolli e notifiche</h2></div>
     <ul class="list-plain">
-      <li><a href="{% url 'protocols:list' %}">{{ protocols_active }} protocolli automatici attivi</a>{% if protocols_unvalidated %} · <span class="pill pill-warn">{{ protocols_unvalidated }} non ancora validati dal medico</span>{% endif %}</li>
+      {% if modules.protocols %}<li><a href="{% url 'protocols:list' %}">{{ protocols_active }} protocolli automatici attivi</a>{% if protocols_unvalidated %} · <span class="pill pill-warn">{{ protocols_unvalidated }} non ancora validati dal medico</span>{% endif %}</li>{% endif %}
       <li><a href="{% url 'notifications:settings' %}">Impostazioni notifiche</a>{% if notifications_disabled %} · <span class="pill pill-warn">{{ notifications_disabled }} tipi disattivati</span>{% endif %}</li>
-      <li><a href="{% url 'reports:schedule_list' %}">Report programmati</a></li>
+      {% if modules.reports %}<li><a href="{% url 'reports:schedule_list' %}">Report programmati</a></li>{% endif %}
     </ul>
   </div>
 

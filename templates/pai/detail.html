@@ -20,7 +20,7 @@
   </tbody></table>
   {% if pai.summary %}<p style="margin-top:.8rem">{{ pai.summary|linebreaksbr }}</p>{% endif %}
 </div>
-{% if assessments %}
+{% if modules.assessments and assessments %}
 <div class="card table-wrap">
   <div class="card-head"><h3>Valutazioni più recenti</h3><div class="actions"><a class="btn btn-sm" href="{% url 'assessments:guest' guest.pk %}">Scale di valutazione</a></div></div>
   <table><thead><tr><th>Scala</th><th>Data</th><th class="num">Punteggio</th><th>Fascia</th></tr></thead>
@@ -28,7 +28,7 @@
     <td><span class="pill {% if a.band_level == 'danger' %}pill-danger{% elif a.band_level == 'warn' %}pill-warn{% else %}pill-ok{% endif %}">{{ a.band }}</span></td></tr>{% endfor %}</tbody></table>
 </div>
 {% endif %}
-{% if wounds %}
+{% if modules.wounds and wounds %}
 <div class="card table-wrap">
   <div class="card-head"><h3>Lesioni aperte</h3><div class="actions"><a class="btn btn-sm" href="{% url 'wounds:guest' guest.pk %}">Lesioni e medicazioni</a></div></div>
   <table><thead><tr><th>Lesione</th><th>Osservata</th><th>Categoria attuale</th><th>Medicazione in corso</th></tr></thead>

@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Moduli{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Moduli</h1><div class="actions"><a class="btn" href="{% url 'core:config' %}">{% icon "arrow-left" %}Configurazione</a></div></div>
+<p class="muted">Un modulo spento sparisce dal menu e dai cruscotti, le sue pagine non si aprono e i suoi promemoria non partono. <strong>I dati restano</strong>: riaccendendolo si ritrova tutto. Ospiti, terapie e giro farmaci, parametri, eventi, diario, consegne, checklist, chiusura turni, evacuazioni, documenti, modalità senza rete, audit e backup sono sempre attivi.</p>
+
+<div class="card">
+  <div class="card-head"><h2>Configurazione per il pilota</h2></div>
+  <p>Lascia accesi il nucleo e solo i moduli utili alle prime settimane. Spegne: {% for m in pilot_off %}<strong>{{ m.label }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}. Si riaccendono uno per uno quando servono.</p>
+  <form method="post" class="inline-form">{% csrf_token %}
+    <button class="btn btn-primary" name="action" value="pilot" data-confirm="Spegnere i moduli non necessari al pilota? I dati restano.">{% icon "flag" %}Applica la configurazione per il pilota</button>
+    <button class="btn" name="action" value="all">{% icon "check-circle" %}Accendi tutto</button>
+  </form>
+</div>
+
+<form method="post" class="card">
+  {% csrf_token %}
+  <div class="card-head"><h2>Uno per uno</h2></div>
+  <div class="module-list">
+    {% for row in modules_list %}
+    <label class="module-row">
+      <input type="checkbox" name="on" value="{{ row.module.key }}"{% if row.on %} checked{% endif %}>
+      <span><strong>{{ row.module.label }}</strong>{% if not row.module.pilot %} <span class="pill">spento nel pilota</span>{% endif %}<small class="muted">{{ row.module.description }}</small></span>
+    </label>
+    {% endfor %}
+  </div>
+  <div class="form-actions"><button class="btn btn-primary" name="action" value="save">Salva</button></div>
+</form>
+{% endblock %}

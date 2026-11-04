@@ -7,7 +7,7 @@ from .models import Role
 MANAGED_APPS = [
     "core", "accounts", "audit", "guests", "documents", "signatures", "pharmacy", "clinical", "daily",
     "protocols", "appointments", "pai", "notifications", "reports", "backups", "assessments",
-    "wounds",
+    "wounds", "feedback",
 ]
 
 # Consultazione della cartella: serve a chi assiste l'ospite (operatore, coordinatore, medico).
@@ -48,6 +48,8 @@ OPERATOR = VIEW_CARE + [
     "wounds.add_wound", "wounds.add_woundcheck", "wounds.add_dressing",
     # Continuità senza rete: pacchetto del turno sul dispositivo e foglio di emergenza stampabile
     "offline.use_offline",
+    # Segnalazioni del pilota: tutti possono segnalare un problema
+    "feedback.add_feedback",
     # Calendario turni: consulta i propri turni, chiede ferie/permessi e cambi turno
     "staffing.view_rotamonth", "staffing.add_leaverequest", "staffing.add_shiftchange",
 ]
@@ -90,6 +92,8 @@ COORDINATOR = OPERATOR + [
     # Passaggio dal cartaceo: importa anagrafiche, terapie, giacenze e documenti scansionati
     "imports.view_importbatch", "imports.add_importbatch",
     "offline.view_offlinerecord",
+    # Pilota: segnalazioni ricevute e indicatori (giro farmaci, registrazioni mancanti, checklist)
+    "feedback.view_feedback", "feedback.view_pilot_metrics",
     # Presenze per la rendicontazione: controlla, corregge e chiude il mese
     "billing.view_attendancemonth", "billing.add_attendancecorrection", "billing.change_attendancecorrection",
     "billing.close_attendance",
@@ -106,6 +110,7 @@ COORDINATOR = OPERATOR + [
 DOCTOR = VIEW_CARE + [
     # Durante un'interruzione consulta terapie, allergie e contatti sul proprio dispositivo, senza registrare nulla
     "offline.view_offline_pack",
+    "feedback.add_feedback",
     "core.edit_after_window",
     "guests.add_diagnosis", "guests.change_diagnosis", "guests.add_allergy", "guests.change_allergy",
     "documents.add_document",
@@ -139,6 +144,8 @@ ADMIN = [
     "signatures.manage_signer_devices",
     # Registro delle accettazioni della firma con CIE (conservazione 20 anni, copie su richiesta)
     "signatures.view_feaacceptance",
+    # Pilota: riceve e gestisce le segnalazioni, vede gli indicatori
+    "feedback.add_feedback", "feedback.view_feedback", "feedback.change_feedback", "feedback.view_pilot_metrics",
 ]
 
 # Amministrativo (ufficio amministrativo, oltre la spec. §2): presenze per la rendicontazione, rette, prospetti
@@ -153,6 +160,7 @@ ADMINISTRATIVE = [
     "notifications.view_notification",
     # Consultazione del calendario turni (ore pianificate per le paghe)
     "staffing.view_rotamonth",
+    "feedback.add_feedback",
 ]
 
 ROLE_PERMISSIONS = {

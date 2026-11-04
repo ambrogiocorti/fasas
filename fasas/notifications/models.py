@@ -29,6 +29,7 @@ class NotificationKind(models.TextChoices):
     WOUND_NEW = "wound_new", "Nuova lesione segnalata"
     DRESSING_DUE = "dressing_due", "Medicazione o rivalutazione di una lesione in ritardo"
     POWER = "power", "Corrente assente o tornata (gruppo di continuità)"
+    FEEDBACK = "feedback", "Nuova segnalazione dal pilota"
 
 
 DEFAULT_ROLES = {
@@ -58,6 +59,7 @@ DEFAULT_ROLES = {
     NotificationKind.WOUND_NEW: ["coordinator", "doctor"],
     NotificationKind.DRESSING_DUE: ["coordinator"],
     NotificationKind.POWER: ["admin", "coordinator", "operator"],
+    NotificationKind.FEEDBACK: ["admin"],
 }
 
 # Tipi inviati di default anche come notifica push sui dispositivi iscritti (modificabile dall'amministratore).
@@ -94,6 +96,7 @@ REQUIRED_PERMISSION = {
     NotificationKind.ROTA_REQUEST: "staffing.change_leaverequest",
     NotificationKind.ROTA_ANSWER: "staffing.view_rotamonth",
     NotificationKind.SYSTEM_ERROR: "core.view_errorevent",
+    NotificationKind.FEEDBACK: "feedback.view_feedback",
 }
 
 

@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import content_disposition_header
 
@@ -67,4 +68,32 @@ def guest_export(request, guest_pk):
         "submit_label": "Genera PDF", "cancel_url": guest.get_absolute_url(),
         "intro": "Genera un unico PDF con dati anagrafici e sanitari, PAI, terapie, eventi e documenti: "
                  "da consegnare quando l'ospite cambia struttura. L'esportazione è registrata nell'audit log.",
+    })
+
+
+@permission_required("reports.add_generatedreport", raise_exception=True)
+def inspection(request):
+    """Pacchetto «pronto per l'ispezione»: un PDF con la situazione di oggi e i dati del periodo, archiviato come i
+    report (cifrato, con la stessa conservazione) e registrato nell'audit."""
+    import datetime
+
+    from .forms import InspectionForm
+    from .inspection import build_inspection
+
+    today = timezone.localdate()
+    form = InspectionForm(request.POST or None, initial={"start": today - datetime.timedelta(days=29), "end": today})
+    if request.method == "POST" and form.is_valid():
+        start, end = form.cleaned_data["start"], form.cleaned_data["end"]
+        data = build_inspection(start, end, request.user)
+        report = store_report(data, "Pacchetto per l'ispezione", "inspection", ReportFormat.PDF, request.user,
+                              None, start, end)
+        messages.success(request, "Pacchetto generato: resta disponibile nell'archivio report.")
+        return redirect("reports:download", pk=report.pk)
+    return render(request, "generic/form.html", {
+        "form": form, "page_title": "Pacchetto per l'ispezione", "submit_label": "Genera PDF",
+        "cancel_url": reverse("reports:list"),
+        "intro": "Un unico PDF per la vigilanza ATS/ASL: ospiti in carico con lo stato del PAI, terapie e "
+                 "somministrazioni del periodo, eventi gravi e cadute, contenzioni, valutazioni e lesioni, farmaci "
+                 "scaduti, protocolli, documenti in scadenza, backup e verifica del registro delle operazioni. "
+                 "Contiene dati sanitari: va consegnato solo a chi effettua l'ispezione.",
     })

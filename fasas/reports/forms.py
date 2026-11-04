@@ -100,3 +100,18 @@ class GuestExportForm(forms.Form):
                                            initial=True)
     date_from = forms.DateField(label="Dati a partire dal (vuoto = tutto lo storico)", required=False,
                                 widget=DateInput())
+
+
+class InspectionForm(forms.Form):
+    start = forms.DateField(label="Dati dal", widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"))
+    end = forms.DateField(label="al", widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"))
+
+    def clean(self):
+        cleaned = super().clean()
+        start, end = cleaned.get("start"), cleaned.get("end")
+        if start and end:
+            if end < start:
+                raise forms.ValidationError("La data finale precede quella iniziale.")
+            if (end - start).days > 365:
+                raise forms.ValidationError("Il periodo può essere al massimo di un anno.")
+        return cleaned

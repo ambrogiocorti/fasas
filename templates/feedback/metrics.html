@@ -1,0 +1,55 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Indicatori del pilota{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Indicatori del pilota</h1><span class="subtitle">Dal {{ start|date:"d/m/Y" }} al {{ end|date:"d/m/Y" }}: numeri da confrontare con il cartaceo, settimana per settimana.</span></div>
+  <div class="actions"><a class="btn" href="?dal={{ start|date:'Y-m-d' }}&al={{ end|date:'Y-m-d' }}&formato=csv">{% icon "download" %}CSV</a>{% if perms.feedback.view_feedback %}<a class="btn" href="{% url 'feedback:list' %}">{% icon "message" %}Segnalazioni{% if open_feedback %} ({{ open_feedback }}){% endif %}</a>{% endif %}</div>
+</div>
+<form method="get" class="card filters">
+  <label>Dal <input type="date" name="dal" value="{{ start|date:'Y-m-d' }}"></label>
+  <label>Al <input type="date" name="al" value="{{ end|date:'Y-m-d' }}"></label>
+  <button class="btn">Aggiorna</button>
+</form>
+
+<div class="grid grid-4">
+  <div class="card stat"><span class="label">Dosi registrate <span class="stat-icon">{% icon "pill" %}</span></span>
+    <span class="value">{% if totals.documented_pct is not None %}{{ totals.documented_pct }}%{% else %}—{% endif %}</span>
+    <small>{{ totals.doses_documented }} di {{ totals.doses_total }} programmate</small></div>
+  <div class="card stat {% if totals.doses_missing %}tone-warn{% endif %}"><span class="label">Registrazioni mancanti <span class="stat-icon">{% icon "alert" %}</span></span>
+    <span class="value">{{ totals.doses_missing }}</span>
+    <small>{{ totals.doses_late }} registrate oltre 60 minuti{% if totals.late_pct is not None %} ({{ totals.late_pct }}%){% endif %}</small></div>
+  <div class="card stat"><span class="label">Durata del giro farmaci <span class="stat-icon">{% icon "timer" %}</span></span>
+    <span class="value">{% if totals.round_median is not None %}{{ totals.round_median }} min{% else %}—{% endif %}</span>
+    <small>mediana su {{ totals.rounds }} giri</small></div>
+  <div class="card stat"><span class="label">Checklist e segnalazioni <span class="stat-icon">{% icon "clipboard-check" %}</span></span>
+    <span class="value">{% if totals.checklist_pct is not None %}{{ totals.checklist_pct }}%{% else %}—{% endif %}</span>
+    <small>checklist completate · {{ totals.feedback }} segnalazioni</small></div>
+</div>
+{% if totals.closed < totals.expected_closures %}<div class="alert alert-info">{% icon "info" %}<div class="alert-body">Contati {{ totals.closed }} turni chiusi su {{ totals.expected_closures }}: dosi e checklist si contano alla chiusura del turno (i turni chiusi prima di questa versione non hanno il conteggio delle dosi).</div></div>{% endif %}
+
+<div class="grid grid-2">
+  <div class="card table-wrap">
+    <h2>Giro farmaci per orario</h2>
+    <table><thead><tr><th>Orario</th><th class="num">Giri</th><th class="num">Mediana</th><th class="num">Più lungo</th></tr></thead>
+      <tbody>{% for s in slots %}<tr><td class="mono">{{ s.time|time:"H:i" }}</td><td class="num">{{ s.rounds }}</td><td class="num">{{ s.median }} min</td><td class="num">{{ s.max }} min</td></tr>
+      {% empty %}<tr><td colspan="4" class="muted">Nessun giro con almeno due dosi registrate.</td></tr>{% endfor %}</tbody></table>
+    <p class="muted"><small>Tempo tra la prima e l'ultima registrazione delle dosi dello stesso orario.</small></p>
+  </div>
+  <div class="card">
+    <h2>Segnalazioni per tipo</h2>
+    <ul class="list-plain">{% for k in feedback_by_kind %}<li>{{ k.label }}: <strong>{{ k.n }}</strong></li>{% endfor %}</ul>
+  </div>
+</div>
+
+<div class="card table-wrap">
+  <h2>Giorno per giorno</h2>
+  <table><thead><tr><th>Giorno</th><th class="num">Turni chiusi</th><th class="num">Dosi</th><th class="num">Registrate</th><th class="num">Mancanti</th><th class="num">In ritardo</th><th class="num">Giro (min)</th><th class="num">Checklist</th><th class="num">Segnalazioni</th></tr></thead>
+    <tbody>{% for r in rows %}<tr>
+      <td>{{ r.day|date:"D d/m" }}</td><td class="num">{{ r.closed }}/3</td><td class="num">{{ r.doses_total }}</td>
+      <td class="num">{% if r.documented_pct is not None %}{{ r.documented_pct }}%{% else %}—{% endif %}</td>
+      <td class="num">{% if r.doses_missing %}<span class="pill pill-warn">{{ r.doses_missing }}</span>{% else %}0{% endif %}</td>
+      <td class="num">{{ r.doses_late }}</td><td class="num">{{ r.round_median|default_if_none:"—" }}</td>
+      <td class="num">{% if r.checklist_pct is not None %}{{ r.checklist_pct }}%{% else %}—{% endif %}</td><td class="num">{{ r.feedback }}</td></tr>{% endfor %}</tbody></table>
+</div>
+<p class="muted"><small>Come usarli: docs/PIANO_PILOTA.md. Gli stessi numeri vanno raccolti sul cartaceo nelle settimane di confronto.</small></p>
+{% endblock %}

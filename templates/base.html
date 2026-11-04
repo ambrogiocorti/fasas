@@ -70,6 +70,7 @@
       {% if perms.clinical.add_clinicalevent %}
       <a class="btn btn-emergency" href="{% url 'clinical:emergency' %}{% if guest %}?guest={{ guest.pk }}{% endif %}" title="Registra un evento critico">{% icon "alert" %}<span class="hide-mobile">Evento critico</span></a>
       {% endif %}
+      {% if modules.feedback and perms.feedback.add_feedback %}<a class="icon-btn" href="{% url 'feedback:create' %}?da={{ request.path|urlencode }}" title="Segnala un problema" aria-label="Segnala un problema">{% icon "message" %}</a>{% endif %}
       <a class="icon-btn" href="{% url 'notifications:list' %}" data-notifications-url="{% url 'notifications:count' %}" aria-label="Notifiche" title="Notifiche">{% icon "bell" %}<span class="badge" {% if not unread_notifications %}hidden{% endif %}>{{ unread_notifications }}</span></a>
       <form method="post" action="{% url 'accounts:set_theme' %}" class="inline-form">
         {% csrf_token %}

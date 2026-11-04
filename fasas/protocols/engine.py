@@ -15,6 +15,8 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from fasas.core.modules import when_on
+
 from .models import Protocol, ProtocolActivation
 
 logger = logging.getLogger("fasas.protocols")
@@ -68,6 +70,7 @@ def resolve(activation, user=None, notes="", automatic=False, status=ProtocolAct
 
 # --- Hook in tempo reale -----------------------------------------------------------------
 
+@when_on("protocols")
 def on_parameter_reading(reading):
     guest = reading.guest
     code = reading.parameter_type.code
@@ -88,6 +91,7 @@ def on_parameter_reading(reading):
                      {"reading": reading.pk, "value": str(value), "direction": "high"})
 
 
+@when_on("protocols")
 def on_clinical_event(event):
     from fasas.clinical.models import ClinicalEvent
 
@@ -110,6 +114,7 @@ def on_clinical_event(event):
                          {"event": event.pk, "count": count})
 
 
+@when_on("protocols")
 def on_sos_administration(administration):
     from fasas.clinical.models import TherapyAdministration
 
@@ -125,6 +130,7 @@ def on_sos_administration(administration):
                      {"administration": administration.pk, "count": count})
 
 
+@when_on("protocols")
 def on_evacuation(record):
     """Un'evacuazione registrata chiude automaticamente il protocollo evacuazione aperto."""
     if not record.outcome:
@@ -153,6 +159,7 @@ def check_evacuation(guest, today=None):
     return activations
 
 
+@when_on("protocols")
 def run_periodic_checks(today=None):
     from fasas.guests.models import Guest
 
@@ -162,6 +169,7 @@ def run_periodic_checks(today=None):
     return {"evacuation_activations": count}
 
 
+@when_on("protocols", default=ProtocolActivation.objects.none)
 def open_activations(guest=None):
     qs = ProtocolActivation.objects.filter(status__in=ProtocolActivation.OPEN_STATES).select_related("protocol", "guest")
     if guest is not None:

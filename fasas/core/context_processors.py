@@ -11,6 +11,10 @@ def fasas(request):
         "cie_enabled": settings.FASAS_CIE_ENABLED,
         "remote_signature_enabled": bool(settings.FASAS_CSC_SERVICE_URL),
     }
+    if flags["remote_signature_enabled"] and getattr(request, "fasas_config", None) is not None:
+        from .modules import is_on
+
+        flags["remote_signature_enabled"] = is_on("remote_signature", request.fasas_config)
     if not getattr(request, "user", None) or not request.user.is_authenticated:
         return flags
     from fasas.notifications.services import unread_for
@@ -21,8 +25,11 @@ def fasas(request):
     if theme == "auto":
         theme = "dark" if (shift == Shift.NIGHT and config.night_theme_auto) else "light"
     unread = unread_for(request.user).count()
+    from .modules import states
+
     return {
         **flags,
+        "modules": states(config),
         "current_shift": {"day": day, "code": shift, "label": Shift(shift).label},
         "community": config.community,
         "fasas_config": config,

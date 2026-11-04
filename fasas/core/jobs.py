@@ -32,9 +32,14 @@ JOBS = {
 
 
 def run_job(name):
+    from . import modules
     from .monitoring import job_finished, job_started
 
     path, _ = JOBS[name]
+    module = modules.for_job(name)
+    if module is not None and not modules.is_on(module.key):
+        logger.info("Job %s saltato: modulo «%s» spento", name, module.label)
+        return f"modulo «{module.label}» spento"
     func = import_string(path)
     job_started(name)
     try:
