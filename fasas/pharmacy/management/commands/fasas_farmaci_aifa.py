@@ -23,7 +23,7 @@ class Command(BaseCommand):
         if not path.is_file():
             raise CommandError(f"File non trovato: {path}")
         try:
-            with audit_context(user=None, ip="", reason="", source="comando fasas_farmaci_aifa"):
+            with audit_context(user=None, ip="", reason="", source="comando:farmaci_aifa"):
                 record = import_list(path.read_bytes(), path.name)
         except OfficialListError as exc:
             raise CommandError(str(exc)) from exc
