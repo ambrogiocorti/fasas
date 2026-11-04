@@ -214,7 +214,7 @@ che usa l'NFC del telefono al posto del lettore e le stesse API del Signer per c
 | Codice | Kotlin, NFC IsoDep, libreria IAS di PagoPA/IPZS (MIT) | SwiftUI, Core NFC, CieSDK di PagoPA (MIT) + patch per la firma |
 | Compilazione | ✅ APK di prova compilato da GitHub (artifact `fasas-signer-android-prova`) | ✅ compila su macOS nella CI, senza firma |
 | Installazione | APK di prova da installare sul telefono (gratuito) | serve l'Apple Developer Program e TestFlight |
-| Collaudo con una CIE reale | ⬜ | ⬜ |
+| Collaudo con una CIE reale | ✅ CIE + PIN FASAS (registrazione e lettura, 4/11/2026); ⬜ firma con il PIN della carta | ⬜ |
 | Guida | [mobile/android](../mobile/android/README.md) | [mobile/ios](../mobile/ios/README.md) |
 
 Per la prova, `avvia-telefono.bat` avvia il FASAS raggiungibile dal telefono sulla stessa Wi-Fi e mostra
@@ -317,8 +317,10 @@ L'unica via hardware sono chiavi di sicurezza personali con lettore di impronte 
 Provato con carte di prova (CSCA, Document Signer, SOD e chiave della carta generati nei test): registrazione,
 PIN FASAS (anche troppo facile, errato con nuovo tentativo, blocco dopo 5), conferma solo da un altro
 amministratore, accesso al documento; rifiutati carta diversa da quella registrata, clone senza chiave privata, SOD
-di una CSCA estranea, stessa carta per due utenti. **Non provato con una CIE reale**: comandi verso la carta, formato
-della risposta all'autenticazione interna e SOD reale vanno collaudati con la propria CIE.
+di una CSCA estranea, stessa carta per due utenti. **Provato con una CIE reale** su un telefono Android (4/11/2026):
+registrazione della carta (SOD verificato con i certificati CSCA del Ministero, autenticazione interna) e lettura
+con il PIN FASAS. Resta da provare su altri modelli di telefono e di carta: ognuno fa la prova con la propria CIE
+alla registrazione.
 
 ## 9. Prove eseguite
 

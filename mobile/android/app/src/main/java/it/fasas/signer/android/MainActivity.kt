@@ -33,7 +33,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * FASAS Signer per Android – PROTOTIPO NON ANCORA COLLAUDATO con una CIE reale.
+ * FASAS Signer per Android – versione di prova: CIE + PIN FASAS provata con una CIE reale; firma con il PIN della
+ * carta non ancora collaudata.
  * Flusso: richiesta dal FASAS → conferma (codice di controllo) → PIN di 8 cifre → «avvicina la CIE» →
  * sessione NFC (canale sicuro, certificato, firma) → esito. Il PIN non lascia il telefono.
  * La lettura resta attiva finché non c'è un esito: se la carta si sposta basta riappoggiarla.

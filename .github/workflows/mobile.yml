@@ -39,14 +39,13 @@ jobs:
         run: |
           gradle --no-daemon -Pandroid.useAndroidX=true :app:recordPaparazziDebug
           ls -la app/src/test/snapshots/images/
-          # un foglio compatto per tema anche nel log (base64), per controllarle senza scaricare l'archivio
+          # un foglio piccolo nel log (base64), per controllare l'aspetto senza scaricare l'archivio
           command -v montage > /dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick > /dev/null)
           cd app/src/test/snapshots/images
-          for theme in Light Dark; do
-            montage *${theme}ScreensTest* -tile 4x2 -geometry 260x+6+6 -background '#888888' /tmp/foglio-$theme.jpg
-            convert /tmp/foglio-$theme.jpg -quality 60 /tmp/foglio-$theme.jpg
-            echo "==FOGLIO $theme $(stat -c %s /tmp/foglio-$theme.jpg)"; base64 -w0 /tmp/foglio-$theme.jpg; echo; echo "==FINE $theme"
-          done
+          montage $(ls *Light*pronto* *Light*avvicina* *Light*richiesta* *Light*pin* *Dark*pronto* *Dark*richiesta*) \
+            -tile 3x2 -geometry 200x+4+4 -background '#808080' /tmp/foglio.png
+          convert /tmp/foglio.png -colors 64 PNG8:/tmp/foglio8.png
+          echo "==FOGLIO $(stat -c %s /tmp/foglio8.png)"; base64 -w0 /tmp/foglio8.png; echo; echo "==FINE"
       - uses: actions/upload-artifact@v4
         with:
           name: fasas-signer-android-schermate
