@@ -7,3 +7,5 @@ local.properties
 app/src/main/java/it/ipzs/cieidsdk/nfc/
 app/src/main/java/it/ipzs/cieidsdk/exceptions/
 app/THIRD_PARTY_*
+# schermate generate da Paparazzi (FASAS_SCREENSHOTS=1)
+app/src/test/snapshots/

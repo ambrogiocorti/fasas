@@ -11,5 +11,7 @@ buildscript {
     dependencies {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21")
         if (hasAndroidSdk) classpath("com.android.tools.build:gradle:8.7.3")
+        // Schermate dell'app disegnate sul computer, senza telefono (solo con FASAS_SCREENSHOTS=1, vedi app/build.gradle.kts)
+        if (hasAndroidSdk && System.getenv("FASAS_SCREENSHOTS") == "1") classpath("app.cash.paparazzi:paparazzi-gradle-plugin:1.3.5")
     }
 }

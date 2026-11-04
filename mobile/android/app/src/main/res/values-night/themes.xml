@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Fasas" parent="android:Theme.Material.NoActionBar">
+        <item name="android:colorPrimary">@color/fasas_primary</item>
+        <item name="android:colorPrimaryDark">@color/fasas_bg</item>
+        <item name="android:colorAccent">@color/fasas_primary</item>
+        <item name="android:colorControlActivated">@color/fasas_primary</item>
+        <item name="android:windowBackground">@color/fasas_bg</item>
+        <item name="android:statusBarColor">@color/fasas_bg</item>
+        <item name="android:navigationBarColor">@color/fasas_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:textColorPrimary">@color/fasas_text</item>
+        <item name="android:textColorSecondary">@color/fasas_muted</item>
+        <item name="android:alertDialogTheme">@style/Theme.Fasas.Dialog</item>
+    </style>
+
+    <style name="Theme.Fasas.Dialog" parent="android:Theme.Material.Dialog.Alert">
+        <item name="android:colorAccent">@color/fasas_primary</item>
+        <item name="android:colorPrimary">@color/fasas_primary</item>
+        <item name="android:windowBackground">@drawable/dialog_background</item>
+        <item name="android:textColorPrimary">@color/fasas_text</item>
+        <item name="android:textColorSecondary">@color/fasas_text_2</item>
+        <item name="android:buttonBarButtonStyle">@style/Fasas.DialogButton</item>
+    </style>
+
+    <style name="Fasas.DialogButton" parent="android:Widget.Material.Button.Borderless.Colored">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/fasas_primary</item>
+    </style>
+</resources>

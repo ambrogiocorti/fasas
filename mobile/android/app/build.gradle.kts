@@ -11,8 +11,8 @@ android {
         applicationId = "it.fasas.signer.android"
         minSdk = 26          // java.util.Base64 e IsoDep con timeout estesi
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1-prototipo"
+        versionCode = 2
+        versionName = "0.2-prova"
     }
     buildTypes {
         release {
@@ -29,4 +29,11 @@ android {
 
 dependencies {
     implementation(project(":signer-core"))
+}
+
+// Schermate dell'app (chiaro e scuro) disegnate da Paparazzi senza telefono né emulatore, per controllarne l'aspetto:
+//   FASAS_SCREENSHOTS=1 gradle :app:recordPaparazziDebug   → app/src/test/snapshots/images/
+if (System.getenv("FASAS_SCREENSHOTS") == "1") {
+    apply(plugin = "app.cash.paparazzi")
+    android.sourceSets.getByName("test").java.srcDir("src/screenshots/kotlin")
 }

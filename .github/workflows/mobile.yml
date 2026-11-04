@@ -32,6 +32,20 @@ jobs:
           name: fasas-signer-android-prova
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+      - name: Schermate dell'app in chiaro e scuro (Paparazzi, senza telefono)
+        continue-on-error: true
+        env:
+          FASAS_SCREENSHOTS: "1"
+        run: |
+          gradle --no-daemon :app:recordPaparazziDebug
+          # anche nel log, in base64, per controllarle senza scaricare l'archivio
+          for f in app/src/test/snapshots/images/*.png; do echo "==SCHERMATA $(basename "$f")"; base64 -w0 "$f"; echo; done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fasas-signer-android-schermate
+          path: mobile/android/app/src/test/snapshots/images/
+          retention-days: 30
+          if-no-files-found: ignore
 
   ios:
     # Verifica che l'app per iPhone compili (senza firma: per installarla serve un account Apple Developer)
