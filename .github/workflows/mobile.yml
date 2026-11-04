@@ -70,7 +70,8 @@ jobs:
           PY
       - name: Senza chiave della struttura niente APK definitivo
         if: env.FASAS_ANDROID_KEYSTORE_B64 == ''
-        run: echo "::notice::Segreti FASAS_ANDROID_KEYSTORE_B64 e password non impostati: compilata solo la versione di prova (docs/FIRMA_CIE.md, «Distribuire l'app»)."
+        run: |
+          echo "::notice::Segreti FASAS_ANDROID_KEYSTORE_B64 e password non impostati: compilata solo la versione di prova (docs/FIRMA_CIE.md, «Distribuire l'app»)."
       - uses: actions/upload-artifact@v4
         if: env.FASAS_ANDROID_KEYSTORE_B64 != ''
         with:
