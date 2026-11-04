@@ -20,4 +20,8 @@ urlpatterns = [
     "interazioni", "interaction", DrugInteraction, DrugInteractionForm,
     ("ingredient_a", "ingredient_b", "severity", "description", "validation"),
     search_fields=("ingredient_a", "ingredient_b"), namespace="pharmacy",
-) + [path("interazioni/<int:pk>/valida/", views.interaction_validate, name="interaction_validate")]
+) + [
+    path("interazioni/<int:pk>/valida/", views.interaction_validate, name="interaction_validate"),
+    path("elenco-ufficiale/", views.official_list, name="official_list"),
+    path("elenco-ufficiale/cerca/", views.official_search, name="official_search"),
+]

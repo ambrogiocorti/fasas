@@ -425,3 +425,115 @@
   kind.addEventListener('change', sync);
   sync();
 })();
+
+// Farmaci: ricerca nell'elenco ufficiale AIFA; scegliendo una confezione si compilano nome, principio attivo,
+// ATC e AIC (i campi restano modificabili). Il lettore di codici a barre funziona come una tastiera.
+(function () {
+  const input = document.querySelector('[data-official-search]');
+  if (!input) return;
+  const box = document.createElement('div');
+  box.className = 'lookup-results';
+  box.setAttribute('role', 'listbox');
+  box.hidden = true;
+  input.insertAdjacentElement('afterend', box);
+  const set = (id, value) => { const f = document.getElementById(id); if (f && value) f.value = value; };
+  const choose = (p) => {
+    set('id_name', p.name);
+    set('id_active_ingredient', (p.ingredients || '').toLowerCase());
+    set('id_atc_code', p.atc);
+    set('id_aic_code', p.aic);
+    set('id_strength', p.description);
+    input.value = p.name + ' ' + p.description;
+    box.hidden = true;
+  };
+  let timer = null;
+  let last = '';
+  const run = () => {
+    const q = input.value.trim();
+    if (q.length < 3 || q === last) return;
+    last = q;
+    fetch(input.dataset.officialSearch + '?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+      .then((r) => (r.ok ? r.json() : { results: [] }))
+      .then((data) => {
+        box.textContent = '';
+        data.results.forEach((p) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.setAttribute('role', 'option');
+          b.innerHTML = '<strong></strong> <span></span><small></small>';
+          b.children[0].textContent = p.name;
+          b.children[1].textContent = p.description;
+          b.children[2].textContent = 'AIC ' + p.aic + (p.ingredients ? ' · ' + p.ingredients : '') + (p.atc ? ' · ' + p.atc : '');
+          b.addEventListener('click', () => choose(p));
+          box.appendChild(b);
+        });
+        if (!data.results.length) box.innerHTML = '<p class="muted">Nessuna confezione trovata.</p>';
+        box.hidden = false;
+        if (data.results.length === 1 && /^\d{9,}$/.test(q.replace(/\D/g, '')) && !/[a-z]{2}/i.test(q)) choose(data.results[0]);
+      })
+      .catch(() => {});
+  };
+  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(run, 250); });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(timer); last = ''; run(); } });
+})();
+
+// Giro farmaci: controllo della confezione con il lettore di codici a barre (o la fotocamera, dove il browser sa
+// leggere i codici). Evidenzia le dosi da dare ora con quel farmaco; è un promemoria visivo: non registra nulla e
+// non sostituisce il controllo di farmaco, dose e ospite.
+(function () {
+  const input = document.querySelector('[data-pack-check]');
+  if (!input) return;
+  const out = document.getElementById('pack-check-result');
+  const rows = Array.from(document.querySelectorAll('.dose-row[data-aic]'));
+  const show = (kind, text) => { out.className = 'alert alert-' + kind; out.hidden = false; out.querySelector('.alert-body').textContent = text; };
+  const check = (code) => {
+    const digits = (code || '').replace(/\D/g, '');
+    rows.forEach((r) => r.classList.remove('pack-match'));
+    if (digits.length < 9) { show('warning', 'Codice troppo corto: serve il codice AIC della confezione (9 cifre).'); return; }
+    const hits = rows.filter((r) => r.dataset.aic && digits.indexOf(r.dataset.aic) !== -1);
+    const todo = hits.filter((r) => !r.classList.contains('done'));
+    if (!hits.length) {
+      show('danger', 'Questa confezione non corrisponde a nessun farmaco in terapia in questo turno. Controllare farmaco e ospite prima di somministrare.');
+    } else if (!todo.length) {
+      show('warning', 'Confezione di ' + hits[0].dataset.drug + ': le dosi di questo turno sono già registrate.');
+    } else {
+      todo.forEach((r) => r.classList.add('pack-match'));
+      show('success', 'Confezione di ' + todo[0].dataset.drug + ': ' + todo.length + (todo.length === 1 ? ' dose da dare: ' : ' dosi da dare: ') +
+        todo.map((r) => r.dataset.guest + ' alle ' + r.dataset.time).join(', ') + '. Controllare comunque dose e ospite.');
+      todo[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    input.select();
+  };
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); check(input.value); } });
+  input.addEventListener('change', () => check(input.value));
+
+  const cam = document.querySelector('[data-pack-camera]');
+  if (!cam || !('BarcodeDetector' in window) || !navigator.mediaDevices) return;
+  cam.hidden = false;
+  cam.addEventListener('click', async () => {
+    let stream;
+    const video = document.createElement('video');
+    video.className = 'pack-video';
+    video.setAttribute('playsinline', '');
+    cam.insertAdjacentElement('afterend', video);
+    try {
+      const detector = new window.BarcodeDetector({ formats: ['code_39', 'code_128', 'data_matrix', 'ean_13'] });
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = stream;
+      await video.play();
+      const stop = () => { stream.getTracks().forEach((t) => t.stop()); video.remove(); };
+      const started = Date.now();
+      const scan = async () => {
+        const codes = await detector.detect(video).catch(() => []);
+        if (codes.length) { stop(); input.value = codes[0].rawValue; check(codes[0].rawValue); return; }
+        if (Date.now() - started > 20000) { stop(); show('warning', 'Nessun codice letto: avvicinare la confezione o scrivere il codice AIC.'); return; }
+        setTimeout(scan, 250);
+      };
+      scan();
+    } catch (err) {
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+      video.remove();
+      show('warning', 'Fotocamera non disponibile: usare il lettore o scrivere il codice AIC.');
+    }
+  });
+})();

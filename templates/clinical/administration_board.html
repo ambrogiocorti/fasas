@@ -11,6 +11,13 @@
   </div>
 </div>
 {% include "partials/shift_nav.html" %}
+{% if pack_check and not closed %}
+<div class="card">
+  <label for="pack-check"><strong>{% icon "barcode" %} Controllo confezione</strong> <small class="muted">passa il lettore di codici a barre sulla confezione o scrivi il codice AIC: si evidenziano le dosi da dare ora con quel farmaco.</small></label>
+  <div class="pack-check"><input id="pack-check" type="text" inputmode="numeric" autocomplete="off" data-pack-check placeholder="Codice AIC o codice a barre"><button type="button" class="btn" data-pack-camera hidden>{% icon "barcode" %}Fotocamera</button></div>
+  <div id="pack-check-result" class="alert" role="status" hidden>{% icon "info" %}<div class="alert-body"></div></div>
+</div>
+{% endif %}
 {% for guest, doses in grouped.items %}
   <div class="card">
     <div class="card-head">
@@ -21,7 +28,7 @@
     {% with allergies=guest.allergies.all %}{% if allergies %}<div class="allergy-banner">{% icon "alert" %}<span>Allergie: {% for a in allergies %}{{ a.substance }}{% if not forloop.last %}, {% endif %}{% endfor %}</span></div>{% endif %}{% endwith %}
     {% for t in guest.tags.all %}{% if t.alert_message %}{% if forloop.first %}<div class="hints">{% endif %}<div class="hint">{% icon "info" %}<span><strong>{{ t.name }}:</strong> {{ t.alert_message }}</span></div>{% endif %}{% if forloop.last %}</div>{% endif %}{% endfor %}
     {% for d in doses %}
-      <div class="dose-row {% if d.done %}done{% elif d.overdue %}overdue{% endif %}">
+      <div class="dose-row {% if d.done %}done{% elif d.overdue %}overdue{% endif %}"{% if d.therapy.drug.aic_code %} data-aic="{{ d.therapy.drug.aic_code }}" data-drug="{{ d.therapy.drug }}" data-guest="{{ guest.last_name }} {{ guest.first_name }}" data-time="{{ d.time|time:'H:i' }}"{% endif %}>
         <div class="time">{{ d.time|time:"H:i" }}</div>
         <div><span class="drug">{{ d.therapy.drug }}</span> – {{ d.therapy.dose_display }} <small class="muted">· {{ d.therapy.get_route_display }}</small>{% if d.overdue %} <span class="pill pill-danger">in ritardo</span>{% endif %}
           {% if d.therapy.instructions %}<br><small>{{ d.therapy.instructions }}</small>{% endif %}

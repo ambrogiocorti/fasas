@@ -19,6 +19,7 @@
   </ul></div>
   <div class="card"><h2>Farmaci</h2><ul class="list-plain">
     {% if perms.pharmacy.view_drug %}<li><a href="{% url 'pharmacy:drug_list' %}">Catalogo farmaci</a></li>{% endif %}
+    {% if perms.pharmacy.view_drug %}<li><a href="{% url 'pharmacy:official_list' %}">Elenco ufficiale dei medicinali (AIFA)</a></li>{% endif %}
     {% if perms.pharmacy.view_druginteraction %}<li><a href="{% url 'pharmacy:interaction_list' %}">Interazioni farmacologiche</a></li>{% endif %}
     {% if modules.stock and perms.pharmacy.add_stocklot %}<li><a href="{% url 'pharmacy:lot_load' %}">Carico magazzino</a></li>{% endif %}
   </ul></div>

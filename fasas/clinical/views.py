@@ -223,6 +223,8 @@ def administration_board(request):
         "total": len(doses), "done": sum(1 for d in doses if d.done), "sos_today": sos_today,
         "shifts": Shift.choices, "closed": is_shift_closed(day, shift),
         "prev_day": day - datetime.timedelta(days=1), "next_day": day + datetime.timedelta(days=1),
+        # controllo della confezione: solo se almeno un farmaco del turno ha il codice AIC
+        "pack_check": any(d.therapy.drug.aic_code for d in doses),
     })
 
 

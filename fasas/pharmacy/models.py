@@ -144,3 +144,47 @@ class StockMovement(models.Model):
 
     def __str__(self):
         return f"{self.get_kind_display()} {self.quantity} – {self.lot}"
+
+
+class OfficialPackage(models.Model):
+    """Confezione dall'elenco ufficiale dei medicinali (open data AIFA, CC BY 4.0). Solo consultazione: si sostituisce
+    per intero a ogni caricamento e non tocca i farmaci già inseriti nel FASAS."""
+
+    aic = models.CharField("codice AIC", max_length=9, unique=True)
+    name = models.CharField("medicinale", max_length=200, db_index=True)
+    description = models.CharField("confezione", max_length=300, blank=True)
+    holder = models.CharField("titolare AIC", max_length=200, blank=True)
+    atc = models.CharField("ATC", max_length=10, blank=True)
+    ingredients = models.CharField("principio attivo", max_length=300, blank=True)
+    form = models.CharField("forma", max_length=120, blank=True)
+    status = models.CharField("stato", max_length=60, blank=True)
+
+    class Meta:
+        verbose_name = "confezione dell'elenco ufficiale"
+        verbose_name_plural = "elenco ufficiale dei medicinali"
+        ordering = ["name", "description"]
+        permissions = [("import_official_list", "Può caricare l'elenco ufficiale dei medicinali")]
+
+    def __str__(self):
+        return f"{self.name} {self.description}".strip()
+
+    def as_json(self):
+        return {"aic": self.aic, "name": self.name, "description": self.description, "holder": self.holder,
+                "atc": self.atc, "ingredients": self.ingredients, "form": self.form, "status": self.status}
+
+
+class OfficialListImport(models.Model):
+    created_at = models.DateTimeField("caricato il", default=timezone.now)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
+    source_name = models.CharField("file", max_length=200)
+    packages = models.PositiveIntegerField("confezioni")
+    skipped = models.PositiveIntegerField("righe scartate", default=0)
+    sha256 = models.CharField("impronta del file", max_length=64)
+
+    class Meta:
+        verbose_name = "caricamento dell'elenco ufficiale"
+        verbose_name_plural = "caricamenti dell'elenco ufficiale"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Elenco ufficiale del {timezone.localtime(self.created_at):%d/%m/%Y} ({self.packages} confezioni)"

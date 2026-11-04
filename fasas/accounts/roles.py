@@ -70,6 +70,7 @@ COORDINATOR = OPERATOR + [
     "pharmacy.view_drug", "pharmacy.add_drug", "pharmacy.change_drug",
     "pharmacy.view_druginteraction", "pharmacy.add_druginteraction", "pharmacy.change_druginteraction",
     "pharmacy.view_stocklot", "pharmacy.add_stocklot", "pharmacy.change_stocklot", "pharmacy.view_stockmovement",
+    "pharmacy.import_official_list",
     # trascrizione delle prescrizioni del medico curante (il medico di struttura è opzionale)
     "clinical.add_therapy", "clinical.change_therapy", "clinical.validate_sos",
     "clinical.delete_therapyadministration", "clinical.delete_parameterreading", "clinical.delete_clinicalevent",
@@ -144,6 +145,8 @@ ADMIN = [
     "signatures.manage_signer_devices",
     # Registro delle accettazioni della firma con CIE (conservazione 20 anni, copie su richiesta)
     "signatures.view_feaacceptance",
+    # Elenco ufficiale dei medicinali (open data AIFA): lo carica e lo aggiorna, non tocca i farmaci in uso
+    "pharmacy.view_drug", "pharmacy.import_official_list",
     # Pilota: riceve e gestisce le segnalazioni, vede gli indicatori
     "feedback.add_feedback", "feedback.view_feedback", "feedback.change_feedback", "feedback.view_pilot_metrics",
 ]
