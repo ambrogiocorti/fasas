@@ -18,3 +18,7 @@ Il ruolo **non vede la cartella clinica**: solo presenze, rette e prospetti.
 - Le regole di conteggio e le percentuali vanno verificate con l'ATS e con il contratto o la convenzione.
 - I prospetti non sono fatture elettroniche: se servono, si esportano verso il gestionale contabile.
 - Un mese riaperto dopo la chiusura richiede una motivazione, registrata.
+
+**Durante il pilota**: per ogni errore o cosa scomoda, il **fumetto** in alto (*Segnala un problema*): pagina e ora si
+salvano da sole; niente nomi né dati sanitari degli ospiti. Testo più grande: *Il mio profilo* → Dimensione del
+testo. Se il cruscotto dice che *Presenze e rette* è spento, lo riaccende l'amministratore di sistema (i dati restano).
