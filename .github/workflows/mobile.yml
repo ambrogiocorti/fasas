@@ -118,6 +118,14 @@ jobs:
           echo "==ICONA $(stat -c %s /tmp/i8.png)"; base64 -w0 /tmp/i8.png; echo; echo "==FINE"
           convert /tmp/f.png -colors 48 PNG8:/tmp/f8.png
           echo "==FOGLIO $(stat -c %s /tmp/f8.png)"; base64 -w0 /tmp/f8.png; echo; echo "==FINE"
+      - name: Schermate singole a piena risoluzione (per video e guide)
+        run: |
+          cd schermate
+          for n in abbinamento pronto avvicina-la-cie lettura richiesta pin-fasas esito aggiornamento; do
+            f=$(ls *Light*"$n"* 2>/dev/null | head -1)
+            [ -n "$f" ] || continue
+            echo "==SCHERMATA $n $(stat -c %s "$f")"; base64 -w0 "$f"; echo; echo "==FINE"
+          done
 
   ios:
     # Verifica che l'app per iPhone compili (senza firma: per installarla serve un account Apple Developer)
