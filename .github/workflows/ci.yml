@@ -233,10 +233,19 @@ jobs:
         run: python scripts/prova_cloud.py "$(cat ospite.txt)"
       - name: Ripristino del backup sopra il database in uso (lo schema public di Supabase resta)
         run: |
+          # backup nuovo, con l'ospite e il documento appena caricati (quello dell'avvio è precedente)
+          docker exec fasas python manage.py fasas_jobs backup
           docker exec fasas sh -c 'python manage.py backup_restore --confirm "$(ls -t /data/backups/*.fbk | head -1)"'
           docker exec fasas python manage.py audit_verify
-          test "$(psql "$DB_URL" -Atc "SELECT has_schema_privilege('anon', 'public', 'USAGE')")" = t
-          test "$(psql "$DB_URL" -Atc "SELECT count(*) FROM public.guests_guest")" = 1
+          usage=$(psql "$DB_URL" -Atc "SELECT has_schema_privilege('anon', 'public', 'USAGE')")
+          guests=$(psql "$DB_URL" -Atc "SELECT count(*) FROM public.guests_guest")
+          versions=$(psql "$DB_URL" -Atc "SELECT count(*) FROM public.documents_documentversion")
+          echo "schema public usabile da anon (come prima): $usage; ospiti: $guests; versioni di documenti: $versions"
+          test "$usage" = t && test "$guests" = 1 && test "$versions" = 1
+          test "$(psql "$DB_URL" -Atc "SELECT count(*) FROM pg_tables WHERE schemaname = 'public' AND NOT rowsecurity")" = 0
+          test "$(psql "$DB_URL" -Atc "SELECT count(*) FROM information_schema.role_table_grants WHERE table_schema = 'public' AND grantee IN ('anon', 'authenticated', 'service_role')")" = 0
+          # dopo il ripristino il documento si scarica ancora (file rimessi nel bucket)
+          python scripts/prova_cloud.py "$(cat ospite.txt)"
       - name: Memoria usata dal container
         run: docker stats --no-stream fasas
       - name: Log in caso di errore

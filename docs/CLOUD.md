@@ -143,6 +143,7 @@ file dello Storage (i backup di Supabase, dove ci sono, contengono solo il datab
 | Internet in struttura | Indispensabile. Se manca: modalità senza rete e foglio di emergenza ([PIANO_DI_CONTINUITA.md](PIANO_DI_CONTINUITA.md)); conviene una seconda linea (anche il telefono) |
 | Accesso da fuori | Il FASAS è su internet: verifica in due passaggi obbligatoria per amministratore, coordinatore e medico (consigliata per tutti: `FASAS_2FA_REQUIRED_ROLES`) |
 | Limitare l'accesso alla rete della struttura | Possibile con `FASAS_ALLOWED_NETWORKS` (IP pubblico della struttura); provarlo prima, perché blocca anche i telefoni fuori dal Wi-Fi |
+| IP degli utenti nel registro degli accessi | Letto dall'intestazione del proxy del servizio di hosting (`FASAS_TRUSTED_PROXY_COUNT=1` predefinito in cloud). Se nel registro compare sempre lo stesso indirizzo per tutti, il servizio ha più proxy in fila: aumentare il numero |
 | Prova di ripristino trimestrale | Parziale (controllo dell'archivio) se non c'è un secondo database vuoto in `FASAS_RESTORE_TEST_DATABASE_URL` |
 | Ripristino completo | Su un progetto Supabase nuovo: `python manage.py backup_restore --confirm FILE` con le variabili del nuovo progetto; i file tornano nel bucket indicato da `FASAS_S3_BUCKET` |
 | Firma con CIE | Uguale: l'app FASAS Signer si collega al dominio HTTPS |
