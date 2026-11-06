@@ -43,6 +43,7 @@ def client():
         aws_access_key_id=settings.FASAS_OFFSITE_ACCESS_KEY,
         aws_secret_access_key=settings.FASAS_OFFSITE_SECRET_KEY,
         config=Config(retries={"max_attempts": 5, "mode": "standard"}, connect_timeout=20, read_timeout=300,
+                      s3={"addressing_style": settings.FASAS_OFFSITE_ADDRESSING_STYLE},
                       request_checksum_calculation="when_required", response_checksum_validation="when_required"),
     )
 
@@ -70,10 +71,12 @@ def upload_file(path, name, metadata=None, s3=None):
     with open(path, "rb") as body:
         for block in iter(lambda: body.read(1024 * 1024), b""):
             md5.update(block)
-    # Content-MD5: il fornitore rifiuta un caricamento arrivato alterato (e con Object Lock è obbligatorio)
+    # Content-MD5: il fornitore rifiuta un caricamento arrivato alterato (e con Object Lock è obbligatorio).
+    # Supabase Storage non lo gestisce (né Object Lock): lì il controllo resta quello della dimensione qui sotto.
+    if lock or settings.FASAS_OFFSITE_CONTENT_MD5:
+        lock["ContentMD5"] = base64.b64encode(md5.digest()).decode()
     with open(path, "rb") as body:
-        s3.put_object(Bucket=settings.FASAS_OFFSITE_BUCKET, Key=key, Body=body, Metadata=metadata or {},
-                      ContentMD5=base64.b64encode(md5.digest()).decode(), **lock)
+        s3.put_object(Bucket=settings.FASAS_OFFSITE_BUCKET, Key=key, Body=body, Metadata=metadata or {}, **lock)
     head = s3.head_object(Bucket=settings.FASAS_OFFSITE_BUCKET, Key=key)
     if head["ContentLength"] != size:
         raise OffsiteError(f"Copia fuori sede incompleta: {head['ContentLength']} byte invece di {size}.")

@@ -12,7 +12,25 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
 
 ## Non ancora rilasciato
 
-Nessuna novità.
+Nuova modalità d'installazione, senza funzioni nuove per il personale (il blocco del pilota resta).
+
+### Versione cloud (docs/CLOUD.md)
+- **Il FASAS su un dominio senza server in struttura**: un container (`FASAS_CLOUD=1`) con sito e pianificatore dei
+  job, porta `$PORT`, file statici serviti dal FASAS (WhiteNoise), dominio da `FASAS_DOMAIN`; `render.yaml` pronto
+  per Render (piano gratuito, pubblicazione manuale dopo il collaudo).
+- **Supabase**: migrazioni SQL in `supabase/migrations` (schema, dati iniziali, protezione dalle API: RLS su ogni
+  tabella e nessun privilegio ad `anon`, `authenticated`, `service_role`), generate da
+  `scripts/genera_migrazioni_supabase.py` e provate nella CI con l'immagine ufficiale del PostgreSQL di Supabase.
+- **File cifrati su Supabase Storage** (S3): indirizzi «path», niente intestazioni non supportate; il controllo di
+  salute verifica lo storage.
+- **Pianificatore integrato** (`manage.py fasas_pianificatore`) al posto di Celery e Redis: stessi orari (ora
+  un'unica tabella anche per Celery), recupero dei job saltati mentre il servizio era fermo, una sola esecuzione
+  anche con più copie attive, cambi dell'ora legale senza backup persi o doppi.
+- **Backup** con i file dell'object storage e ripristino che li rimette al loro posto; su Supabase `pg_dump` del solo
+  schema `public` e ripristino che non tocca lo schema; copia fuori sede anche su un bucket Supabase.
+- **Primo amministratore** da `FASAS_ADMIN_USERNAME` e `FASAS_ADMIN_PASSWORD` se non ce n'è nessuno.
+- Controlli all'avvio che fermano un servizio senza storage dei file, dominio o chiavi; `/salute/` risponde ai
+  controlli interni del servizio di hosting con qualsiasi Host.
 
 ## 0.10.0 – 04/11/2026 – versione per il pilota
 

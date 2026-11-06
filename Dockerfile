@@ -23,12 +23,14 @@ WORKDIR /app
 COPY requirements.lock .
 RUN pip install --require-hashes -r requirements.lock
 COPY --chown=fasas:fasas . .
-RUN DJANGO_SECRET_KEY=solo-per-collectstatic DJANGO_DEBUG=0 python manage.py collectstatic --noinput --verbosity 0
+# file statici anche compressi (.gz): nella versione cloud li serve il FASAS stesso (WhiteNoise)
+RUN DJANGO_SECRET_KEY=solo-per-collectstatic DJANGO_DEBUG=0 FASAS_SERVE_STATIC=1 \
+    python manage.py collectstatic --noinput --verbosity 0
 
 USER fasas
 EXPOSE 8000
 VOLUME ["/data"]
 HEALTHCHECK --interval=60s --timeout=10s --start-period=60s --retries=3 \
-  CMD python -c "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/salute/', timeout=8)" || exit 1
+  CMD python -c "import os, urllib.request as u; u.urlopen('http://127.0.0.1:%s/salute/' % os.environ.get('PORT', '8000'), timeout=8)" || exit 1
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
 CMD ["web"]

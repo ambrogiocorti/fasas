@@ -26,15 +26,20 @@ Un piccolo server Linux (2 vCPU, 4 GB RAM) è sufficiente. In alternativa a Cele
 nel database (responsabile del trattamento, contratto art. 28, regione UE) e i piani gratuiti si sospendono per
 inattività: valutarlo con il DPO. Se si sceglie:
 
+Per tutto in cloud (sito compreso, senza server) c'è la guida dedicata [CLOUD.md](CLOUD.md), con le migrazioni SQL
+in `supabase/migrations`.
+
 1. Creare un progetto Supabase in una **regione UE** (es. Francoforte) e firmare il DPA (accordo sul trattamento dei dati).
-2. In *Project Settings → Database* copiare la stringa di connessione in modalità **Session** (porta 5432) o la
-   connessione diretta. Non usare la modalità *Transaction* (porta 6543): Django usa connessioni persistenti e lock di sessione.
+2. Pulsante *Connect* → copiare la stringa di connessione **Session pooler** (porta 5432). Non usare la modalità
+   *Transaction* (porta 6543): Django usa connessioni persistenti e il backup con `pg_dump` non funziona.
 3. Impostare `DATABASE_URL` e `DATABASE_SSL_REQUIRE=1` nel file `.env`.
 4. FASAS non usa le API REST di Supabase: dopo ogni `migrate` attiva automaticamente la Row Level Security su tutte
-   le tabelle e revoca i privilegi ai ruoli `anon` e `authenticated` (si può rilanciare con `manage.py supabase_harden`).
-   Non pubblicare comunque la chiave `service_role`.
+   le tabelle e revoca i privilegi ai ruoli `anon`, `authenticated` e `service_role` (si può rilanciare con
+   `manage.py supabase_harden`). Non usare né pubblicare comunque la chiave `service_role`.
 5. Per i backup con `pg_dump` installare un client PostgreSQL della **stessa versione o superiore** a quella del progetto
    Supabase (es. `postgresql-client-17`). Se `pg_dump` non è disponibile il backup usa un export JSON di Django.
+   Con un database Supabase il backup salva solo lo schema `public` (gli altri schemi sono del servizio):
+   `FASAS_BACKUP_PG_SCHEMAS`.
 
 ## 2. Applicazione
 

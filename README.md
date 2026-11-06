@@ -56,6 +56,12 @@ Backblaze B2 nel piano gratuito, gruppo di continuità; con lista della spesa e 
 `scripts/prepara_server.sh` fa la parte tecnica ed è provato a ogni modifica nella CI; la manutenzione del mese è
 `scripts/aggiorna_fasas.sh`, anche da casa con la VPN dell'amministratore (`scripts/accesso_remoto.sh`).
 
+## Versione cloud (dominio + Supabase)
+
+Senza server in struttura: [docs/CLOUD.md](docs/CLOUD.md). Un container presso un servizio di hosting (pronto
+`render.yaml` per Render), il dominio della struttura, database e file cifrati su Supabase con le migrazioni SQL in
+[`supabase/migrations`](supabase/migrations). Sito e job nello stesso container (`FASAS_CLOUD=1`), senza Redis.
+
 Riferimenti tecnici per chi installa diversamente: [docs/CONTAINER.md](docs/CONTAINER.md) (Docker su un altro server),
 [docs/DEPLOY.md](docs/DEPLOY.md) (installazione tradizionale senza Docker, anche con un database gestito).
 

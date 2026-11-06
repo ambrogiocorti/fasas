@@ -59,8 +59,30 @@ if not SECRET_KEY:
     else:
         raise RuntimeError("DJANGO_SECRET_KEY deve essere impostata in produzione")
 
+# Versione cloud (docs/CLOUD.md): un solo container dietro l'HTTPS del servizio di hosting, file statici serviti dal
+# FASAS (WhiteNoise), job periodici dal pianificatore integrato (niente Redis), file cifrati su object storage S3.
+FASAS_CLOUD = env_bool("FASAS_CLOUD", False)
+
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
+
+
+def public_hosts():
+    """Dominio pubblico (FASAS_DOMAIN, anche più di uno) e nome assegnato dal servizio di hosting (Render)."""
+    hosts = []
+    for value in env_list("FASAS_DOMAIN") + env_list("RENDER_EXTERNAL_HOSTNAME"):
+        host = value.lower().removeprefix("https://").removeprefix("http://").split("/")[0].strip()
+        if host and host not in hosts:
+            hosts.append(host)
+    return hosts
+
+
+FASAS_PUBLIC_HOSTS = public_hosts()
+for _host in FASAS_PUBLIC_HOSTS:
+    if _host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_host)
+    if f"https://{_host}" not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(f"https://{_host}")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -100,6 +122,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # /salute/ risponde prima dei controlli su Host e reti: i controlli dei servizi di hosting arrivano da indirizzi
+    # interni con un Host qualsiasi. La risposta non contiene dati (il dettaglio solo con FASAS_HEALTH_TOKEN).
+    "fasas.core.middleware.HealthCheckMiddleware",
     "fasas.core.middleware.ApiSwitchMiddleware",
     "fasas.core.middleware.AllowedNetworksMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -115,6 +140,12 @@ MIDDLEWARE = [
     "fasas.core.middleware.LoginRequiredMiddleware",
     "fasas.core.middleware.ModuleSwitchMiddleware",
 ]
+
+# File statici serviti dal FASAS stesso quando davanti non c'è un proxy che li serve (versione cloud)
+FASAS_SERVE_STATIC = env_bool("FASAS_SERVE_STATIC", FASAS_CLOUD)
+if FASAS_SERVE_STATIC:
+    MIDDLEWARE.insert(MIDDLEWARE.index("fasas.core.middleware.HealthCheckMiddleware") + 1,
+                      "whitenoise.middleware.WhiteNoiseMiddleware")
 
 ROOT_URLCONF = "config.urls"
 SERIALIZATION_MODULES = {"fasasjson": "fasas.core.exactjson"}  # backup JSON con orari esatti (microsecondi)
@@ -146,6 +177,11 @@ DATABASES = {
 }
 # Ogni richiesta è atomica: una modifica e il suo audit log vengono salvati insieme o per niente.
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
+# Connessioni riusate controllate prima dell'uso: i pooler (Supabase) chiudono quelle rimaste ferme
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
+if str(DATABASES["default"].get("PORT") or "") == "6543":
+    # pooler di Supabase in modalità transazione: niente istruzioni preparate lato server (meglio la porta 5432)
+    DATABASES["default"].setdefault("OPTIONS", {})["prepare_threshold"] = None
 if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
     # SQLite (prove e sviluppo): transazioni IMMEDIATE evitano «database is locked» con richieste contemporanee
     DATABASES["default"].setdefault("OPTIONS", {}).update({"transaction_mode": "IMMEDIATE", "timeout": 20})
@@ -177,18 +213,37 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_ROOT = Path(os.environ.get("FASAS_MEDIA_ROOT", BASE_DIR / "media"))
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage" if FASAS_SERVE_STATIC
+                    else "django.contrib.staticfiles.storage.StaticFilesStorage"},
 }
-if os.environ.get("FASAS_S3_BUCKET"):
+# File cifrati su object storage compatibile S3 (versione cloud: Supabase Storage, bucket privato).
+# Le chiavi S3 sono solo del server: non sono la chiave «service_role» di Supabase e non vanno mai nel browser.
+FASAS_S3_BUCKET = os.environ.get("FASAS_S3_BUCKET", "")
+# Disco persistente montato su /data (alternativa allo storage S3 nella versione cloud, se il servizio lo offre)
+FASAS_PERSISTENT_DISK = env_bool("FASAS_PERSISTENT_DISK", False)
+if FASAS_S3_BUCKET:
+    from botocore.config import Config as _BotoConfig
+
+    _s3_endpoint = os.environ.get("FASAS_S3_ENDPOINT_URL", "").strip()
+    _s3_supabase = ".supabase.co" in _s3_endpoint  # Supabase Storage: niente intestazioni ACL, indirizzi «path»
     STORAGES["default"] = {
         "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
-            "bucket_name": os.environ["FASAS_S3_BUCKET"],
-            "endpoint_url": os.environ.get("FASAS_S3_ENDPOINT_URL") or None,
+            "bucket_name": FASAS_S3_BUCKET,
+            "endpoint_url": _s3_endpoint or None,
             "region_name": os.environ.get("FASAS_S3_REGION") or None,
-            "default_acl": "private",
+            "access_key": os.environ.get("FASAS_S3_ACCESS_KEY") or None,  # altrimenti AWS_ACCESS_KEY_ID
+            "secret_key": env_secret("FASAS_S3_SECRET_KEY") or None,
+            "default_acl": os.environ.get("FASAS_S3_DEFAULT_ACL", "" if _s3_supabase else "private") or None,
             "querystring_auth": True,
             "file_overwrite": False,
+            "client_config": _BotoConfig(
+                signature_version="s3v4",
+                s3={"addressing_style": os.environ.get("FASAS_S3_ADDRESSING_STYLE", "path" if _s3_supabase else "auto")},
+                retries={"max_attempts": 5, "mode": "standard"}, connect_timeout=20, read_timeout=120,
+                # i servizi compatibili S3 (Supabase compreso) non accettano tutte le impronte aggiunte da boto3 recenti
+                request_checksum_calculation="when_required", response_checksum_validation="when_required",
+            ),
         },
     }
 
@@ -231,6 +286,9 @@ FASAS_OFFSITE_REGION = os.environ.get("FASAS_OFFSITE_REGION", "")
 FASAS_OFFSITE_BUCKET = os.environ.get("FASAS_OFFSITE_BUCKET", "")
 FASAS_OFFSITE_ACCESS_KEY = os.environ.get("FASAS_OFFSITE_ACCESS_KEY", "")
 FASAS_OFFSITE_SECRET_KEY = env_secret("FASAS_OFFSITE_SECRET_KEY")
+FASAS_OFFSITE_ADDRESSING_STYLE = os.environ.get(
+    "FASAS_OFFSITE_ADDRESSING_STYLE", "path" if ".supabase.co" in FASAS_OFFSITE_ENDPOINT else "auto")
+FASAS_OFFSITE_CONTENT_MD5 = env_bool("FASAS_OFFSITE_CONTENT_MD5", ".supabase.co" not in FASAS_OFFSITE_ENDPOINT)
 FASAS_OFFSITE_PREFIX = os.environ.get("FASAS_OFFSITE_PREFIX", "fasas")
 FASAS_OFFSITE_LOCK_DAYS = int(os.environ.get("FASAS_OFFSITE_LOCK_DAYS", "30"))
 FASAS_OFFSITE_LOCK_MODE = os.environ.get("FASAS_OFFSITE_LOCK_MODE", "COMPLIANCE")  # COMPLIANCE | GOVERNANCE
@@ -238,9 +296,14 @@ FASAS_OFFSITE_KEEP_DAILY = int(os.environ.get("FASAS_OFFSITE_KEEP_DAILY", "30"))
 FASAS_OFFSITE_KEEP_MONTHLY = int(os.environ.get("FASAS_OFFSITE_KEEP_MONTHLY", "12"))
 # Database vuoto su cui provare il ripristino dei backup PostgreSQL (prova trimestrale). Vuoto = prova parziale.
 FASAS_RESTORE_TEST_DATABASE_URL = os.environ.get("FASAS_RESTORE_TEST_DATABASE_URL", "")
+# Schemi del database salvati da pg_dump (vuoto = tutto il database). Su Supabase solo «public»: gli altri schemi
+# (auth, storage, realtime…) sono del servizio, non del FASAS, e non si possono ripristinare con l'utente del FASAS.
+FASAS_BACKUP_PG_SCHEMAS = env_list(
+    "FASAS_BACKUP_PG_SCHEMAS", "public" if "supabase." in str(DATABASES["default"].get("HOST") or "") else "")
 # Reti autorizzate (CIDR). Vuoto = nessuna restrizione di rete applicativa.
 FASAS_ALLOWED_NETWORKS = env_list("FASAS_ALLOWED_NETWORKS")
-FASAS_TRUSTED_PROXY_COUNT = int(os.environ.get("FASAS_TRUSTED_PROXY_COUNT", "0"))
+# Proxy fidati davanti al FASAS (per leggere l'IP vero da X-Forwarded-For). In cloud c'è quello del servizio di hosting.
+FASAS_TRUSTED_PROXY_COUNT = int(os.environ.get("FASAS_TRUSTED_PROXY_COUNT", "1" if FASAS_CLOUD else "0"))
 # Tentativi di accesso falliti prima del blocco temporaneo
 FASAS_LOGIN_MAX_FAILURES = int(os.environ.get("FASAS_LOGIN_MAX_FAILURES", "5"))
 FASAS_LOGIN_LOCKOUT_MINUTES = int(os.environ.get("FASAS_LOGIN_LOCKOUT_MINUTES", "15"))
@@ -345,7 +408,7 @@ CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", False)
 
 # Monitoraggio (docs/MONITORAGGIO.md): dettaglio di /salute/ solo con questo token; spazio minimo su disco
 FASAS_HEALTH_TOKEN = env_secret("FASAS_HEALTH_TOKEN")
-FASAS_HEALTH_MIN_FREE_GB = float(os.environ.get("FASAS_HEALTH_MIN_FREE_GB", "5"))
+FASAS_HEALTH_MIN_FREE_GB = float(os.environ.get("FASAS_HEALTH_MIN_FREE_GB", "1" if FASAS_CLOUD else "5"))
 FASAS_ERROR_RECORDING = env_bool("FASAS_ERROR_RECORDING", True)
 
 LOGGING = {

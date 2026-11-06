@@ -35,7 +35,9 @@ COUNTED_TABLES = ["guests_guest", "clinical_therapy", "clinical_therapyadministr
 def _manage(args, database_url, workdir, timeout=1800):
     env = os.environ.copy()
     env.update({"DATABASE_URL": database_url, "FASAS_BACKUP_DIR": str(workdir), "FASAS_MEDIA_ROOT": str(workdir / "media"),
-                "FASAS_PUSH_ASYNC": "0"})
+                "FASAS_PUSH_ASYNC": "0",
+                # la prova non tocca lo storage dei file in uso: i file ripristinati restano nella cartella di prova
+                "FASAS_S3_BUCKET": "", "FASAS_CLOUD": "0"})
     return subprocess.run([sys.executable, str(Path(settings.BASE_DIR) / "manage.py"), *args], env=env,
                           capture_output=True, text=True, timeout=timeout, cwd=settings.BASE_DIR)
 

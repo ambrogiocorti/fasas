@@ -5,10 +5,12 @@ Supabase espone lo schema "public" tramite le sue API REST (PostgREST) ai ruoli 
 "authenticated": senza protezioni chiunque abbia la chiave pubblica del progetto potrebbe
 leggere le tabelle. FASAS non usa quelle API (accede solo via Django), quindi:
 - attiva la Row Level Security su ogni tabella, senza policy => nessun accesso via API;
-- revoca ai due ruoli ogni privilegio su tabelle, sequenze e funzioni, anche per le tabelle future.
+- revoca ai ruoli delle API ogni privilegio su tabelle, sequenze e funzioni, anche per le tabelle future;
+  anche a "service_role": se la sua chiave segreta finisse fuori, le API non darebbero comunque i dati del FASAS.
 Django si collega come proprietario delle tabelle e non è soggetto alla RLS.
+Le stesse istruzioni sono in supabase/migrations/*_fasas_protezione_api.sql per chi prepara il database a mano.
 """
-API_ROLES = ("anon", "authenticated")
+API_ROLES = ("anon", "authenticated", "service_role")
 
 
 def api_roles(cursor):

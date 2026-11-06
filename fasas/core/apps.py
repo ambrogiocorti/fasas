@@ -10,6 +10,7 @@ class CoreConfig(AppConfig):
 
         from fasas.audit.services import register
 
+        from . import cloud  # noqa: F401  (controlli della versione cloud)
         from .models import Community, SystemConfig
         from .supabase import post_migrate_setup
 

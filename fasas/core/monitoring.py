@@ -133,6 +133,25 @@ def _writable(path):
         return False
 
 
+_storage_state = {"at": 0.0, "value": None}
+
+
+def object_storage_state(max_age=300):
+    """Object storage dei file (versione cloud) raggiungibile? Si chiede al più ogni 5 minuti, non a ogni controllo."""
+    import time
+
+    from django.core.files.storage import default_storage
+
+    if _storage_state["value"] is None or time.monotonic() - _storage_state["at"] > max_age:
+        try:
+            default_storage.exists(".fasas-salute")
+            value = ("ok", "object storage raggiungibile")
+        except Exception as exc:  # solo il tipo di errore: niente indirizzi né chiavi
+            value = ("error", f"object storage non raggiungibile ({type(exc).__name__})")
+        _storage_state.update(at=time.monotonic(), value=value)
+    return _storage_state["value"]
+
+
 def ping_database():
     try:
         with connection.cursor() as cursor:
@@ -158,9 +177,16 @@ def checks():
 
     for kind, state, detail in check_keys():
         results.append((f"chiave_{kind}", state, detail))
-    for name, path in (("file", settings.MEDIA_ROOT), ("cartella_backup", settings.FASAS_BACKUP_DIR)):
+    from fasas.backups.services import media_on_disk
+
+    folders = [("cartella_backup", settings.FASAS_BACKUP_DIR)]
+    if media_on_disk():
+        folders.insert(0, ("file", settings.MEDIA_ROOT))
+    else:
+        results.append(("file", *object_storage_state()))
+    for name, path in folders:
         results.append((name, "ok" if _writable(path) else "error", "scrivibile" if _writable(path) else "non scrivibile"))
-    free = shutil.disk_usage(Path(settings.MEDIA_ROOT)).free / 1024 ** 3
+    free = shutil.disk_usage(Path(folders[0][1])).free / 1024 ** 3
     level = "ok" if free >= settings.FASAS_HEALTH_MIN_FREE_GB else "warning"
     results.append(("spazio_disco", level, f"{free:.1f} GB liberi"))
 

@@ -203,7 +203,9 @@ billiard==4.3.1 \
 boto3==1.43.122 \
     --hash=sha256:c923650d09e4c445564ca14d5ce89466c3083884b6f6c189f0f445fc17f02eb5 \
     --hash=sha256:cca51b3650080594a1df344b8a2e76007eab6d5fa50504a0b622dfdc14cdeaa1
-    # via -r requirements.txt
+    # via
+    #   -r requirements.txt
+    #   django-storages
 botocore==1.43.122 \
     --hash=sha256:2fc53b68b35314b1738cad46e6170d0556496863913451428fc3afccb8c7fa95 \
     --hash=sha256:668e608edf8847fc4c3c6b38688e183c3bcf19b8a1f7f58d33c03a6f3039bd49
@@ -599,7 +601,12 @@ django==5.2.18 \
     # via
     #   -r requirements.txt
     #   dj-database-url
+    #   django-storages
     #   djangorestframework
+django-storages==1.14.6 \
+    --hash=sha256:11b7b6200e1cb5ffcd9962bd3673a39c7d6a6109e8096f0e03d46fab3d3aabd9 \
+    --hash=sha256:7a25ce8f4214f69ac9c7ce87e2603887f7ae99326c316bc8d2d75375e09341c9
+    # via -r requirements.txt
 djangorestframework==3.18.3 \
     --hash=sha256:446a9b352e7eff630421ab3f2328bd2401b109a9470afa4a31189994911ed030 \
     --hash=sha256:8544bb674846731b1e3c9b309236ee1dc412905a0aa725be2ec193ca950a7d12
@@ -1544,6 +1551,10 @@ wcwidth==0.9.4 \
     --hash=sha256:f28d77153303450ee13ebbe888297e75cf532c754555b6cabafc9bdda16c421c \
     --hash=sha256:fd8d57d3cdfe570e3265c8fab1885c24e34ef40889c0759c0c304a19e9835954
     # via prompt-toolkit
+whitenoise==6.12.0 \
+    --hash=sha256:f723ebb76a112e98816ff80fcea0a6c9b8ecde835f8ddda25df7a30a3c2db6ad \
+    --hash=sha256:fc5e8c572e33ebf24795b47b6a7da8da3c00cff2349f5b04c02f28d0cc5a3cc2
+    # via -r requirements.txt
 yarl==1.25.1 \
     --hash=sha256:0136d640dfa9b0523853e411430a99f8a91eca85774c6420285a33b755bc6de3 \
     --hash=sha256:03dd38de09bc213e9a8b29761eec33ee1d5318dac0e49d8af36e4d27830e23a7 \

@@ -14,7 +14,7 @@ aggiornare e ripristinare; serve per correggere il codice.
 | Cosa | Dove |
 |---|---|
 | Codice | repository Git (`ambrogiocorti/fasas`), branch indicato da chi ha consegnato il FASAS |
-| Server | PC in struttura, Ubuntu Server con disco cifrato ([INSTALLAZIONE_IN_STRUTTURA.md](INSTALLAZIONE_IN_STRUTTURA.md)) |
+| Server | PC in struttura, Ubuntu Server con disco cifrato ([INSTALLAZIONE_IN_STRUTTURA.md](INSTALLAZIONE_IN_STRUTTURA.md)); nella versione cloud servizio di hosting + Supabase ([CLOUD.md](CLOUD.md)) |
 | Configurazione e chiavi | file `.env` sul server; copia nella **busta di custodia** in cassaforte (passo 11 della guida) |
 | Chiave di firma dell'app Android | file `fasas-signer.jks` e password: busta di custodia ([FIRMA_CIE.md](FIRMA_CIE.md), «Distribuire l'app») |
 | Backup | ogni notte cifrato sul server, copia fuori sede (Backblaze B2), copia mensile su USB, disco di continuità ogni 5 minuti ([BACKUP.md](BACKUP.md)) |

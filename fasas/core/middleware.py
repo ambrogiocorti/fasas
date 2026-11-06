@@ -23,6 +23,24 @@ def client_ip(request):
     return request.META.get("REMOTE_ADDR", "")
 
 
+class HealthCheckMiddleware:
+    """
+    /salute/ prima dei controlli su Host (ALLOWED_HOSTS) e reti: i controlli dei servizi di hosting e dei container
+    arrivano da indirizzi interni con un Host qualsiasi. La risposta dice solo stato e versione (il dettaglio dei
+    controlli richiede FASAS_HEALTH_TOKEN) e non usa l'Host della richiesta.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path == "/salute/" and request.method in ("GET", "HEAD"):
+            from .views import health
+
+            return health(request)
+        return self.get_response(request)
+
+
 class AllowedNetworksMiddleware:
     """Il sistema è accessibile solo dalle reti della comunità (FASAS_ALLOWED_NETWORKS)."""
 

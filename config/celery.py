@@ -2,8 +2,8 @@
 Pianificazione automatica dei job FASAS.
 
 Ogni job è una funzione registrata in fasas.core.jobs: Celery beat li esegue
-secondo la tabella sotto; in alternativa un cron può lanciare
-"python manage.py fasas_jobs <nome>".
+secondo la tabella SCHEDULE di fasas/core/scheduler.py; in alternativa un cron può lanciare
+"python manage.py fasas_jobs <nome>", oppure (versione cloud, senza Redis) gira «manage.py fasas_pianificatore».
 """
 import os
 
@@ -16,24 +16,9 @@ app = Celery("fasas")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks(["fasas.core"])
 
+# Orari in fasas/core/scheduler.py, gli stessi del pianificatore integrato della versione cloud
+from fasas.core.scheduler import SCHEDULE  # noqa: E402
+
 app.conf.beat_schedule = {
-    "chiusura-automatica-turni": {"task": "fasas.run_job", "schedule": crontab(minute="*/15"), "args": ("close_shifts",)},
-    "protocolli-periodici": {"task": "fasas.run_job", "schedule": crontab(minute="*/30"), "args": ("protocols",)},
-    "promemoria-appuntamenti": {"task": "fasas.run_job", "schedule": crontab(minute=5), "args": ("appointments",)},
-    "allarmi-magazzino": {"task": "fasas.run_job", "schedule": crontab(hour="6,18", minute=10), "args": ("stock",)},
-    "scadenze-documenti": {"task": "fasas.run_job", "schedule": crontab(hour=7, minute=10), "args": ("documents",)},
-    "scadenze-pai": {"task": "fasas.run_job", "schedule": crontab(hour=7, minute=0), "args": ("pai_reviews",)},
-    "scadenze-valutazioni": {"task": "fasas.run_job", "schedule": crontab(hour=7, minute=5), "args": ("assessments",)},
-    "medicazioni-in-ritardo": {"task": "fasas.run_job", "schedule": crontab(hour=7, minute=10), "args": ("wounds",)},
-    "report-programmati": {"task": "fasas.run_job", "schedule": crontab(hour=1, minute=15), "args": ("reports",)},
-    "pulizia-report-scaduti": {"task": "fasas.run_job", "schedule": crontab(hour=1, minute=45), "args": ("report_retention",)},
-    "gruppo-di-continuita": {"task": "fasas.run_job", "schedule": crontab(), "args": ("ups",)},
-    "copia-continua": {"task": "fasas.run_job", "schedule": crontab(minute="*/5"), "args": ("continuity",)},
-    "backup-giornaliero": {"task": "fasas.run_job", "schedule": crontab(hour=2, minute=30), "args": ("backup",)},
-    # prima del backup, così il backup e la sua copia fuori sede contengono il punto di controllo della notte
-    "verifica-catena-audit": {"task": "fasas.run_job", "schedule": crontab(hour=2, minute=0), "args": ("audit_verify",)},
-    "prova-ripristino-trimestrale": {"task": "fasas.run_job", "args": ("restore_test",),
-                                     "schedule": crontab(hour=4, minute=15, day_of_month=1, month_of_year="1,4,7,10")},
-    "pulizia-importazioni": {"task": "fasas.run_job", "schedule": crontab(hour=3, minute=50), "args": ("imports_cleanup",)},
-    "pulizia-firme-cie": {"task": "fasas.run_job", "schedule": crontab(minute="*/10"), "args": ("cie_cleanup",)},
+    name: {"task": "fasas.run_job", "schedule": crontab(**spec), "args": (job,)} for name, job, spec in SCHEDULE
 }

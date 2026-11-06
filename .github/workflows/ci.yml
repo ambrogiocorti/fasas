@@ -132,6 +132,120 @@ jobs:
       - run: docker compose down -v
         if: always()
 
+  cloud:
+    # Versione cloud (docs/CLOUD.md): migrazioni SQL di supabase/migrations applicate al PostgreSQL ufficiale di
+    # Supabase come dall'editor SQL, immagine avviata con FASAS_CLOUD=1 (sito + pianificatore, porta $PORT), file su
+    # object storage S3 di prova, poi prova completa via HTTP come dietro il dominio e ripristino di un backup.
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_POSTGRES_IMAGE: supabase/postgres:17.11.0.017
+      DB_URL: postgresql://postgres:prova-ci-supabase@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: PostgreSQL di Supabase
+        run: |
+          docker run -d --name supabase-db -p 5432:5432 -e POSTGRES_PASSWORD=prova-ci-supabase "$SUPABASE_POSTGRES_IMAGE"
+          for i in $(seq 1 60); do
+            psql "$DB_URL" -Atc "SELECT 1" > /dev/null 2>&1 && break
+            sleep 3
+          done
+          psql "$DB_URL" -Atc "SELECT version(), current_user, (SELECT rolsuper FROM pg_roles WHERE rolname = current_user)"
+          psql "$DB_URL" -Atc "SELECT string_agg(rolname, ', ') FROM pg_roles WHERE rolname IN ('anon', 'authenticated', 'service_role')"
+      - name: Migrazioni SQL (come nell'editor SQL di Supabase, utente postgres)
+        run: |
+          for f in supabase/migrations/*.sql; do
+            echo "== $f"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 --single-transaction -q -f "$f"
+          done
+          # una seconda volta il file di protezione: si può rieseguire
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/*_fasas_protezione_api.sql
+      - name: Le API di Supabase non arrivano ai dati
+        run: |
+          test "$(psql "$DB_URL" -Atc "SELECT count(*) FROM pg_tables WHERE schemaname = 'public' AND NOT rowsecurity")" = 0
+          test "$(psql "$DB_URL" -Atc "SELECT count(*) FROM information_schema.role_table_grants WHERE table_schema = 'public' AND grantee IN ('anon', 'authenticated', 'service_role')")" = 0
+          for role in anon authenticated service_role; do
+            if psql "$DB_URL" -Atc "SET ROLE $role; SELECT count(*) FROM public.core_systemconfig" 2>/dev/null; then
+              echo "il ruolo $role legge le tabelle"; exit 1
+            fi
+          done
+      - name: Storage S3 di prova
+        run: |
+          pip install "moto[server]==5.2.4" "boto3==1.43.122" "requests==2.34.2"
+          moto_server -p 5055 > moto.log 2>&1 &
+          sleep 3
+          python -c "import boto3; s3 = boto3.client('s3', endpoint_url='http://127.0.0.1:5055', region_name='eu-central-1', aws_access_key_id='prova', aws_secret_access_key='prova'); [s3.create_bucket(Bucket=b, CreateBucketConfiguration={'LocationConstraint': 'eu-central-1'}) for b in ('fasas-documenti', 'fasas-backup')]"
+      - run: docker build -t fasas:cloud .
+      - name: Avvio in modalità cloud
+        run: |
+          python3 -c "import base64,os,secrets; print('DJANGO_SECRET_KEY=' + secrets.token_hex(32)); print('FASAS_ENCRYPTION_KEYS=' + base64.urlsafe_b64encode(os.urandom(32)).decode()); print('FASAS_BACKUP_KEY=' + base64.urlsafe_b64encode(os.urandom(32)).decode())" > cloud.env
+          cat >> cloud.env <<'EOF'
+          FASAS_CLOUD=1
+          PORT=8123
+          FASAS_DOMAIN=fasas.prova.it
+          DATABASE_URL=postgresql://postgres:prova-ci-supabase@127.0.0.1:5432/postgres
+          FASAS_BACKUP_PG_SCHEMAS=public
+          FASAS_S3_BUCKET=fasas-documenti
+          FASAS_S3_ENDPOINT_URL=http://127.0.0.1:5055
+          FASAS_S3_REGION=eu-central-1
+          FASAS_S3_ACCESS_KEY=prova
+          FASAS_S3_SECRET_KEY=prova
+          FASAS_S3_DEFAULT_ACL=
+          FASAS_S3_ADDRESSING_STYLE=path
+          FASAS_OFFSITE_ENDPOINT=http://127.0.0.1:5055
+          FASAS_OFFSITE_REGION=eu-central-1
+          FASAS_OFFSITE_BUCKET=fasas-backup
+          FASAS_OFFSITE_ACCESS_KEY=prova
+          FASAS_OFFSITE_SECRET_KEY=prova
+          FASAS_OFFSITE_LOCK_DAYS=0
+          FASAS_OFFSITE_CONTENT_MD5=0
+          FASAS_OFFSITE_ADDRESSING_STYLE=path
+          FASAS_ADMIN_USERNAME=amministratore
+          FASAS_ADMIN_PASSWORD=Prova-Cloud-2026!x
+          FASAS_2FA_REQUIRED_ROLES=
+          FASAS_HEALTH_TOKEN=token-di-prova-salute
+          GUNICORN_WORKERS=1
+          GUNICORN_THREADS=8
+          EOF
+          sed -i 's/^ *//' cloud.env
+          docker run -d --name fasas --network host --env-file cloud.env fasas:cloud
+          for i in $(seq 1 60); do
+            curl -sf -H "Host: 10.0.0.9" http://127.0.0.1:8123/salute/ && break
+            sleep 3
+          done
+          docker logs fasas 2>&1 | head -20
+      - name: Ospite di prova (dati inventati)
+        run: |
+          docker exec -i fasas python manage.py shell <<'PY' | tail -1 > ospite.txt
+          import datetime
+          from fasas.audit.context import audit_context
+          from fasas.core.models import Community
+          from fasas.guests.models import Guest
+          with audit_context(source="prova"):
+              guest = Guest.objects.create(first_name="Mario", last_name="Prova", fiscal_code="RSSMRA40A01F205X",
+                                           birth_date=datetime.date(1940, 1, 1), community=Community.default())
+          print(guest.pk)
+          PY
+          cat ospite.txt
+      - name: Prova completa via HTTP
+        run: python scripts/prova_cloud.py "$(cat ospite.txt)"
+      - name: Ripristino del backup sopra il database in uso (lo schema public di Supabase resta)
+        run: |
+          docker exec fasas sh -c 'python manage.py backup_restore --confirm "$(ls -t /data/backups/*.fbk | head -1)"'
+          docker exec fasas python manage.py audit_verify
+          test "$(psql "$DB_URL" -Atc "SELECT has_schema_privilege('anon', 'public', 'USAGE')")" = t
+          test "$(psql "$DB_URL" -Atc "SELECT count(*) FROM public.guests_guest")" = 1
+      - name: Memoria usata dal container
+        run: docker stats --no-stream fasas
+      - name: Log in caso di errore
+        if: failure()
+        run: |
+          docker logs fasas 2>&1 | tail -150
+          docker logs supabase-db 2>&1 | tail -40
+          tail -20 moto.log
+
   installazione:
     # scripts/prepara_server.sh su un vero Ubuntu 24.04 con Docker, come nella guida d'installazione in struttura.
     # Dominio .localhost (certificato locale di Caddy), senza DuckDNS, firewall né backup fuori sede.

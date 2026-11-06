@@ -4,7 +4,8 @@ Backup automatici cifrati (sezione 19).
 Contenuto dell'archivio (tar.gz, poi cifrato AES-256-GCM):
 - manifest.json con versione, data e SHA-256 di ogni componente;
 - database.dump (pg_dump formato custom) su PostgreSQL, oppure database.json (dumpdata) negli altri casi;
-- media.tar con i file caricati (già cifrati singolarmente);
+- media.tar con i file caricati (già cifrati singolarmente), presi dalla cartella dei file o dall'object storage
+  S3 della versione cloud;
 - audit-punti-di-controllo.csv con i punti di controllo dell'audit (impronte e marche temporali).
 
 Dopo la verifica il backup viene copiato fuori sede (fasas.backups.offsite) se è configurato un object storage.
@@ -15,6 +16,7 @@ import io
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import tarfile
@@ -72,8 +74,9 @@ def _pg_env():
 def _dump_database(workdir):
     if connection.vendor == "postgresql" and shutil.which("pg_dump"):
         target = workdir / "database.dump"
+        schemas = [f"--schema={name}" for name in settings.FASAS_BACKUP_PG_SCHEMAS]  # Supabase: solo «public»
         result = subprocess.run(
-            ["pg_dump", "--format=custom", "--no-owner", "--no-privileges", "--file", str(target)],
+            ["pg_dump", "--format=custom", "--no-owner", "--no-privileges", *schemas, "--file", str(target)],
             env=_pg_env(), capture_output=True, text=True, timeout=3600,
         )
         if result.returncode != 0:
@@ -86,13 +89,57 @@ def _dump_database(workdir):
     return target, "json"
 
 
+def media_on_disk():
+    """Vero se i file caricati sono nella cartella MEDIA_ROOT; falso con l'object storage S3 (versione cloud)."""
+    from django.core.files.storage import FileSystemStorage, default_storage
+
+    return isinstance(default_storage, FileSystemStorage)
+
+
+def storage_files(storage, prefix=""):
+    """Tutti i file dello storage (percorsi relativi con «/»), cartella per cartella."""
+    folders, files = storage.listdir(prefix)
+    for name in sorted(files):
+        yield f"{prefix}{name}" if not prefix else f"{prefix.rstrip('/')}/{name}"
+    for folder in sorted(folders):
+        yield from storage_files(storage, f"{prefix.rstrip('/')}/{folder}" if prefix else folder)
+
+
 def _media_tar(workdir):
-    media_root = Path(settings.MEDIA_ROOT)
     target = workdir / "media.tar"
     with tarfile.open(target, "w") as tar:
-        if media_root.exists():
-            tar.add(media_root, arcname="media")
+        if media_on_disk():
+            media_root = Path(settings.MEDIA_ROOT)
+            if media_root.exists():
+                tar.add(media_root, arcname="media")
+            return target
+        from django.core.files.storage import default_storage
+
+        for name in storage_files(default_storage):
+            info = tarfile.TarInfo(f"media/{name}")
+            info.size = default_storage.size(name)
+            info.mtime = int(default_storage.get_modified_time(name).timestamp())
+            with default_storage.open(name, "rb") as handle:
+                tar.addfile(info, handle)
     return target
+
+
+def _restore_media(folder):
+    """File del backup di nuovo al loro posto, con lo stesso nome (i documenti li cercano per nome)."""
+    if media_on_disk():
+        shutil.copytree(folder, settings.MEDIA_ROOT, dirs_exist_ok=True)
+        return
+    from django.core.files import File
+    from django.core.files.storage import default_storage
+
+    for path in sorted(p for p in Path(folder).rglob("*") if p.is_file()):
+        name = path.relative_to(folder).as_posix()
+        if default_storage.exists(name):
+            default_storage.delete(name)
+        with open(path, "rb") as handle:
+            saved = default_storage.save(name, File(handle, name=path.name))
+        if saved != name:
+            raise BackupError(f"File {name} ripristinato con un nome diverso ({saved}).")
 
 
 def build_archive(workdir, created_at, include_media=True):
@@ -210,10 +257,28 @@ def _server_major():
     return connection.pg_version // 10000
 
 
+# Voci dell'indice di pg_restore da non eseguire: con «pg_dump --schema=public» (Supabase) l'archivio contiene anche
+# lo schema «public» stesso, che il ripristino cancellerebbe e ricreerebbe. Lo schema resta com'è: si sostituisce
+# solo ciò che contiene.
+SKIPPED_TOC = re.compile(r"^\d+; \d+ \d+ (SCHEMA - public|COMMENT - SCHEMA public) ")
+
+
+def _restore_list(dump, workdir):
+    """Indice dell'archivio senza le voci di SKIPPED_TOC (file per «pg_restore --use-list»)."""
+    listing = subprocess.run(["pg_restore", "--list", str(dump)], capture_output=True, text=True, timeout=600)
+    if listing.returncode != 0:
+        raise BackupError(f"Archivio pg_dump illeggibile: {listing.stderr.strip()[:500]}")
+    target = Path(workdir) / "indice-ripristino.txt"
+    target.write_text("".join(f";{line}\n" if SKIPPED_TOC.match(line) else f"{line}\n"
+                              for line in listing.stdout.splitlines()), encoding="utf-8")
+    return target
+
+
 def _pg_restore(dump):
     """Ripristino in un'unica transazione; verso server più vecchi del client si tolgono le impostazioni sconosciute."""
     database = settings.DATABASES["default"]["NAME"]
-    options = ["--clean", "--if-exists", "--no-owner", "--no-privileges"]
+    options = ["--clean", "--if-exists", "--no-owner", "--no-privileges",
+               "--use-list", str(_restore_list(dump, Path(dump).parent))]
     skip = {line for major, lines in NEWER_SERVER_SETTINGS.items() if _server_major() < major for line in lines}
     if not skip:
         result = subprocess.run(["pg_restore", *options, "--single-transaction", "--dbname", database, str(dump)],
@@ -320,7 +385,7 @@ def restore_backup(path, restore_media=True):
             with tarfile.open(workdir / "media.tar") as media:
                 media.extractall(workdir / "restored", filter="data")
             if (workdir / "restored" / "media").exists():
-                shutil.copytree(workdir / "restored" / "media", settings.MEDIA_ROOT, dirs_exist_ok=True)
+                _restore_media(workdir / "restored" / "media")
     return manifest
 
 
