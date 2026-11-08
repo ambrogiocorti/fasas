@@ -30,7 +30,7 @@ jobs:
       SERVER_DIR: ${{ vars.SERVER_DIR || '/opt/fasas' }}
       FASAS_URL: ${{ vars.FASAS_URL || 'https://fasas.online' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Versione da pubblicare
