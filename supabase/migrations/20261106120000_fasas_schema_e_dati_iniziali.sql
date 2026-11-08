@@ -9,6 +9,17 @@
 -- Nessun dato personale o sanitario, nessun utente: il primo amministratore si crea all'avvio (docs/CLOUD.md).
 -- Gli aggiornamenti futuri dello schema li applica il FASAS da solo a ogni avvio («migrate»).
 
+-- Solo in un progetto dedicato: se lo schema public contiene già tabelle (di un'altra applicazione o di
+-- un'installazione precedente) ci si ferma prima di creare qualsiasi cosa.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_catalog.pg_tables WHERE schemaname = 'public') THEN
+        RAISE EXCEPTION 'Lo schema public contiene già delle tabelle: il FASAS va installato in un progetto '
+                        'Supabase nuovo e dedicato. Nessuna modifica eseguita.';
+    END IF;
+END
+$$;
+
 --
 -- PostgreSQL database dump
 --
@@ -4036,7 +4047,7 @@ INSERT INTO public.core_community (id, name, code, address, phone, email, asl_co
 --
 
 INSERT INTO public.core_systemconfig (id, evacuation_mode, edit_lock_policy, edit_window_hours, morning_start, afternoon_start, night_start, auto_close_shifts, auto_close_grace_minutes, allow_admin_reopen, max_upload_mb, allowed_upload_extensions, report_retention_years, archive_retention_years, backup_retention_days, session_timeout_minutes, stock_expiry_warning_days, pai_review_warning_days, night_theme_auto, updated_at, community_id, therapy_check_allergies, therapy_check_duplicates, therapy_check_interactions, sos_limit_policy, documents_cie_minutes, documents_cie_required, documents_verification, disabled_modules) VALUES
-	(1, 'A', 'reason', 24, '07:00:00', '14:00:00', '21:00:00', true, 120, true, 20, 'pdf,jpg,jpeg,png,tif,tiff,doc,docx,odt,xls,xlsx,txt,p7m', 5, 10, 30, 30, 30, 15, true, '2026-11-06 13:01:34.689903+00', 1, true, true, false, 'warn', 10, false, 'nis', '[]');
+	(1, 'A', 'reason', 24, '07:00:00', '14:00:00', '21:00:00', true, 120, true, 20, 'pdf,jpg,jpeg,png,tif,tiff,doc,docx,odt,xls,xlsx,txt,p7m', 5, 10, 30, 30, 30, 15, true, '2026-11-08 21:35:49.599771+00', 1, true, true, false, 'warn', 10, false, 'nis', '[]');
 
 --
 -- Data for Name: daily_checklistcheck; Type: TABLE DATA; Schema: public; Owner: -
@@ -4202,91 +4213,91 @@ INSERT INTO public.django_content_type (id, app_label, model) VALUES
 --
 
 INSERT INTO public.django_migrations (id, app, name, applied) VALUES
-	(1, 'sessions', '0001_initial', '2026-11-06 13:01:23.067339+00'),
-	(2, 'core', '0001_initial', '2026-11-06 13:01:23.092771+00'),
-	(3, 'contenttypes', '0001_initial', '2026-11-06 13:01:23.10154+00'),
-	(4, 'contenttypes', '0002_remove_content_type_name', '2026-11-06 13:01:23.11528+00'),
-	(5, 'auth', '0001_initial', '2026-11-06 13:01:23.148918+00'),
-	(6, 'auth', '0002_alter_permission_name_max_length', '2026-11-06 13:01:23.154856+00'),
-	(7, 'auth', '0003_alter_user_email_max_length', '2026-11-06 13:01:23.161227+00'),
-	(8, 'auth', '0004_alter_user_username_opts', '2026-11-06 13:01:23.169004+00'),
-	(9, 'auth', '0005_alter_user_last_login_null', '2026-11-06 13:01:23.175365+00'),
-	(10, 'auth', '0006_require_contenttypes_0002', '2026-11-06 13:01:23.177317+00'),
-	(11, 'auth', '0007_alter_validators_add_error_messages', '2026-11-06 13:01:23.183725+00'),
-	(12, 'auth', '0008_alter_user_username_max_length', '2026-11-06 13:01:23.191036+00'),
-	(13, 'auth', '0009_alter_user_last_name_max_length', '2026-11-06 13:01:23.197458+00'),
-	(14, 'auth', '0010_alter_group_name_max_length', '2026-11-06 13:01:23.204737+00'),
-	(15, 'auth', '0011_update_proxy_permissions', '2026-11-06 13:01:23.21268+00'),
-	(16, 'auth', '0012_alter_user_first_name_max_length', '2026-11-06 13:01:23.217509+00'),
-	(17, 'accounts', '0001_initial', '2026-11-06 13:01:23.296464+00'),
-	(18, 'accounts', '0002_append_only_trigger', '2026-11-06 13:01:23.314275+00'),
-	(19, 'accounts', '0003_alter_user_role', '2026-11-06 13:01:23.330928+00'),
-	(20, 'accounts', '0004_verifica_due_passaggi', '2026-11-06 13:01:23.411065+00'),
-	(21, 'accounts', '0005_accesso_da_fuori', '2026-11-06 13:01:23.42315+00'),
-	(22, 'accounts', '0006_dimensione_testo', '2026-11-06 13:01:23.441905+00'),
-	(23, 'admin', '0001_initial', '2026-11-06 13:01:23.467226+00'),
-	(24, 'admin', '0002_logentry_remove_auto_add', '2026-11-06 13:01:23.47846+00'),
-	(25, 'admin', '0003_logentry_add_action_flag_choices', '2026-11-06 13:01:23.492254+00'),
-	(26, 'guests', '0001_initial', '2026-11-06 13:01:23.725605+00'),
-	(27, 'documents', '0001_initial', '2026-11-06 13:01:23.814686+00'),
-	(28, 'appointments', '0001_initial', '2026-11-06 13:01:23.874185+00'),
-	(29, 'assessments', '0001_initial', '2026-11-06 13:01:23.925222+00'),
-	(30, 'audit', '0001_initial', '2026-11-06 13:01:23.979754+00'),
-	(31, 'audit', '0002_append_only_trigger', '2026-11-06 13:01:24.026562+00'),
-	(32, 'audit', '0003_alter_auditlog_action', '2026-11-06 13:01:24.072889+00'),
-	(33, 'audit', '0004_punti_di_controllo', '2026-11-06 13:01:24.12481+00'),
-	(34, 'audit', '0005_auditlog_hash_version', '2026-11-06 13:01:24.186248+00'),
-	(35, 'authtoken', '0001_initial', '2026-11-06 13:01:24.243306+00'),
-	(36, 'authtoken', '0002_auto_20160226_1747', '2026-11-06 13:01:24.386941+00'),
-	(37, 'authtoken', '0003_tokenproxy', '2026-11-06 13:01:24.391519+00'),
-	(38, 'authtoken', '0004_alter_tokenproxy_options', '2026-11-06 13:01:24.401256+00'),
-	(39, 'backups', '0001_initial', '2026-11-06 13:01:24.469926+00'),
-	(40, 'backups', '0002_fuori_sede_e_prove_ripristino', '2026-11-06 13:01:24.678502+00'),
-	(41, 'billing', '0001_initial', '2026-11-06 13:01:25.138016+00'),
-	(42, 'clinical', '0001_initial', '2026-11-06 13:01:25.41369+00'),
-	(43, 'pharmacy', '0001_initial', '2026-11-06 13:01:25.573814+00'),
-	(44, 'clinical', '0002_initial', '2026-11-06 13:01:26.367433+00'),
-	(45, 'clinical', '0003_controlli_somministrazioni', '2026-11-06 13:01:26.467912+00'),
-	(46, 'core', '0002_monitoraggio', '2026-11-06 13:01:26.491124+00'),
-	(47, 'core', '0003_validazione_e_promemoria', '2026-11-06 13:01:26.53198+00'),
-	(48, 'core', '0004_verifica_chiavi', '2026-11-06 13:01:26.543397+00'),
-	(49, 'core', '0005_controlli_somministrazioni', '2026-11-06 13:01:26.559249+00'),
-	(50, 'core', '0006_riapertura_turni', '2026-11-06 13:01:26.648816+00'),
-	(51, 'core', '0007_verifica_cie_documenti', '2026-11-06 13:01:26.696736+00'),
-	(52, 'core', '0008_cie_con_pin_fasas', '2026-11-06 13:01:26.714687+00'),
-	(53, 'core', '0009_moduli_accendibili', '2026-11-06 13:01:26.733332+00'),
-	(54, 'daily', '0001_initial', '2026-11-06 13:01:27.349157+00'),
-	(55, 'documents', '0002_foto_lesioni', '2026-11-06 13:01:27.433627+00'),
-	(56, 'feedback', '0001_segnalazioni_pilota', '2026-11-06 13:01:27.524187+00'),
-	(57, 'imports', '0001_initial', '2026-11-06 13:01:27.626092+00'),
-	(58, 'notifications', '0001_initial', '2026-11-06 13:01:27.740717+00'),
-	(59, 'notifications', '0002_push', '2026-11-06 13:01:27.97092+00'),
-	(60, 'notifications', '0003_alter_notification_kind_and_more', '2026-11-06 13:01:28.065018+00'),
-	(61, 'notifications', '0004_alter_notification_kind_and_more', '2026-11-06 13:01:28.140452+00'),
-	(62, 'notifications', '0005_monitoraggio', '2026-11-06 13:01:28.407977+00'),
-	(63, 'notifications', '0006_valutazioni', '2026-11-06 13:01:28.454363+00'),
-	(64, 'notifications', '0007_lesioni', '2026-11-06 13:01:28.52392+00'),
-	(65, 'notifications', '0008_gruppo_continuita', '2026-11-06 13:01:28.580227+00'),
-	(66, 'notifications', '0009_segnalazioni_pilota', '2026-11-06 13:01:28.642261+00'),
-	(67, 'offline', '0001_initial', '2026-11-06 13:01:28.723815+00'),
-	(68, 'offline', '0002_consultazione_medico', '2026-11-06 13:01:28.781807+00'),
-	(69, 'pai', '0001_initial', '2026-11-06 13:01:28.981461+00'),
-	(70, 'pharmacy', '0002_validazione_e_promemoria', '2026-11-06 13:01:29.089939+00'),
-	(71, 'pharmacy', '0003_elenco_ufficiale_aifa', '2026-11-06 13:01:29.203735+00'),
-	(72, 'protocols', '0001_initial', '2026-11-06 13:01:29.55022+00'),
-	(73, 'protocols', '0002_validazione_e_promemoria', '2026-11-06 13:01:29.845854+00'),
-	(74, 'protocols', '0003_azioni_e_parametri_guidati', '2026-11-06 13:01:30.067366+00'),
-	(75, 'reports', '0001_initial', '2026-11-06 13:01:30.287485+00'),
-	(76, 'reports', '0002_modelli_e_ogni_n_giorni', '2026-11-06 13:01:31.081545+00'),
-	(77, 'signatures', '0001_initial', '2026-11-06 13:01:31.306306+00'),
-	(78, 'signatures', '0002_csc_remote', '2026-11-06 13:01:31.489193+00'),
-	(79, 'signatures', '0003_firma_cie', '2026-11-06 13:01:31.869078+00'),
-	(80, 'signatures', '0004_accettazione_fea', '2026-11-06 13:01:32.057826+00'),
-	(81, 'signatures', '0005_verifica_cie_documenti', '2026-11-06 13:01:32.347577+00'),
-	(82, 'signatures', '0006_cie_con_pin_fasas', '2026-11-06 13:01:33.088883+00'),
-	(83, 'signatures', '0007_app_android_dal_fasas', '2026-11-06 13:01:33.18848+00'),
-	(84, 'staffing', '0001_initial', '2026-11-06 13:01:33.748544+00'),
-	(85, 'wounds', '0001_initial', '2026-11-06 13:01:34.214297+00');
+	(1, 'sessions', '0001_initial', '2026-11-08 21:35:40.80123+00'),
+	(2, 'core', '0001_initial', '2026-11-08 21:35:40.817284+00'),
+	(3, 'contenttypes', '0001_initial', '2026-11-08 21:35:40.822706+00'),
+	(4, 'contenttypes', '0002_remove_content_type_name', '2026-11-08 21:35:40.829298+00'),
+	(5, 'auth', '0001_initial', '2026-11-08 21:35:40.853857+00'),
+	(6, 'auth', '0002_alter_permission_name_max_length', '2026-11-08 21:35:40.858581+00'),
+	(7, 'auth', '0003_alter_user_email_max_length', '2026-11-08 21:35:40.863442+00'),
+	(8, 'auth', '0004_alter_user_username_opts', '2026-11-08 21:35:40.869073+00'),
+	(9, 'auth', '0005_alter_user_last_login_null', '2026-11-08 21:35:40.874884+00'),
+	(10, 'auth', '0006_require_contenttypes_0002', '2026-11-08 21:35:40.876649+00'),
+	(11, 'auth', '0007_alter_validators_add_error_messages', '2026-11-08 21:35:40.881307+00'),
+	(12, 'auth', '0008_alter_user_username_max_length', '2026-11-08 21:35:40.886937+00'),
+	(13, 'auth', '0009_alter_user_last_name_max_length', '2026-11-08 21:35:40.891749+00'),
+	(14, 'auth', '0010_alter_group_name_max_length', '2026-11-08 21:35:40.897175+00'),
+	(15, 'auth', '0011_update_proxy_permissions', '2026-11-08 21:35:40.904504+00'),
+	(16, 'auth', '0012_alter_user_first_name_max_length', '2026-11-08 21:35:40.910113+00'),
+	(17, 'accounts', '0001_initial', '2026-11-08 21:35:40.969207+00'),
+	(18, 'accounts', '0002_append_only_trigger', '2026-11-08 21:35:41.020441+00'),
+	(19, 'accounts', '0003_alter_user_role', '2026-11-08 21:35:41.02874+00'),
+	(20, 'accounts', '0004_verifica_due_passaggi', '2026-11-08 21:35:41.075777+00'),
+	(21, 'accounts', '0005_accesso_da_fuori', '2026-11-08 21:35:41.097041+00'),
+	(22, 'accounts', '0006_dimensione_testo', '2026-11-08 21:35:41.11384+00'),
+	(23, 'admin', '0001_initial', '2026-11-08 21:35:41.133651+00'),
+	(24, 'admin', '0002_logentry_remove_auto_add', '2026-11-08 21:35:41.145042+00'),
+	(25, 'admin', '0003_logentry_add_action_flag_choices', '2026-11-08 21:35:41.156488+00'),
+	(26, 'guests', '0001_initial', '2026-11-08 21:35:41.310373+00'),
+	(27, 'documents', '0001_initial', '2026-11-08 21:35:41.368126+00'),
+	(28, 'appointments', '0001_initial', '2026-11-08 21:35:41.402821+00'),
+	(29, 'assessments', '0001_initial', '2026-11-08 21:35:41.443037+00'),
+	(30, 'audit', '0001_initial', '2026-11-08 21:35:41.478232+00'),
+	(31, 'audit', '0002_append_only_trigger', '2026-11-08 21:35:41.500217+00'),
+	(32, 'audit', '0003_alter_auditlog_action', '2026-11-08 21:35:41.525392+00'),
+	(33, 'audit', '0004_punti_di_controllo', '2026-11-08 21:35:41.561365+00'),
+	(34, 'audit', '0005_auditlog_hash_version', '2026-11-08 21:35:41.59974+00'),
+	(35, 'authtoken', '0001_initial', '2026-11-08 21:35:41.625276+00'),
+	(36, 'authtoken', '0002_auto_20160226_1747', '2026-11-08 21:35:41.701493+00'),
+	(37, 'authtoken', '0003_tokenproxy', '2026-11-08 21:35:41.704956+00'),
+	(38, 'authtoken', '0004_alter_tokenproxy_options', '2026-11-08 21:35:41.711031+00'),
+	(39, 'backups', '0001_initial', '2026-11-08 21:35:41.741435+00'),
+	(40, 'backups', '0002_fuori_sede_e_prove_ripristino', '2026-11-08 21:35:41.880597+00'),
+	(41, 'billing', '0001_initial', '2026-11-08 21:35:42.265258+00'),
+	(42, 'clinical', '0001_initial', '2026-11-08 21:35:42.472888+00'),
+	(43, 'pharmacy', '0001_initial', '2026-11-08 21:35:42.568001+00'),
+	(44, 'clinical', '0002_initial', '2026-11-08 21:35:43.150259+00'),
+	(45, 'clinical', '0003_controlli_somministrazioni', '2026-11-08 21:35:43.224175+00'),
+	(46, 'core', '0002_monitoraggio', '2026-11-08 21:35:43.239496+00'),
+	(47, 'core', '0003_validazione_e_promemoria', '2026-11-08 21:35:43.266788+00'),
+	(48, 'core', '0004_verifica_chiavi', '2026-11-08 21:35:43.276748+00'),
+	(49, 'core', '0005_controlli_somministrazioni', '2026-11-08 21:35:43.287568+00'),
+	(50, 'core', '0006_riapertura_turni', '2026-11-08 21:35:43.363407+00'),
+	(51, 'core', '0007_verifica_cie_documenti', '2026-11-08 21:35:43.397827+00'),
+	(52, 'core', '0008_cie_con_pin_fasas', '2026-11-08 21:35:43.41249+00'),
+	(53, 'core', '0009_moduli_accendibili', '2026-11-08 21:35:43.428576+00'),
+	(54, 'daily', '0001_initial', '2026-11-08 21:35:43.920178+00'),
+	(55, 'documents', '0002_foto_lesioni', '2026-11-08 21:35:43.964368+00'),
+	(56, 'feedback', '0001_segnalazioni_pilota', '2026-11-08 21:35:44.016343+00'),
+	(57, 'imports', '0001_initial', '2026-11-08 21:35:44.077747+00'),
+	(58, 'notifications', '0001_initial', '2026-11-08 21:35:44.144454+00'),
+	(59, 'notifications', '0002_push', '2026-11-08 21:35:44.256934+00'),
+	(60, 'notifications', '0003_alter_notification_kind_and_more', '2026-11-08 21:35:44.302441+00'),
+	(61, 'notifications', '0004_alter_notification_kind_and_more', '2026-11-08 21:35:44.348009+00'),
+	(62, 'notifications', '0005_monitoraggio', '2026-11-08 21:35:44.592433+00'),
+	(63, 'notifications', '0006_valutazioni', '2026-11-08 21:35:44.653937+00'),
+	(64, 'notifications', '0007_lesioni', '2026-11-08 21:35:44.703631+00'),
+	(65, 'notifications', '0008_gruppo_continuita', '2026-11-08 21:35:44.765374+00'),
+	(66, 'notifications', '0009_segnalazioni_pilota', '2026-11-08 21:35:44.815338+00'),
+	(67, 'offline', '0001_initial', '2026-11-08 21:35:44.921636+00'),
+	(68, 'offline', '0002_consultazione_medico', '2026-11-08 21:35:44.96831+00'),
+	(69, 'pai', '0001_initial', '2026-11-08 21:35:45.171718+00'),
+	(70, 'pharmacy', '0002_validazione_e_promemoria', '2026-11-08 21:35:45.267584+00'),
+	(71, 'pharmacy', '0003_elenco_ufficiale_aifa', '2026-11-08 21:35:45.351679+00'),
+	(72, 'protocols', '0001_initial', '2026-11-08 21:35:45.571585+00'),
+	(73, 'protocols', '0002_validazione_e_promemoria', '2026-11-08 21:35:45.818646+00'),
+	(74, 'protocols', '0003_azioni_e_parametri_guidati', '2026-11-08 21:35:45.931782+00'),
+	(75, 'reports', '0001_initial', '2026-11-08 21:35:46.06805+00'),
+	(76, 'reports', '0002_modelli_e_ogni_n_giorni', '2026-11-08 21:35:46.667527+00'),
+	(77, 'signatures', '0001_initial', '2026-11-08 21:35:46.820362+00'),
+	(78, 'signatures', '0002_csc_remote', '2026-11-08 21:35:46.972587+00'),
+	(79, 'signatures', '0003_firma_cie', '2026-11-08 21:35:47.248168+00'),
+	(80, 'signatures', '0004_accettazione_fea', '2026-11-08 21:35:47.393145+00'),
+	(81, 'signatures', '0005_verifica_cie_documenti', '2026-11-08 21:35:47.672015+00'),
+	(82, 'signatures', '0006_cie_con_pin_fasas', '2026-11-08 21:35:48.240166+00'),
+	(83, 'signatures', '0007_app_android_dal_fasas', '2026-11-08 21:35:48.307813+00'),
+	(84, 'staffing', '0001_initial', '2026-11-08 21:35:48.777488+00'),
+	(85, 'wounds', '0001_initial', '2026-11-08 21:35:49.145297+00');
 
 --
 -- Data for Name: documents_document; Type: TABLE DATA; Schema: public; Owner: -
@@ -4413,25 +4424,25 @@ INSERT INTO public.notifications_notificationsetting (id, kind, enabled, roles, 
 --
 
 INSERT INTO public.protocols_protocol (id, created_at, updated_at, name, kind, description, params, actions, severity, applies_to_all, notify_roles, validated_by, active, created_by_id, updated_by_id, validated_at, validated_by_user_id) VALUES
-	(1, '2026-11-06 13:01:35.368053+00', '2026-11-06 13:01:35.368303+00', 'Protocollo evacuazione', 'evacuation', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"days": 3}', 'Somministrare il lassativo previsto dalla prescrizione
+	(1, '2026-11-08 21:35:50.159349+00', '2026-11-08 21:35:50.15959+00', 'Protocollo evacuazione', 'evacuation', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"days": 3}', 'Somministrare il lassativo previsto dalla prescrizione
 Se nessun risultato entro 12 ore: eseguire lavanda intestinale
 Informare il medico curante se persiste', 'warning', true, '[]', '', true, NULL, NULL, NULL, NULL),
-	(2, '2026-11-06 13:01:35.374289+00', '2026-11-06 13:01:35.374433+00', 'Protocollo febbre', 'fever', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"parameter": "temperatura", "threshold": 37.5}', 'Ricontrollare la temperatura dopo 30 minuti
+	(2, '2026-11-08 21:35:50.165581+00', '2026-11-08 21:35:50.165815+00', 'Protocollo febbre', 'fever', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"parameter": "temperatura", "threshold": 37.5}', 'Ricontrollare la temperatura dopo 30 minuti
 Somministrare l''antipiretico SOS se prescritto
 Idratare l''ospite
 Avvisare il medico se > 38.5 °C o persistente oltre 24 ore', 'warning', true, '[]', '', true, NULL, NULL, NULL, NULL),
-	(3, '2026-11-06 13:01:35.382904+00', '2026-11-06 13:01:35.383105+00', 'Protocollo glicemia', 'glycemia', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"max": 250, "min": 70, "parameter": "glicemia"}', 'Ipoglicemia: somministrare zuccheri semplici e ricontrollare dopo 15 minuti
+	(3, '2026-11-08 21:35:50.170789+00', '2026-11-08 21:35:50.170964+00', 'Protocollo glicemia', 'glycemia', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"max": 250, "min": 70, "parameter": "glicemia"}', 'Ipoglicemia: somministrare zuccheri semplici e ricontrollare dopo 15 minuti
 Iperglicemia: ricontrollare e applicare lo schema insulinico prescritto
 Avvisare il medico', 'critical', true, '[]', '', true, NULL, NULL, NULL, NULL),
-	(4, '2026-11-06 13:01:35.389923+00', '2026-11-06 13:01:35.390113+00', 'Protocollo crisi epilettica', 'seizure', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"min_duration_minutes": 0}', 'Proteggere l''ospite da traumi e posizionarlo in sicurezza
+	(4, '2026-11-08 21:35:50.176058+00', '2026-11-08 21:35:50.176203+00', 'Protocollo crisi epilettica', 'seizure', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"min_duration_minutes": 0}', 'Proteggere l''ospite da traumi e posizionarlo in sicurezza
 Cronometrare la durata della crisi
 Se la crisi supera la durata indicata in prescrizione: somministrare il farmaco SOS antiepilettico
 Chiamare il 112/118 se la crisi non cede
 Avvisare medico e familiari/tutore', 'critical', true, '[]', '', true, NULL, NULL, NULL, NULL),
-	(5, '2026-11-06 13:01:35.396238+00', '2026-11-06 13:01:35.396432+00', 'Protocollo agitazione', 'agitation', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"events": 2, "window_hours": 24}', 'Applicare le strategie di contenimento relazionale previste dal PAI
+	(5, '2026-11-08 21:35:50.180876+00', '2026-11-08 21:35:50.181015+00', 'Protocollo agitazione', 'agitation', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"events": 2, "window_hours": 24}', 'Applicare le strategie di contenimento relazionale previste dal PAI
 Valutare il farmaco SOS se prescritto
 Informare il coordinatore', 'warning', true, '[]', '', true, NULL, NULL, NULL, NULL),
-	(6, '2026-11-06 13:01:35.402349+00', '2026-11-06 13:01:35.402539+00', 'Protocollo farmaci SOS', 'sos', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"count": 2, "window_hours": 24}', 'Verificare la corretta indicazione delle somministrazioni SOS
+	(6, '2026-11-08 21:35:50.185554+00', '2026-11-08 21:35:50.18576+00', 'Protocollo farmaci SOS', 'sos', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"count": 2, "window_hours": 24}', 'Verificare la corretta indicazione delle somministrazioni SOS
 Informare il medico per rivalutazione terapia', 'warning', true, '[]', '', true, NULL, NULL, NULL, NULL);
 
 --

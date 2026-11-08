@@ -3,7 +3,7 @@ Controlli della versione cloud (FASAS_CLOUD=1, docs/CLOUD.md): all'avvio («migr
 se manca qualcosa senza cui i dati andrebbero persi o il sito non risponderebbe al dominio.
 """
 from django.conf import settings
-from django.core.checks import Error, Warning, register
+from django.core.checks import Error, Tags, Warning, register
 
 
 @register("fasas")
@@ -43,3 +43,36 @@ def cloud_checks(app_configs=None, **kwargs):
             "Backup senza copia fuori sede: il disco del container è temporaneo e il backup della notte si perde al "
             "primo riavvio. Configurare FASAS_OFFSITE_* (docs/CLOUD.md, passo 5).", id="fasas.W102"))
     return problems
+
+
+def shared_database_guarded():
+    """Il controllo del database dedicato vale nella versione cloud e con qualsiasi database Supabase."""
+    host = str(settings.DATABASES["default"].get("HOST") or "")
+    return settings.FASAS_CLOUD or "supabase." in host
+
+
+@register(Tags.database)
+def dedicated_database_check(app_configs=None, databases=None, **kwargs):
+    """
+    Prima di «migrate»: il FASAS non si installa in un database che contiene tabelle di altre applicazioni (per esempio
+    un progetto Supabase usato da un'altra app). Si mescolerebbero dati sanitari con altri dati e la protezione delle
+    API cambierebbe i privilegi predefiniti di tutto lo schema.
+    """
+    if not databases or "default" not in databases or not shared_database_guarded():
+        return []
+    from django.db import connections
+
+    from .supabase import foreign_tables
+
+    connection = connections["default"]
+    try:
+        foreign = foreign_tables(connection)
+    except Exception:  # database irraggiungibile: lo segnala «migrate» stesso con il suo errore
+        return []
+    if not foreign:
+        return []
+    shown = ", ".join(foreign[:8]) + (f" e altre {len(foreign) - 8}" if len(foreign) > 8 else "")
+    return [Error(
+        f"Il database contiene {len(foreign)} tabelle di un'altra applicazione ({shown}): il FASAS va installato in "
+        "un database dedicato (su Supabase un progetto nuovo solo per il FASAS). Nessuna tabella è stata creata o "
+        "modificata.", id="fasas.E107")]

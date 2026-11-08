@@ -39,6 +39,17 @@ HEADER = """-- FASAS Digitale {version}: schema del database e dati iniziali per
 -- Nessun dato personale o sanitario, nessun utente: il primo amministratore si crea all'avvio (docs/CLOUD.md).
 -- Gli aggiornamenti futuri dello schema li applica il FASAS da solo a ogni avvio («migrate»).
 
+-- Solo in un progetto dedicato: se lo schema public contiene già tabelle (di un'altra applicazione o di
+-- un'installazione precedente) ci si ferma prima di creare qualsiasi cosa.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_catalog.pg_tables WHERE schemaname = 'public') THEN
+        RAISE EXCEPTION 'Lo schema public contiene già delle tabelle: il FASAS va installato in un progetto '
+                        'Supabase nuovo e dedicato. Nessuna modifica eseguita.';
+    END IF;
+END
+$$;
+
 """
 
 SECURITY = """-- FASAS Digitale: protezione delle tabelle dalle API automatiche di Supabase (Data API / PostgREST).
@@ -46,30 +57,50 @@ SECURITY = """-- FASAS Digitale: protezione delle tabelle dalle API automatiche 
 --
 -- Il FASAS legge e scrive solo attraverso il proprio server (Django), collegato come proprietario delle tabelle.
 -- Le API REST di Supabase non servono e non devono dare accesso ai dati:
---   1. Row Level Security attiva su ogni tabella dello schema public, senza alcuna policy: via API nessuna riga;
---   2. nessun privilegio ai ruoli delle API (anon, authenticated, service_role) su tabelle, sequenze e funzioni,
---      anche per le tabelle create in futuro.
+--   1. Row Level Security attiva su ogni tabella del FASAS, senza alcuna policy: via API nessuna riga;
+--   2. nessun privilegio ai ruoli delle API (anon, authenticated, service_role) su tabelle, sequenze e funzioni del
+--      FASAS e, se il progetto contiene solo il FASAS, nemmeno sulle tabelle create in futuro.
+-- Agisce solo sulle {count} tabelle del FASAS elencate qui sotto: tabelle di altre applicazioni non vengono toccate.
 -- Il FASAS ripete gli stessi passi dopo ogni aggiornamento (fasas/core/supabase.py). È sicuro rieseguire il file.
 
 DO $$
 DECLARE
-    item record;
-BEGIN
-    FOR item IN SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' LOOP
-        EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', item.tablename);
-    END LOOP;
-END
-$$;
-
-DO $$
-DECLARE
+    fasas_tables text[] := ARRAY[
+{tables}
+    ];
+    api_roles text[];
     api_role text;
+    item text;
+    dedicated boolean;
 BEGIN
-    FOREACH api_role IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
-        IF EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = api_role) THEN
-            EXECUTE format('REVOKE ALL ON ALL TABLES IN SCHEMA public FROM %I', api_role);
-            EXECUTE format('REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM %I', api_role);
-            EXECUTE format('REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM %I', api_role);
+    SELECT array_agg(rolname) INTO api_roles FROM pg_catalog.pg_roles
+     WHERE rolname IN ('anon', 'authenticated', 'service_role');
+    SELECT NOT EXISTS (SELECT 1 FROM pg_catalog.pg_tables WHERE schemaname = 'public'
+                        AND tablename <> ALL (fasas_tables)) INTO dedicated;
+    FOREACH item IN ARRAY fasas_tables LOOP
+        IF to_regclass(format('public.%I', item)) IS NOT NULL THEN
+            EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', item);
+            FOREACH api_role IN ARRAY coalesce(api_roles, ARRAY[]::text[]) LOOP
+                EXECUTE format('REVOKE ALL ON TABLE public.%I FROM %I', item, api_role);
+            END LOOP;
+        END IF;
+    END LOOP;
+    FOREACH api_role IN ARRAY coalesce(api_roles, ARRAY[]::text[]) LOOP
+        -- sequenze delle chiavi primarie e funzioni del FASAS
+        FOR item IN SELECT DISTINCT format('public.%I', seq.relname) FROM pg_catalog.pg_class seq
+                    JOIN pg_catalog.pg_depend dep ON dep.objid = seq.oid
+                    JOIN pg_catalog.pg_class tab ON tab.oid = dep.refobjid
+                    JOIN pg_catalog.pg_namespace ns ON ns.oid = seq.relnamespace
+                    WHERE seq.relkind = 'S' AND dep.deptype IN ('a', 'i') AND ns.nspname = 'public'
+                      AND tab.relname = ANY (fasas_tables) LOOP
+            EXECUTE format('REVOKE ALL ON SEQUENCE %s FROM %I', item, api_role);
+        END LOOP;
+        FOR item IN SELECT p.oid::regprocedure::text FROM pg_catalog.pg_proc p
+                    JOIN pg_catalog.pg_namespace ns ON ns.oid = p.pronamespace
+                    WHERE ns.nspname = 'public' AND p.proname LIKE 'fasas\\_%' LOOP
+            EXECUTE format('REVOKE ALL ON FUNCTION %s FROM %I', item, api_role);
+        END LOOP;
+        IF dedicated THEN
             EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM %I', api_role);
             EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM %I', api_role);
             EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM %I', api_role);
@@ -114,7 +145,11 @@ def main():
         HEADER.format(version=version, tables=tables, migrations=migrations)
         + text + "\n-- percorso di ricerca di nuovo quello normale per le istruzioni successive\nRESET search_path;\n",
         encoding="utf-8")
-    (OUT / SECURITY_FILE).write_text(SECURITY, encoding="utf-8")
+    names = run(["psql", url, "-Atc", "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY 1"],
+                env).split()
+    listing = ",\n".join(f"        '{name}'" for name in names)
+    (OUT / SECURITY_FILE).write_text(SECURITY.replace("{count}", str(len(names))).replace("{tables}", listing),
+                                     encoding="utf-8")
     print(f"Scritti {SCHEMA_FILE} ({tables} tabelle, {migrations} migrazioni) e {SECURITY_FILE} in {OUT}")
 
 

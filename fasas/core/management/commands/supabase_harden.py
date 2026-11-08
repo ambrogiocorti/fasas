@@ -5,7 +5,8 @@ from fasas.core.supabase import harden
 
 
 class Command(BaseCommand):
-    help = "Attiva la RLS e revoca i privilegi ai ruoli API di Supabase (anon, authenticated) su tutte le tabelle"
+    help = ("Attiva la RLS e revoca i privilegi ai ruoli API di Supabase (anon, authenticated, service_role) sulle "
+            "tabelle del FASAS; non tocca tabelle di altre applicazioni")
 
     def handle(self, *args, **options):
         result = harden(connection)

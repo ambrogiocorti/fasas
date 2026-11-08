@@ -341,3 +341,59 @@ class ProtezioneApiTest(TestCase):
         self.assertEqual(API_ROLES, ("anon", "authenticated", "service_role"))
         if connection.vendor != "postgresql":
             self.assertEqual(harden(connection), {"skipped": "non PostgreSQL"})
+
+
+class DatabaseDedicatoTest(TestCase):
+    """Il FASAS non si installa in un database con tabelle di altre applicazioni e non le tocca mai."""
+
+    def test_controllo_prima_di_migrate(self):
+        from fasas.core.cloud import dedicated_database_check
+
+        with override_settings(FASAS_CLOUD=True), \
+                mock.patch("fasas.core.supabase.foreign_tables", return_value=["bars", "orders"]):
+            errors = dedicated_database_check(databases=["default"])
+            self.assertEqual([e.id for e in errors], ["fasas.E107"])
+            self.assertIn("bars, orders", errors[0].msg)
+            self.assertEqual(dedicated_database_check(databases=None), [])  # «check» senza database: nessuna query
+        with override_settings(FASAS_CLOUD=False), \
+                mock.patch("fasas.core.supabase.foreign_tables", return_value=["orders"]):
+            if "supabase." not in str(settings.DATABASES["default"].get("HOST") or ""):
+                self.assertEqual(dedicated_database_check(databases=["default"]), [])  # installazione in struttura
+
+    def test_database_del_fasas_senza_tabelle_estranee(self):
+        from fasas.core.supabase import fasas_tables, foreign_tables
+
+        self.assertEqual(foreign_tables(connection), [])
+        self.assertIn("django_migrations", fasas_tables(connection))
+        self.assertIn("guests_guest", fasas_tables(connection))
+
+    def test_protezione_non_tocca_tabelle_di_altre_applicazioni(self):
+        if connection.vendor != "postgresql":
+            self.skipTest("solo PostgreSQL")
+        from fasas.core.supabase import foreign_tables, harden
+
+        with connection.cursor() as cursor:
+            cursor.execute("CREATE TABLE public.altra_app_ordini (id serial PRIMARY KEY)")
+        try:
+            self.assertEqual(foreign_tables(connection), ["altra_app_ordini"])
+            result = harden(connection)
+            self.assertEqual(result["foreign_tables"], 1)
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT relrowsecurity FROM pg_class WHERE relname = 'altra_app_ordini'")
+                self.assertFalse(cursor.fetchone()[0])
+                cursor.execute("SELECT relrowsecurity FROM pg_class WHERE relname = 'guests_guest'")
+                self.assertTrue(cursor.fetchone()[0])
+        finally:
+            with connection.cursor() as cursor:
+                cursor.execute("DROP TABLE public.altra_app_ordini")
+
+    def test_sql_solo_su_progetto_dedicato(self):
+        folder = Path(settings.BASE_DIR) / "supabase" / "migrations"
+        schema = next(folder.glob("*_fasas_schema_e_dati_iniziali.sql")).read_text(encoding="utf-8")
+        guard = schema.index("RAISE EXCEPTION")
+        self.assertLess(guard, schema.index("CREATE TABLE"))  # il controllo viene prima di creare qualsiasi cosa
+        security = next(folder.glob("*_fasas_protezione_api.sql")).read_text(encoding="utf-8")
+        self.assertNotIn("ALL TABLES IN SCHEMA", security)
+        self.assertIn("'guests_guest'", security)
+        tables = set(re.findall(r"^        '(\w+)',?$", security, re.M))
+        self.assertEqual(tables, set(re.findall(r"^CREATE TABLE public\.(\w+) \(", schema, re.M)))
