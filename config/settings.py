@@ -67,17 +67,26 @@ ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 
 
-def public_hosts():
-    """Dominio pubblico (FASAS_DOMAIN, anche più di uno) e nome assegnato dal servizio di hosting (Render)."""
+def _hosts(*names):
     hosts = []
-    for value in env_list("FASAS_DOMAIN") + env_list("RENDER_EXTERNAL_HOSTNAME"):
-        host = value.lower().removeprefix("https://").removeprefix("http://").split("/")[0].strip()
-        if host and host not in hosts:
-            hosts.append(host)
+    for name in names:
+        for value in env_list(name):
+            host = value.lower().removeprefix("https://").removeprefix("http://").split("/")[0].strip()
+            if host and host not in hosts:
+                hosts.append(host)
     return hosts
 
 
+def public_hosts():
+    """Dominio pubblico (FASAS_DOMAIN, anche più di uno) e nome assegnato dal servizio di hosting (Render)."""
+    return _hosts("FASAS_DOMAIN", "RENDER_EXTERNAL_HOSTNAME")
+
+
 FASAS_PUBLIC_HOSTS = public_hosts()
+# Dominio della struttura: il primo di FASAS_DOMAIN (es. «fasas.online,www.fasas.online»). Nella versione cloud gli
+# altri nomi (www, nome tecnico dell'hosting) rimandano qui: un solo indirizzo per cookie, QR dei telefoni e link.
+FASAS_CANONICAL_HOST = (_hosts("FASAS_DOMAIN") or [""])[0]
+FASAS_CANONICAL_REDIRECT = env_bool("FASAS_CANONICAL_REDIRECT", FASAS_CLOUD)
 for _host in FASAS_PUBLIC_HOSTS:
     if _host not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(_host)
@@ -125,6 +134,8 @@ MIDDLEWARE = [
     # /salute/ risponde prima dei controlli su Host e reti: i controlli dei servizi di hosting arrivano da indirizzi
     # interni con un Host qualsiasi. La risposta non contiene dati (il dettaglio solo con FASAS_HEALTH_TOKEN).
     "fasas.core.middleware.HealthCheckMiddleware",
+    # versione cloud: www e nome tecnico dell'hosting rimandano al dominio della struttura (FASAS_CANONICAL_HOST)
+    "fasas.core.middleware.CanonicalDomainMiddleware",
     "fasas.core.middleware.ApiSwitchMiddleware",
     "fasas.core.middleware.AllowedNetworksMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -144,7 +155,7 @@ MIDDLEWARE = [
 # File statici serviti dal FASAS stesso quando davanti non c'è un proxy che li serve (versione cloud)
 FASAS_SERVE_STATIC = env_bool("FASAS_SERVE_STATIC", FASAS_CLOUD)
 if FASAS_SERVE_STATIC:
-    MIDDLEWARE.insert(MIDDLEWARE.index("fasas.core.middleware.HealthCheckMiddleware") + 1,
+    MIDDLEWARE.insert(MIDDLEWARE.index("fasas.core.middleware.CanonicalDomainMiddleware") + 1,
                       "whitenoise.middleware.WhiteNoiseMiddleware")
 
 ROOT_URLCONF = "config.urls"

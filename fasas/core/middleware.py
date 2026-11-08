@@ -4,7 +4,7 @@ import time
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import logout
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, HttpResponseNotFound, HttpResponsePermanentRedirect
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.functional import SimpleLazyObject
@@ -38,6 +38,28 @@ class HealthCheckMiddleware:
             from .views import health
 
             return health(request)
+        return self.get_response(request)
+
+
+class CanonicalDomainMiddleware:
+    """
+    Versione cloud: il FASAS si usa solo dal dominio della struttura (FASAS_CANONICAL_HOST). Le pagine chieste con un
+    altro nome ammesso (www, nome tecnico assegnato dall'hosting) rimandano al dominio; le altre richieste (moduli,
+    API, abbinamento dei telefoni) ricevono 404, così nessun dispositivo resta legato a un indirizzo provvisorio.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        canonical = settings.FASAS_CANONICAL_HOST
+        if settings.FASAS_CANONICAL_REDIRECT and canonical:
+            host = request.get_host().rsplit(":", 1)[0].lower()  # nome non ammesso: 400 come sempre
+            if host != canonical:
+                if request.method in ("GET", "HEAD"):
+                    return HttpResponsePermanentRedirect(f"https://{canonical}{request.get_full_path()}")
+                return HttpResponseNotFound("Il FASAS si usa dal dominio della struttura.",
+                                            content_type="text/plain; charset=utf-8")
         return self.get_response(request)
 
 

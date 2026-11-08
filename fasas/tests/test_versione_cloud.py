@@ -397,3 +397,39 @@ class DatabaseDedicatoTest(TestCase):
         self.assertIn("'guests_guest'", security)
         tables = set(re.findall(r"^        '(\w+)',?$", security, re.M))
         self.assertEqual(tables, set(re.findall(r"^CREATE TABLE public\.(\w+) \(", schema, re.M)))
+
+
+class DominioDellaStrutturaTest(SimpleTestCase):
+    def middleware(self):
+        from django.http import HttpResponse
+
+        from fasas.core.middleware import CanonicalDomainMiddleware
+
+        return CanonicalDomainMiddleware(lambda request: HttpResponse("OK"))
+
+    @override_settings(FASAS_CANONICAL_REDIRECT=True, FASAS_CANONICAL_HOST="fasas.online",
+                       ALLOWED_HOSTS=["fasas.online", "www.fasas.online", "fasas-online.onrender.com"])
+    def test_un_solo_indirizzo(self):
+        from django.test import RequestFactory
+
+        factory = RequestFactory()
+        middleware = self.middleware()
+        self.assertEqual(middleware(factory.get("/accesso/entra/", HTTP_HOST="fasas.online")).status_code, 200)
+        www = middleware(factory.get("/ospiti/?q=1", HTTP_HOST="www.fasas.online"))
+        self.assertEqual((www.status_code, www["Location"]), (301, "https://fasas.online/ospiti/?q=1"))
+        technical = middleware(factory.get("/", HTTP_HOST="fasas-online.onrender.com"))
+        self.assertEqual(technical["Location"], "https://fasas.online/")
+        api = middleware(factory.post("/api/firma/v1/abbina/", HTTP_HOST="fasas-online.onrender.com"))
+        self.assertEqual(api.status_code, 404)
+
+    @override_settings(FASAS_CANONICAL_REDIRECT=False, FASAS_CANONICAL_HOST="fasas.online", ALLOWED_HOSTS=["127.0.0.1"])
+    def test_versione_locale_non_cambia(self):
+        from django.test import RequestFactory
+
+        self.assertEqual(self.middleware()(RequestFactory().get("/", HTTP_HOST="127.0.0.1")).status_code, 200)
+
+    def test_dominio_dalle_variabili(self):
+        from config.settings import _hosts
+
+        with mock.patch.dict(os.environ, {"FASAS_DOMAIN": "https://Fasas.online/, www.fasas.online"}):
+            self.assertEqual(_hosts("FASAS_DOMAIN"), ["fasas.online", "www.fasas.online"])

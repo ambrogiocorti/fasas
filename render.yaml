@@ -1,4 +1,5 @@
-# FASAS Digitale – versione cloud su Render (guida completa: docs/CLOUD.md).
+# FASAS Digitale – versione cloud su Render (guida completa: docs/CLOUD.md; per fasas.online la soluzione
+# consigliata è un VPS: docs/FASAS_ONLINE.md). Database: un progetto Supabase NUOVO e dedicato al FASAS.
 # Render › New › Blueprint › questo repository: crea il servizio dal Dockerfile; le variabili con «sync: false»
 # si compilano al primo avvio (valori dal passo 1-4 della guida), quelle con «generateValue» le crea Render.
 #
@@ -15,6 +16,9 @@ services:
     region: frankfurt # UE, vicino alla regione Supabase consigliata (eu-central-1, Francoforte)
     plan: free
     healthCheckPath: /salute/
+    domains:
+      - fasas.online
+      - www.fasas.online
     # Nessuna pubblicazione automatica a ogni modifica su GitHub: si aggiorna con «Manual Deploy» dopo il collaudo
     autoDeploy: false
     envVars:
@@ -30,8 +34,8 @@ services:
         sync: false
       - key: FASAS_BACKUP_KEY # da fasas_genkey; copia nella busta di custodia
         sync: false
-      - key: FASAS_DOMAIN # es. fasas.miacooperativa.it (senza https://)
-        sync: false
+      - key: FASAS_DOMAIN # il primo è il dominio principale; gli altri (e il nome …onrender.com) rimandano lì
+        value: fasas.online,www.fasas.online
       - key: DATABASE_URL # Supabase › Connect › Session pooler (porta 5432)
         sync: false
       - key: DATABASE_SSL_REQUIRE

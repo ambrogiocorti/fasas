@@ -74,6 +74,7 @@ services:
     image: caddy:2
     environment:
       FASAS_DOMAIN: ${FASAS_DOMAIN:-localhost}
+      FASAS_DOMAIN_ALIASES: ${FASAS_DOMAIN_ALIASES:-}
     ports:
       - "80:80"
       - "443:443"

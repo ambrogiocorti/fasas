@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Prepara il server FASAS installato in struttura (Ubuntu Server 24.04 con Docker).
 #
-#   sudo ./scripts/prepara_server.sh
+#   sudo ./scripts/prepara_server.sh          PC in struttura (rete della struttura, DuckDNS)
+#   sudo ./scripts/prepara_server.sh --vps    server affittato su internet con IP fisso e dominio proprio
+#                                             (es. fasas.online: docs/FASAS_ONLINE.md)
 #
 # Cosa fa, chiedendo conferma: crea il file .env con chiavi nuove (solo se non esiste già), installa
 # l'aggiornamento automatico dell'indirizzo DuckDNS, attiva firewall e riavvio automatico dopo gli
@@ -14,6 +16,13 @@ ROOT_DIR=$(pwd)
 ENV_FILE="$ROOT_DIR/.env"
 DUCKDNS_CONF=/etc/fasas-duckdns.conf
 DUCKDNS_BIN=/usr/local/sbin/fasas-duckdns
+VPS=""
+for arg in "$@"; do
+  case "$arg" in
+    --vps) VPS=1 ;;
+    *) printf 'argomento sconosciuto: %s (vedere le istruzioni in cima allo script)\n' "$arg" >&2; exit 1 ;;
+  esac
+done
 
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 ok() { printf '  \033[32m✔\033[0m %s\n' "$*"; }
@@ -57,14 +66,16 @@ done
 docker compose version >/dev/null 2>&1 || die "manca Docker Compose. Installare con: sudo apt install docker-compose-v2"
 systemctl is-active --quiet docker || systemctl enable --now docker
 
-say "FASAS Digitale – preparazione del server in struttura"
+if [ -n "$VPS" ]; then say "FASAS Digitale – preparazione del server su internet (VPS)"
+else say "FASAS Digitale – preparazione del server in struttura"; fi
 echo "  Cartella: $ROOT_DIR"
 
 IFACE=$(ip -4 route show default | awk '{for (i = 1; i <= NF; i++) if ($i == "dev") {print $(i + 1); exit}}')
 SERVER_CIDR=$(ip -4 -o addr show dev "${IFACE:-lo}" scope global 2>/dev/null | awk '{print $4; exit}')
 SERVER_IP=${SERVER_CIDR%/*}
 [ -n "$SERVER_IP" ] || die "il server non ha un indirizzo di rete: collegare il cavo di rete e riprovare."
-ok "Indirizzo del server nella rete della struttura: $SERVER_IP (scheda $IFACE)"
+if [ -n "$VPS" ]; then ok "Indirizzo del server: $SERVER_IP (scheda $IFACE)"
+else ok "Indirizzo del server nella rete della struttura: $SERVER_IP (scheda $IFACE)"; fi
 
 # --- 1. File .env con le chiavi --------------------------------------------------------------------------
 if [ -f "$ENV_FILE" ]; then
@@ -72,20 +83,36 @@ if [ -f "$ENV_FILE" ]; then
   ok "esiste già: lo lascio com'è (le chiavi non si rigenerano: documenti e backup diventerebbero illeggibili)"
   DOMAIN=$(env_value FASAS_DOMAIN)
   LAN=$(env_value FASAS_2FA_TRUSTED_NETWORKS)
+  ALIASES=$(env_value FASAS_DOMAIN_ALIASES)
   [ -n "$DOMAIN" ] || die "nel .env manca FASAS_DOMAIN."
 else
   say "1. Indirizzo, rete e chiavi"
   while true; do
-    DOMAIN=$(ask "Indirizzo del FASAS (es. casarosa.duckdns.org)" "")
+    if [ -n "$VPS" ]; then DOMAIN=$(ask "Dominio del FASAS (es. fasas.online)" "")
+    else DOMAIN=$(ask "Indirizzo del FASAS (es. casarosa.duckdns.org)" ""); fi
     DOMAIN=$(printf '%s' "$DOMAIN" | tr '[:upper:]' '[:lower:]' | sed -e 's#^https\?://##' -e 's#/.*$##')
     if [[ "$DOMAIN" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$ ]]; then break; fi
     warn "indirizzo non valido, riprovare (solo lettere, numeri, trattini e punti)"
   done
 
+  ALIASES=""
+  if [ -n "$VPS" ]; then
+    # su internet non c'è una «rete della struttura»: la verifica in due passaggi vale ovunque per i ruoli previsti
+    LAN=""
+    SUGGESTED_ALIAS=""
+    [[ "$DOMAIN" =~ ^[a-z0-9-]+\.[a-z]+$ ]] && SUGGESTED_ALIAS="www.$DOMAIN"
+    echo "  Altri nomi che rimandano al dominio (es. www.$DOMAIN), separati da spazi; vuoto se nessuno."
+    echo "  Ognuno deve avere un record DNS verso questo server, altrimenti il suo certificato non arriva."
+    ALIASES=$(ask "Altri nomi" "$SUGGESTED_ALIAS" | tr '[:upper:]' '[:lower:]' | tr ',' ' ' | xargs || true)
+    for name in $ALIASES; do
+      [[ "$name" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$ && "$name" != "$DOMAIN" ]] \
+        || die "nome non valido: $name"
+    done
+  fi
   SUGGESTED=$(python3 -c 'import ipaddress, sys; print(ipaddress.ip_interface(sys.argv[1]).network)' "$SERVER_CIDR")
-  echo "  Rete della struttura: da qui si entra con la sola password; da fuori serve sempre il codice"
-  echo "  della verifica in due passaggi. Di solito è quella proposta."
-  while true; do
+  [ -n "$VPS" ] || echo "  Rete della struttura: da qui si entra con la sola password; da fuori serve sempre il codice"
+  [ -n "$VPS" ] || echo "  della verifica in due passaggi. Di solito è quella proposta."
+  while [ -z "$VPS" ]; do
     LAN=$(ask "Rete della struttura" "$SUGGESTED")
     if LAN=$(python3 - "$LAN" <<'PY'
 import ipaddress, sys
@@ -139,20 +166,23 @@ PY
   fi
 
   umask 077
-  FASAS_DOMAIN="$DOMAIN" FASAS_LAN="$LAN" FASAS_EMAIL="$EMAIL" \
+  FASAS_DOMAIN="$DOMAIN" FASAS_ALIASES="$ALIASES" FASAS_LAN="$LAN" FASAS_EMAIL="$EMAIL" FASAS_VPS="$VPS" \
   OFFSITE_ENDPOINT="$OFFSITE_ENDPOINT" OFFSITE_REGION="$OFFSITE_REGION" OFFSITE_BUCKET="$OFFSITE_BUCKET" \
   OFFSITE_KEY="$OFFSITE_KEY" OFFSITE_SECRET="$OFFSITE_SECRET" python3 - "$ENV_FILE" <<'PY'
 import base64, datetime, os, secrets, sys
 
 e = os.environ
 key32 = lambda: base64.urlsafe_b64encode(secrets.token_bytes(32)).decode()
+where = "su server internet (VPS)" if e["FASAS_VPS"] else "in struttura"
 text = f"""\
-# FASAS Digitale in struttura – creato da scripts/prepara_server.sh il {datetime.date.today():%d/%m/%Y}.
+# FASAS Digitale {where} – creato da scripts/prepara_server.sh il {datetime.date.today():%d/%m/%Y}.
 # NON rigenerare né perdere le chiavi: senza quelle originali documenti e backup non si aprono più.
 # Copia di sicurezza: busta di custodia (guida, passo 11). Dopo una modifica: sudo docker compose up -d
 DJANGO_DEBUG=0
 DJANGO_SECRET_KEY={secrets.token_urlsafe(50)}
 FASAS_DOMAIN={e["FASAS_DOMAIN"]}
+# altri nomi che il proxy HTTPS rimanda al dominio (es. www)
+FASAS_DOMAIN_ALIASES={e["FASAS_ALIASES"]}
 POSTGRES_PASSWORD={secrets.token_urlsafe(32)}
 
 # Cifratura dei documenti e dei backup
@@ -202,7 +232,23 @@ fi
 
 # --- 2. Indirizzo DuckDNS ----------------------------------------------------------------------------
 say "2. Aggiornamento automatico dell'indirizzo"
-if [[ "$DOMAIN" == *.duckdns.org ]]; then
+if [ -n "$VPS" ]; then
+  # IP fisso: il record A del dominio (e dei nomi aggiuntivi) deve già puntare a questo server, altrimenti
+  # il certificato HTTPS non arriva e i tentativi ripetuti fanno scattare i limiti di Let's Encrypt
+  PUBLIC_IP=$(curl -4 -fsS -m 15 https://api.ipify.org 2>/dev/null || true)
+  [ -n "$PUBLIC_IP" ] || PUBLIC_IP=$SERVER_IP
+  for name in $DOMAIN $ALIASES; do
+    RESOLVED=$(getent ahostsv4 "$name" 2>/dev/null | awk '{print $1}' | sort -u | paste -sd' ' -)
+    if [[ " $RESOLVED " == *" $PUBLIC_IP "* ]]; then
+      ok "$name punta a questo server ($PUBLIC_IP)"
+    else
+      warn "$name punta a «${RESOLVED:-nessun indirizzo}», non a questo server ($PUBLIC_IP)."
+      warn "Presso chi gestisce il dominio (es. Register.it): record A di $name → $PUBLIC_IP (docs/FASAS_ONLINE.md)."
+      yes_no "Continuo lo stesso (il certificato arriverà quando il DNS sarà aggiornato)?" n \
+        || die "aggiornare il DNS, aspettare qualche minuto e rilanciare lo script."
+    fi
+  done
+elif [[ "$DOMAIN" == *.duckdns.org ]]; then
   NAME=${DOMAIN%.duckdns.org}
   NAME=${NAME##*.}
   if [ ! -f "$DUCKDNS_CONF" ]; then
@@ -245,16 +291,32 @@ install_missing() {  # installa i pacchetti indicati solo se mancano; mai attese
     && DEBIAN_FRONTEND=noninteractive timeout 900 apt-get -o DPkg::Lock::Timeout=300 install -y -qq \
       "${missing[@]}" >/dev/null
 }
-if yes_no "Attivo il firewall (da fuori solo le porte 80 e 443, accesso SSH solo dalla rete $LAN)?" s; then
+if [ -n "$VPS" ]; then
+  FIREWALL_QUESTION="Attivo il firewall (da fuori solo 80, 443 e SSH con limite ai tentativi)?"
+else
+  FIREWALL_QUESTION="Attivo il firewall (da fuori solo le porte 80 e 443, accesso SSH solo dalla rete $LAN)?"
+fi
+if yes_no "$FIREWALL_QUESTION" s; then
   install_missing ufw || die "installazione del firewall non riuscita: riprovare tra qualche minuto (forse era in corso un aggiornamento)."
   ufw default deny incoming >/dev/null
   ufw default allow outgoing >/dev/null
-  ufw allow from "$LAN" to any port 22 proto tcp comment "SSH dalla rete della struttura" >/dev/null
+  if [ -n "$VPS" ]; then
+    # su un VPS l'amministratore entra da internet: SSH aperto ma con limite ai tentativi (mai chiudersi fuori)
+    ufw limit 22/tcp comment "SSH dell'amministratore (limite ai tentativi)" >/dev/null
+  else
+    ufw allow from "$LAN" to any port 22 proto tcp comment "SSH dalla rete della struttura" >/dev/null
+  fi
   ufw allow 80/tcp comment "FASAS: certificato HTTPS" >/dev/null
   ufw allow 443/tcp comment "FASAS" >/dev/null
   ufw --force enable >/dev/null
   systemctl restart docker  # le regole di Docker per le porte 80 e 443 tornano sopra quelle del firewall
-  ok "firewall attivo: da fuori solo le porte 80 e 443, SSH solo da $LAN"
+  if [ -n "$VPS" ]; then
+    ok "firewall attivo: da fuori solo 80, 443 e SSH (con limite ai tentativi)"
+    grep -qiE '^\s*PasswordAuthentication\s+no' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf 2>/dev/null \
+      || warn "SSH accetta ancora le password: usare solo chiavi SSH (docs/FASAS_ONLINE.md, passo 3)"
+  else
+    ok "firewall attivo: da fuori solo le porte 80 e 443, SSH solo da $LAN"
+  fi
 else
   warn "firewall non modificato da questo script (guida, passo 15)"
 fi
@@ -320,7 +382,7 @@ ok "sito avviato"
 # rientrare nella rete della struttura, altrimenti da fuori si entrerebbe senza il secondo passaggio.
 NETWORK=$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}} {{end}}' "$WEB" | awk '{print $1}')
 GATEWAY=$(docker network inspect --format '{{range .IPAM.Config}}{{.Gateway}} {{end}}' "$NETWORK" 2>/dev/null | awk '{print $1}')
-if [ -n "$GATEWAY" ] && python3 -c 'import ipaddress, sys; sys.exit(0 if any(ipaddress.ip_address(sys.argv[1]) in ipaddress.ip_network(n.strip(), strict=False) for n in sys.argv[2].split(",") if n.strip()) else 1)' "$GATEWAY" "$LAN"; then
+if [ -n "$GATEWAY" ] && [ -n "$LAN" ] && python3 -c 'import ipaddress, sys; sys.exit(0 if any(ipaddress.ip_address(sys.argv[1]) in ipaddress.ip_network(n.strip(), strict=False) for n in sys.argv[2].split(",") if n.strip()) else 1)' "$GATEWAY" "$LAN"; then
   docker compose stop web worker
   die "la rete della struttura ($LAN) contiene la rete interna di Docker ($GATEWAY): correggere FASAS_2FA_TRUSTED_NETWORKS nel .env e rilanciare."
 fi
@@ -339,9 +401,14 @@ echo
 if [ -n "$HTTPS_OK" ]; then
   ok "HTTPS funzionante con certificato valido: https://$DOMAIN"
 else
-  warn "certificato HTTPS non ancora ottenuto. Di solito vuol dire che dall'esterno le porte 80 e 443"
-  warn "non arrivano a questo server: controllare l'inoltro delle porte nel router verso $SERVER_IP"
-  warn "(guida, passo 6) e i messaggi con: sudo docker compose logs --tail 30 proxy"
+  if [ -n "$VPS" ]; then
+    warn "certificato HTTPS non ancora ottenuto: di solito il record A del dominio non punta ancora qui o le"
+    warn "porte 80 e 443 sono chiuse nel pannello del fornitore. Messaggi: sudo docker compose logs --tail 30 proxy"
+  else
+    warn "certificato HTTPS non ancora ottenuto. Di solito vuol dire che dall'esterno le porte 80 e 443"
+    warn "non arrivano a questo server: controllare l'inoltro delle porte nel router verso $SERVER_IP"
+    warn "(guida, passo 6) e i messaggi con: sudo docker compose logs --tail 30 proxy"
+  fi
 fi
 
 say "Fatto. Prossimi passi (guida, passi 10–11):"

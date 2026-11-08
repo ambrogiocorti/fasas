@@ -8,17 +8,30 @@
 #   sudo ./scripts/aggiorna_fasas.sh                    backup, contenitori aggiornati, nuova versione se c'è
 #   sudo ./scripts/aggiorna_fasas.sh --solo-sicurezza   backup e contenitori aggiornati, versione del FASAS invariata
 #   sudo ./scripts/aggiorna_fasas.sh --riavvia          come sopra e, se un aggiornamento lo chiede, riavvio del server
+#   sudo ./scripts/aggiorna_fasas.sh --versione REF     porta il FASAS a una versione precisa (commit, tag o ramo
+#                                                       di GitHub): la usa la pubblicazione da GitHub Actions
+#
+# Se dopo l'aggiornamento il FASAS non risponde, si torna da soli alla versione e all'immagine di prima (il backup
+# fatto all'inizio resta disponibile per i casi in cui serve anche il database di prima).
 #
 # Ogni esecuzione è annotata in /var/log/fasas-aggiornamenti.log (registro della manutenzione).
 # Guida: docs/INSTALLAZIONE_IN_STRUTTURA.md, passo 18.
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+cd "${FASAS_ROOT_DIR:-$(dirname "$0")/..}"
 ROOT_DIR=$(pwd)
+# la nuova versione può cambiare anche questo script, e bash legge i file man mano: si esegue una copia
+if [ -z "${FASAS_AGGIORNA_COPIA:-}" ]; then
+  COPY=$(mktemp /tmp/fasas-aggiorna.XXXXXX)
+  cp "$ROOT_DIR/scripts/aggiorna_fasas.sh" "$COPY"
+  FASAS_AGGIORNA_COPIA="$COPY" FASAS_ROOT_DIR="$ROOT_DIR" exec bash "$COPY" "$@"
+fi
+trap 'rm -f "$FASAS_AGGIORNA_COPIA"' EXIT
 LOG=/var/log/fasas-aggiornamenti.log
 MODE=aggiorna
 CODE=1
 REBOOT=""
+TARGET=""
 
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 ok() { printf '  \033[32m✔\033[0m %s\n' "$*"; }
@@ -31,6 +44,7 @@ while [ $# -gt 0 ]; do
     --controlla) MODE=controlla ;;
     --solo-sicurezza) CODE="" ;;
     --riavvia) REBOOT=1 ;;
+    --versione) shift; TARGET=${1:-}; [[ "$TARGET" =~ ^[A-Za-z0-9._/-]+$ ]] || die "versione non valida: $TARGET" ;;
     *) die "argomento sconosciuto: $1 (vedere le istruzioni in cima allo script)" ;;
   esac
   shift
@@ -62,7 +76,7 @@ check() {
   else ok "nessun aggiornamento di sicurezza in attesa"; fi
   if [ -f /var/run/reboot-required ]; then
     if needs_passphrase; then warn "serve un riavvio: farlo IN STRUTTURA (al riavvio il disco chiede la frase alla tastiera)"
-    else warn "serve un riavvio (sudo $0 --riavvia, oppure di notte alle 05:15 se attivo)"; fi
+    else warn "serve un riavvio (sudo scripts/aggiorna_fasas.sh --riavvia, oppure di notte alle 05:15 se attivo)"; fi
   else ok "nessun riavvio necessario"; fi
   local free
   free=$(df --output=pcent / | tail -n 1 | tr -dc '0-9')
@@ -99,28 +113,68 @@ web_ok || die "il FASAS non risponde: sistemare prima il problema (sudo docker c
 docker compose exec -T web python manage.py backup_create || die "backup non riuscito: nessun aggiornamento fatto"
 ok "backup fatto e verificato (in caso di problemi si ripristina dalla pagina Backup)"
 
-if [ -n "$CODE" ] && git rev-parse -q --verify '@{u}' > /dev/null && [ "$(git rev-list --count 'HEAD..@{u}')" -gt 0 ]; then
-  say "2. Nuova versione del FASAS"
-  BEFORE=$(git rev-parse --short HEAD)
-  git pull -q --ff-only || die "nuova versione non scaricata: ci sono modifiche locali in $ROOT_DIR (git status)"
-  ok "versione $BEFORE → $(git rev-parse --short HEAD)"
-  log "versione $BEFORE -> $(git rev-parse --short HEAD)"
+BEFORE=$(git rev-parse HEAD)
+BEFORE_BRANCH=$(git symbolic-ref -q --short HEAD || true)
+IMAGE=$(docker compose config --images 2>/dev/null | grep '^fasas-digitale:' | head -n 1 || true)
+# immagine in funzione conservata per tornare indietro senza ricostruirla
+if [ -n "$IMAGE" ] && docker image inspect "$IMAGE" > /dev/null 2>&1; then
+  docker tag "$IMAGE" fasas-digitale:precedente
 fi
+if [ -n "$TARGET" ]; then
+  say "2. Versione $TARGET del FASAS"
+  git status --porcelain --untracked-files=no | grep -q . \
+    && die "ci sono modifiche locali in $ROOT_DIR (git status): nessun aggiornamento fatto"
+  timeout 120 git fetch -q --tags origin || die "versione non scaricata da GitHub (internet?): nessun aggiornamento fatto"
+  RESOLVED=$(git rev-parse -q --verify "origin/$TARGET^{commit}" 2>/dev/null || git rev-parse -q --verify "$TARGET^{commit}" 2>/dev/null) \
+    || die "versione $TARGET non trovata: nessun aggiornamento fatto"
+  git checkout -q --detach "$RESOLVED"
+  ok "versione $(git rev-parse --short "$BEFORE") → $(git rev-parse --short HEAD)"
+  log "versione $(git rev-parse --short "$BEFORE") -> $(git rev-parse --short HEAD) ($TARGET)"
+elif [ -n "$CODE" ] && git rev-parse -q --verify '@{u}' > /dev/null && [ "$(git rev-list --count 'HEAD..@{u}')" -gt 0 ]; then
+  say "2. Nuova versione del FASAS"
+  git pull -q --ff-only || die "nuova versione non scaricata: ci sono modifiche locali in $ROOT_DIR (git status)"
+  ok "versione $(git rev-parse --short "$BEFORE") → $(git rev-parse --short HEAD)"
+  log "versione $(git rev-parse --short "$BEFORE") -> $(git rev-parse --short HEAD)"
+fi
+
+rollback() {  # torna a codice e immagine di prima; il database resta quello attuale
+  warn "$1: ritorno alla versione di prima ($(git rev-parse --short "$BEFORE"))"
+  log "ritorno alla versione precedente: $1"
+  if [ "$(git rev-parse HEAD)" != "$BEFORE" ]; then
+    if [ -n "$BEFORE_BRANCH" ]; then git checkout -q "$BEFORE_BRANCH" && git reset -q --keep "$BEFORE"
+    else git checkout -q --detach "$BEFORE"; fi
+  fi
+  if [ -n "$IMAGE" ] && docker image inspect fasas-digitale:precedente > /dev/null 2>&1; then
+    docker tag fasas-digitale:precedente "$IMAGE"
+    docker compose up -d --no-build --remove-orphans
+  else
+    docker compose up -d --build --remove-orphans
+  fi
+  for _ in $(seq 1 90); do web_ok && break; sleep 2; done
+  if web_ok; then
+    log "tornati alla versione precedente"
+    die "aggiornamento annullato, il FASAS funziona con la versione di prima. Se la nuova versione aveva modificato il database e qualcosa non va, ripristinare il backup fatto all'inizio (guida «Ripristino»)."
+  fi
+  die "il FASAS non risponde nemmeno con la versione di prima: ripristinare il backup fatto all'inizio (guida «Ripristino») — sudo docker compose logs --tail 100 web"
+}
 
 say "3. Contenitori aggiornati"
 docker compose pull -q --ignore-buildable 2>/dev/null || docker compose pull -q --ignore-pull-failures \
   || warn "immagini non scaricate (internet?): si riparte con quelle attuali"
-docker compose build -q --pull || die "costruzione del FASAS non riuscita: il FASAS attuale resta in funzione"
+if ! docker compose build -q --pull; then
+  [ "$(git rev-parse HEAD)" = "$BEFORE" ] || rollback "costruzione della nuova versione non riuscita"
+  die "costruzione del FASAS non riuscita: il FASAS attuale resta in funzione"
+fi
 docker compose up -d --remove-orphans
 for _ in $(seq 1 90); do web_ok && break; sleep 2; done
-web_ok || die "dopo l'aggiornamento il FASAS non risponde: sudo docker compose logs --tail 100 web"
-ok "FASAS ripartito e funzionante"
+web_ok || rollback "dopo l'aggiornamento il FASAS non risponde"
+ok "FASAS ripartito e funzionante ($(git rev-parse --short HEAD))"
 docker image prune -f > /dev/null 2>&1 || true
 log "aggiornamento completato"
 
 if [ -f /var/run/reboot-required ]; then
   if [ -z "$REBOOT" ]; then
-    warn "il sistema chiede un riavvio: sudo $0 --riavvia (o di notte alle 05:15, se attivo)"
+    warn "il sistema chiede un riavvio: sudo scripts/aggiorna_fasas.sh --riavvia (o di notte alle 05:15, se attivo)"
   elif needs_passphrase; then
     warn "riavvio NON fatto: il disco chiederebbe la frase alla tastiera del server. Riavviare in struttura."
   else

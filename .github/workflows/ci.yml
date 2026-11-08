@@ -345,6 +345,50 @@ jobs:
       - run: sudo docker compose down -v
         if: always()
 
+  installazione-vps:
+    # scripts/prepara_server.sh --vps (server su internet, es. fasas.online) su un vero Ubuntu 24.04 con Docker:
+    # nessuna rete della struttura, nome «www» che rimanda al dominio, pubblicazione di una versione precisa e
+    # ritorno automatico alla versione di prima quando la nuova non parte.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installazione in modalità VPS
+        run: >
+          sudo python3 .github/ci/prova_prepara_server.py . '[["Dominio del FASAS", "fasas.localhost"],
+          ["Altri nomi", "www.fasas.localhost"], ["Email", "direzione@esempio.it"], ["bucket B2", "n"],
+          ["Continuo lo stesso", "s"], ["Continuo lo stesso", "s"],
+          ["Attivo il firewall", "n"], ["Riavvio automatico", "n"]]' --vps
+      - name: Controlli dopo l'installazione
+        run: |
+          sudo grep -q '^FASAS_2FA_TRUSTED_NETWORKS=$' .env
+          sudo grep -q '^FASAS_DOMAIN_ALIASES=www.fasas.localhost$' .env
+          curl -skf --resolve fasas.localhost:443:127.0.0.1 https://fasas.localhost/salute/
+          redirect=$(curl -sk --resolve www.fasas.localhost:443:127.0.0.1 -o /dev/null -w '%{http_code} %{redirect_url}' https://www.fasas.localhost/accesso/entra/)
+          echo "$redirect"
+          test "$redirect" = "301 https://fasas.localhost/accesso/entra/"
+      - name: Pubblicazione di una versione precisa
+        run: |
+          sudo ./scripts/aggiorna_fasas.sh --versione "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          curl -skf --resolve fasas.localhost:443:127.0.0.1 https://fasas.localhost/salute/
+      - name: Versione rotta → ritorno automatico alla precedente
+        run: |
+          sed -i 's|^  web)$|  web)\n    echo "versione di prova che non parte"; exit 1|' docker/entrypoint.sh
+          git -c user.name=ci -c user.email=ci@example.invalid commit -qam "versione di prova che non parte"
+          ROTTA=$(git rev-parse HEAD)
+          git checkout -q --detach "$GITHUB_SHA"
+          if sudo ./scripts/aggiorna_fasas.sh --versione "$ROTTA"; then echo "la versione rotta è stata accettata"; exit 1; fi
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          curl -skf --resolve fasas.localhost:443:127.0.0.1 https://fasas.localhost/salute/
+          sudo grep -q "tornati alla versione precedente" /var/log/fasas-aggiornamenti.log
+      - name: Log in caso di errore
+        if: failure()
+        run: |
+          sudo docker compose logs --tail 100
+          sudo tail -30 /var/log/fasas-aggiornamenti.log || true
+      - run: sudo docker compose down -v
+        if: always()
+
   sicurezza:
     # Vulnerabilità note nelle dipendenze bloccate e analisi statica del codice
     runs-on: ubuntu-latest

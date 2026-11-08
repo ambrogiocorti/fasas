@@ -32,6 +32,22 @@ Nuova modalità d'installazione, senza funzioni nuove per il personale (il blocc
 - Controlli all'avvio che fermano un servizio senza storage dei file, dominio o chiavi; `/salute/` risponde ai
   controlli interni del servizio di hosting con qualsiasi Host.
 
+### fasas.online (docs/FASAS_ONLINE.md)
+- **Database dedicato obbligatorio**: con tabelle di altre applicazioni nello schema (per esempio un progetto
+  Supabase già usato da un'altra app) il FASAS non parte (`fasas.E107`) e non crea nulla; la protezione dalle API
+  agisce solo su tabelle, sequenze e funzioni del FASAS; il primo file SQL si ferma se lo schema non è vuoto.
+- **Dominio unico**: nella versione cloud `www` e il nome tecnico dell'hosting rimandano al primo nome di
+  `FASAS_DOMAIN` (dal repository `fasas-deploy`, ora integrato qui); Caddy rimanda gli altri nomi
+  (`FASAS_DOMAIN_ALIASES`).
+- **`prepara_server.sh --vps`**: server affittato su internet, senza rete della struttura né DuckDNS; controllo che il
+  DNS punti al server; SSH aperto con limite ai tentativi; provato a ogni modifica nella CI.
+- **Pubblicazione controllata**: workflow «Pubblica su fasas.online» (solo commit con la CI verde, ambiente con
+  approvazione); `aggiorna_fasas.sh --versione` con backup prima e **ritorno automatico** a codice e immagine di
+  prima se la nuova versione non risponde (provato nella CI con una versione volutamente rotta).
+- `scripts/avvia_cloud.sh` per gli hosting Python senza Docker.
+- Test dei casi critici che mancavano: terapia modificata senza permessi, terapia sospesa mentre il telefono è senza
+  rete, operatore disattivato che sincronizza, invio ripetuto dopo un riavvio.
+
 ## 0.10.0 – 04/11/2026 – versione per il pilota
 
 Da questa versione si fanno solo correzioni fino alla fine del pilota (docs/PIANO_PILOTA.md).

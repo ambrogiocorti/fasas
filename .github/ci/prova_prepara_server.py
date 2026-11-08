@@ -1,7 +1,7 @@
 """
 Collaudo di scripts/prepara_server.sh: lo esegue in un terminale virtuale e risponde alle domande.
 
-    sudo python3 .github/ci/prova_prepara_server.py <cartella del FASAS> '<risposte JSON>'
+    sudo python3 .github/ci/prova_prepara_server.py <cartella del FASAS> '<risposte JSON>' [argomenti dello script]
 
 Le risposte sono coppie [testo della domanda (espressione regolare), risposta], date nell'ordine in cui lo
 script le pone. Esce con il codice dello script; fallisce se lo script si ferma su una domanda imprevista.
@@ -14,12 +14,12 @@ import select
 import sys
 import time
 
-folder, answers = sys.argv[1], json.loads(sys.argv[2])
+folder, answers, script_args = sys.argv[1], json.loads(sys.argv[2]), sys.argv[3:]
 timeout = int(os.environ.get("PROVA_TIMEOUT", "1800"))
 pid, fd = pty.fork()
 if pid == 0:
     os.chdir(folder)
-    os.execvp("bash", ["bash", "scripts/prepara_server.sh"])
+    os.execvp("bash", ["bash", "scripts/prepara_server.sh", *script_args])
 
 output, given, status, last_output = b"", 0, None, time.time()
 deadline = time.time() + timeout

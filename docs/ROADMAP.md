@@ -1,6 +1,6 @@
 # Roadmap
 
-Stato al 04/11/2026, versione 0.10.0 «pilota» ([CHANGELOG](../CHANGELOG.md)). ✅ fatto · 🟡 da decidere o da completare fuori dal software · ⬜ da fare
+Stato al 08/11/2026, versione 0.10.0 «pilota» ([CHANGELOG](../CHANGELOG.md)). ✅ fatto · 🟡 da decidere o da completare fuori dal software · ⬜ da fare
 
 > **Blocco delle funzioni fino alla fine del pilota.** Dalla 0.10.0 si fanno solo correzioni di errori e dei punti
 > scomodi segnalati con «Segnala un problema». Le voci ⬜ delle fasi 2 e 3 si riprendono dopo la 1.0, scegliendole
@@ -10,6 +10,8 @@ Stato al 04/11/2026, versione 0.10.0 «pilota» ([CHANGELOG](../CHANGELOG.md)). 
 
 | | Attività | Note |
 |---|---|---|
+| ✅ | Versione online su un solo codice: VPS (`prepara_server.sh --vps`), pubblicazione da GitHub con ritorno automatico, versione cloud con Supabase | [FASAS_ONLINE.md](FASAS_ONLINE.md), [CLOUD.md](CLOUD.md); provate nella CI |
+| 🟡 | **fasas.online operativo**: acquisto del VPS, record DNS su Register.it, dominio tolto da GitHub Pages, segreti per la pubblicazione | decisione e spesa della struttura (circa 6–8 €/mese), passi 1–6 di [FASAS_ONLINE.md](FASAS_ONLINE.md) |
 | ✅ | Importazione dal FASAS cartaceo | modello Excel con anteprima degli errori, scansioni abbinate all'ospite – [IMPORTAZIONE.md](IMPORTAZIONE.md) |
 | ✅ | Firma digitale remota qualificata | API CSC, PIN + OTP, PAdES con marca temporale – [FIRMA_DIGITALE.md](FIRMA_DIGITALE.md). Serve il contratto con un prestatore e una prova nella sua sandbox |
 | 🟡 | Firma elettronica avanzata con CIE (FASAS Sign) | server, interfaccia e FASAS Signer pronti e provati con PKCS#11 reale (SoftHSM); accettazione delle condizioni firmata con la CIE e conservata 20 anni (art. 57) – [FIRMA_CIE.md](FIRMA_CIE.md). **Da collaudare con una CIE reale**; testo delle condizioni da far approvare al legale; assicurazione dell'erogatore |

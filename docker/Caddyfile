@@ -1,7 +1,10 @@
 # Proxy HTTPS davanti al FASAS: certificato Let's Encrypt automatico per FASAS_DOMAIN
-# (con «localhost» usa un certificato locale, per le prove).
-{$FASAS_DOMAIN:localhost} {
+# (con «localhost» usa un certificato locale, per le prove). FASAS_DOMAIN_ALIASES: altri nomi (es. www.fasas.online),
+# separati da spazi, che ricevono un certificato e rimandano al dominio principale.
+{$FASAS_DOMAIN:localhost} {$FASAS_DOMAIN_ALIASES} {
 	encode gzip
+	@alias not host {$FASAS_DOMAIN:localhost}
+	redir @alias https://{$FASAS_DOMAIN:localhost}{uri} permanent
 	handle /static/* {
 		root * /
 		file_server

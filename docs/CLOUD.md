@@ -11,7 +11,8 @@ browser / telefoni ──HTTPS──▶ dominio ──▶ servizio di hosting: c
                                                                                     · (bucket dei backup)
 ```
 
-Per l'installazione su un PC in struttura resta valida [INSTALLAZIONE_IN_STRUTTURA.md](INSTALLAZIONE_IN_STRUTTURA.md).
+Per l'installazione su un PC in struttura resta valida [INSTALLAZIONE_IN_STRUTTURA.md](INSTALLAZIONE_IN_STRUTTURA.md); per
+`fasas.online` su un server affittato (soluzione consigliata per i dati veri) [FASAS_ONLINE.md](FASAS_ONLINE.md).
 
 ## Cosa fa il FASAS da solo in modalità cloud (`FASAS_CLOUD=1`)
 
@@ -58,8 +59,10 @@ python -c "import base64,os,secrets; print('DJANGO_SECRET_KEY=' + secrets.token_
 
 ## Passo 2 – Supabase: progetto e database
 
-1. Nuovo progetto, regione **UE** (consigliata Francoforte, `eu-central-1`, la stessa di `render.yaml`).
-   Annotare la password del database.
+1. **Nuovo progetto dedicato al FASAS** (mai un progetto già usato da un'altra applicazione: il FASAS si rifiuta
+   di partire se trova tabelle non sue, errore `fasas.E107`), regione **UE** (consigliata Francoforte,
+   `eu-central-1`, la stessa di `render.yaml`). Il piano gratuito consente due progetti attivi. Annotare la password
+   del database.
 2. Applicare le migrazioni della cartella [`supabase/migrations`](../supabase/migrations), **nell'ordine**:
    - `…_fasas_schema_e_dati_iniziali.sql`: tabelle, vincoli, protezioni dell'audit, ruoli e permessi, configurazione
      iniziale (nessun dato personale, nessun utente);
@@ -106,8 +109,11 @@ python -c "import base64,os,secrets; print('DJANGO_SECRET_KEY=' + secrets.token_
 5. Aggiornamenti: `render.yaml` non pubblica da solo a ogni modifica su GitHub. Dopo il collaudo di una nuova
    versione: **Manual Deploy**. Lo schema del database si aggiorna da solo all'avvio: non c'è SQL da eseguire.
 
-Altri servizi che avviano un `Dockerfile` (Railway, Fly.io, Koyeb, Google Cloud Run…) vanno bene allo stesso modo:
-stesse variabili, comando predefinito dell'immagine, porta nella variabile `PORT`, controllo di salute `/salute/`.
+Altri servizi che avviano un `Dockerfile` vanno bene allo stesso modo: stesse variabili, comando predefinito
+dell'immagine, porta nella variabile `PORT`, controllo di salute `/salute/`. Sugli hosting Python senza Docker:
+`scripts/avvia_cloud.sh` (serve anche `pg_dump` 17, altrimenti i backup non sono ripristinabili). Prima di sceglierne
+uno controllare che non si addormenti e non abbia limiti di ore: a novembre 2026 Koyeb non offre più un piano
+gratuito ai nuovi account e Oracle Always Free recupera le istanze poco usate ([FASAS_ONLINE.md](FASAS_ONLINE.md)).
 
 ## Passo 5 – Copia fuori sede dei backup
 
@@ -167,6 +173,8 @@ file dello Storage (i backup di Supabase, dove ci sono, contengono solo il datab
 | `fasas.E102` / `fasas.E103` | Mancano o sono incomplete le variabili `FASAS_S3_*` |
 | `fasas.E104` | Manca `FASAS_DOMAIN` |
 | `fasas.E106` | Mancano `FASAS_ENCRYPTION_KEYS` o `FASAS_BACKUP_KEY` |
+| `fasas.E107` | Il database contiene tabelle di un'altra applicazione: usare un progetto Supabase nuovo solo per il FASAS (nulla è stato creato o modificato) |
+| La pagina rimanda sempre a un altro indirizzo | Il primo nome di `FASAS_DOMAIN` è il dominio principale: `www` e il nome tecnico dell'hosting rimandano lì |
 | `password authentication failed` | Password sbagliata in `DATABASE_URL`; caratteri come `@ : / #` vanno scritti come `%40 %3A %2F %23` |
 | `Network is unreachable` verso `db.….supabase.co` | Si sta usando «Direct connection»: usare «Session pooler» |
 | Pagina «Bad Request (400)» | Il nome nella barra degli indirizzi non è in `FASAS_DOMAIN` |
