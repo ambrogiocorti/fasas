@@ -146,9 +146,9 @@ rollback() {  # torna a codice e immagine di prima; il database resta quello att
   fi
   if [ -n "$IMAGE" ] && docker image inspect fasas-digitale:precedente > /dev/null 2>&1; then
     docker tag fasas-digitale:precedente "$IMAGE"
-    docker compose up -d --no-build --remove-orphans
+    docker compose up -d --no-build --remove-orphans || true
   else
-    docker compose up -d --build --remove-orphans
+    docker compose up -d --build --remove-orphans || true
   fi
   for _ in $(seq 1 90); do web_ok && break; sleep 2; done
   if web_ok; then
@@ -165,7 +165,8 @@ if ! docker compose build -q --pull; then
   [ "$(git rev-parse HEAD)" = "$BEFORE" ] || rollback "costruzione della nuova versione non riuscita"
   die "costruzione del FASAS non riuscita: il FASAS attuale resta in funzione"
 fi
-docker compose up -d --remove-orphans
+# «up» fallisce anche quando il sito nuovo non diventa sano (il worker lo aspetta): si decide con il controllo
+docker compose up -d --remove-orphans || warn "i contenitori della nuova versione non sono partiti tutti"
 for _ in $(seq 1 90); do web_ok && break; sleep 2; done
 web_ok || rollback "dopo l'aggiornamento il FASAS non risponde"
 ok "FASAS ripartito e funzionante ($(git rev-parse --short HEAD))"
