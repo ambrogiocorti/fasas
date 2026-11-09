@@ -1,34 +1,75 @@
 # Presentazione online del FASAS (dati inventati)
 
-Una copia del FASAS su internet, all'indirizzo `fasas.online`, per mostrarlo e farlo provare. Stesso programma della
-versione locale, con **ospiti, terapie e documenti inventati** che si ricreano da soli a ogni avvio. Non serve
-nessun database, nessuno storage e nessuna chiave: il servizio gratuito di Render costruisce e avvia tutto da GitHub.
+Una copia del FASAS su internet per mostrarlo e farlo provare. Stesso programma della versione locale, con **ospiti,
+terapie e documenti inventati**. Non serve nessun database, nessuno storage e nessuna chiave da configurare.
 
 **Mai dati di persone reali**: le chiavi di cifratura sono quelle pubbliche di prova e le password degli utenti sono
 scritte nella pagina di accesso. Per l'uso vero c'è [FASAS_ONLINE.md](FASAS_ONLINE.md).
 
-## Passo 1 – Pubblicarla (5 minuti, poi 5–10 minuti di attesa)
+## Dove pubblicarla senza carta di credito (verifica di novembre 2026)
 
-1. Entrare su <https://render.com> con l'account GitHub.
-2. **New** › **Blueprint** › scegliere il repository `ambrogiocorti/fasas` › **Apply**. Non c'è niente da compilare:
-   legge il file `render.yaml` (servizio `fasas-presentazione`, piano Free, Francoforte).
-3. Aspettare lo stato **Live** (la prima volta costruisce l'immagine: 5–10 minuti).
-4. Aprire l'indirizzo mostrato da Render (tipo `https://fasas-presentazione.onrender.com`): pagina di accesso con la
-   fascia rossa «Versione di presentazione», utenti e password.
+| Servizio | Carta | Indirizzo | Per cosa |
+|---|---|---|---|
+| **PythonAnywhere**, account gratuito (consigliato) | no | `nomeutente.eu.pythonanywhere.com` (server in UE) | presentazione sempre raggiungibile, da far provare anche ad altri |
+| **GitHub Codespaces** | no | indirizzo temporaneo `…app.github.dev` | presentazione dal vivo, acceso solo mentre lo usi |
+| Render (`render.yaml` di questo repository) | a volte richiesta | `fasas.online` | se la carta viene accettata: passo «Render» in fondo |
 
-## Passo 2 – Collegare fasas.online
+Il piano gratuito di PythonAnywhere non permette un dominio proprio: `fasas.online` si fa rimandare all'indirizzo di
+PythonAnywhere (passo A4).
 
-1. Su Render › servizio `fasas-presentazione` › **Settings** › **Custom Domains**: `fasas.online` e
-   `www.fasas.online` sono già elencati; accanto Render indica i record DNS da creare.
-2. Su Register.it › Domini › `fasas.online` › **Gestione DNS**:
-   - togliere i 4 record A `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153` (GitHub Pages);
-   - creare il record A di `fasas.online` con l'indirizzo indicato da Render;
-   - cambiare il CNAME di `www` (oggi `ambrogiocorti.github.io`) con il valore indicato da Render.
-3. Su GitHub › `fasas-deploy` › Settings › **Pages**: togliere il dominio `fasas.online`.
-4. Su Render premere **Verify** accanto ai due domini: quando risultano verificati, il certificato HTTPS arriva da
-   solo (di solito minuti, a volte qualche ora per la propagazione del DNS).
+## A. PythonAnywhere (gratuito, senza carta)
 
-## Come si comporta
+1. **Account**: <https://eu.pythonanywhere.com> › *Pricing & signup* › **Create a Beginner account** (nome utente,
+   email, password). Il nome utente diventa l'indirizzo: `nomeutente.eu.pythonanywhere.com`.
+2. **Sito vuoto**: scheda **Web** › **Add a new web app** › Next › **Manual configuration** › **Python 3.13** (o la
+   più recente in elenco) › Next.
+3. **Installazione**: scheda **Consoles** › **Bash**, poi incollare:
+
+   ```bash
+   git clone --depth 1 https://github.com/ambrogiocorti/fasas.git && cd fasas && ./scripts/presentazione_pythonanywhere.sh
+   ```
+
+   In qualche minuto installa le librerie, crea i dati di esempio e collega il sito. Alla fine scrive tre impostazioni
+   da controllare nella scheda **Web**: *Python version* (la stessa scelta al punto 2), *Virtualenv*
+   (`/home/nomeutente/.virtualenvs/fasas`) e **Force HTTPS** su *Enabled*. Poi il pulsante verde **Reload**.
+4. **fasas.online** (facoltativo): nel repository `fasas-deploy`, che oggi pubblica `fasas.online` con GitHub Pages,
+   aggiungere il file `index.html`:
+
+   ```html
+   <!doctype html><meta charset="utf-8"><title>FASAS Digitale</title>
+   <meta http-equiv="refresh" content="0; url=https://nomeutente.eu.pythonanywhere.com/">
+   <a href="https://nomeutente.eu.pythonanywhere.com/">FASAS Digitale – presentazione</a>
+   ```
+
+   Così chi apre `fasas.online` arriva alla presentazione (nella barra degli indirizzi compare quello di PythonAnywhere).
+
+Da sapere:
+
+- l'account gratuito tiene acceso il sito per un mese: scheda **Web** › **Run until 1 month from today**, una volta al
+  mese (arriva un'email di promemoria);
+- i dati inseriti restano; per tornare ai dati di esempio con le date di oggi (per esempio prima di una presentazione):
+  console Bash › `cd fasas && ./scripts/presentazione_pythonanywhere.sh --rigenera`, poi **Reload**;
+- per aggiornare alla versione più recente: `cd fasas && git pull && ./scripts/presentazione_pythonanywhere.sh`;
+- niente job pianificati (promemoria e chiusura automatica dei turni non partono da soli): per mostrare il programma
+  non servono.
+
+## B. GitHub Codespaces (per la presentazione dal vivo)
+
+1. Su GitHub, repository `fasas` › **Code** › **Codespaces** › **Create codespace**. Parte da solo con i dati di
+   esempio (2–3 minuti la prima volta) e apre la scheda del FASAS.
+2. Per farlo vedere ad altri: in basso scheda **Porte** › porta 8000 › tasto destro › **Port visibility** › **Public**,
+   e condividere l'indirizzo.
+3. Si spegne dopo 30 minuti senza uso (o quando lo si chiude); le ore gratuite al mese bastano per molte presentazioni.
+
+## Render (se la carta viene accettata)
+
+1. <https://render.com> con l'account GitHub › **New** › **Blueprint** › repository `ambrogiocorti/fasas` ›
+   **Apply**: legge `render.yaml`, non c'è nulla da compilare.
+2. Settings › **Custom Domains**: `fasas.online` e `www.fasas.online`; su Register.it togliere i 4 record A di GitHub
+   Pages (`185.199.108–111.153`) e mettere i record indicati da Render; su `fasas-deploy` › Settings › Pages togliere il
+   dominio.
+
+Come si comporta su Render:
 
 | | |
 |---|---|
@@ -43,10 +84,11 @@ Per una presentazione riservata: Render › servizio › **Environment** › agg
 password scelta (almeno 10 caratteri). Al riavvio successivo gli utenti di prova usano quella e la pagina di accesso
 non la mostra più.
 
-## Se Render non funziona
+## Altri servizi
 
 Va bene qualsiasi servizio che avvii il `Dockerfile` di questo repository con la variabile `FASAS_PRESENTAZIONE=1`
-(porta nella variabile `PORT`, controllo di salute `/salute/`): non servono altre impostazioni.
+(porta nella variabile `PORT`, controllo di salute `/salute/`): non servono altre impostazioni (a novembre 2026 Koyeb, Oracle e Google Cloud Run chiedono la carta e Hugging Face
+fa pagare gli spazi Docker).
 
 ## Provarla sul proprio PC
 

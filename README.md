@@ -58,9 +58,9 @@ Backblaze B2 nel piano gratuito, gruppo di continuità; con lista della spesa e 
 
 ## Presentazione online (dati inventati)
 
-Una copia del FASAS su internet per mostrarlo e provarlo, gratuita e senza nulla da configurare: Render › New ›
-Blueprint › questo repository (`render.yaml`). Dati di esempio ricreati a ogni avvio, mai dati reali:
-[docs/PRESENTAZIONE.md](docs/PRESENTAZIONE.md).
+Una copia del FASAS su internet per mostrarlo e provarlo, gratuita e **senza carta di credito**: account gratuito di
+PythonAnywhere e un solo comando (`scripts/presentazione_pythonanywhere.sh`), oppure GitHub Codespaces per una
+presentazione dal vivo. Dati di esempio, mai dati reali: [docs/PRESENTAZIONE.md](docs/PRESENTAZIONE.md).
 
 ## Versione online (fasas.online)
 

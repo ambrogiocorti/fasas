@@ -39,6 +39,8 @@ Nuova modalità d'installazione, senza funzioni nuove per il personale (il blocc
 - `render.yaml` è ora la presentazione (Render › Blueprint › Apply, piano Free, domini fasas.online e www); la
   versione cloud per i dati veri è in `deploy/render-cloud.yaml`.
 - Password riservata facoltativa (`FASAS_PRESENTAZIONE_PASSWORD`); prova dell'immagine in modalità presentazione nella CI.
+- Senza carta di credito: `scripts/presentazione_pythonanywhere.sh` installa la presentazione su un account gratuito di
+  PythonAnywhere (server UE) con un solo comando, scrive il file WSGI e rigenera i dati di esempio a richiesta.
 
 ### fasas.online (docs/FASAS_ONLINE.md)
 - **Database dedicato obbligatorio**: con tabelle di altre applicazioni nello schema (per esempio un progetto
