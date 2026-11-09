@@ -5,7 +5,9 @@ set -e
 mkdir -p "${FASAS_MEDIA_ROOT:-/data/media}" "${FASAS_BACKUP_DIR:-/data/backups}"
 case "$1" in
   web)
-    # con FASAS_CLOUD=1 lo stesso comando avvia la versione cloud: nessun comando da impostare sul servizio di hosting
+    # con FASAS_PRESENTAZIONE=1 o FASAS_CLOUD=1 lo stesso comando avvia la versione di presentazione o cloud:
+    # nessun comando da impostare sul servizio di hosting
+    if [ "${FASAS_PRESENTAZIONE:-0}" = "1" ]; then exec /app/docker/presentazione.sh; fi
     if [ "${FASAS_CLOUD:-0}" = "1" ]; then exec /app/docker/cloud.sh; fi
     python manage.py migrate --noinput
     # i file statici dell'immagine vanno nel volume condiviso con il proxy HTTPS

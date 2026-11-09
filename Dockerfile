@@ -26,6 +26,11 @@ COPY --chown=fasas:fasas . .
 # file statici anche compressi (.gz): nella versione cloud li serve il FASAS stesso (WhiteNoise)
 RUN DJANGO_SECRET_KEY=solo-per-collectstatic DJANGO_DEBUG=0 FASAS_SERVE_STATIC=1 \
     python manage.py collectstatic --noinput --verbosity 0
+# versione di presentazione (FASAS_PRESENTAZIONE=1): schema del database di prova già pronto, così l'avvio sui servizi
+# gratuiti (più lenti) deve creare solo i dati di esempio. Nessun dato: solo tabelle e configurazione iniziale.
+RUN mkdir -p presentazione && DJANGO_SECRET_KEY=solo-per-la-presentazione FASAS_PRESENTAZIONE=1 \
+    FASAS_PRESENTAZIONE_DB=/app/presentazione/base.sqlite3 FASAS_MEDIA_ROOT=/tmp/m FASAS_BACKUP_DIR=/tmp/b \
+    python manage.py migrate --noinput --verbosity 0 && rm -rf /tmp/m /tmp/b
 
 USER fasas
 EXPOSE 8000

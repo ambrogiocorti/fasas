@@ -27,7 +27,7 @@
   </section>
   <section class="auth-panel">
     <div class="card">
-      {% if dev_keys_in_use %}<div class="alert alert-danger" role="alert" id="dev-keys-banner">{% icon "alert-circle" %}<div class="alert-body"><strong>Installazione di prova.</strong> Chiavi di cifratura pubbliche e utenti con password note: non inserire dati di persone reali. Per l'uso vero: docs/INSTALLAZIONE_IN_STRUTTURA.md.</div></div>{% endif %}
+      {% include "partials/banner_prova.html" with show_users=True %}
       {% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}">{% icon "info" %}<div class="alert-body">{{ message }}</div></div>{% endfor %}
       {% block panel %}{% endblock %}
     </div>

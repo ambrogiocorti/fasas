@@ -32,6 +32,14 @@ Nuova modalità d'installazione, senza funzioni nuove per il personale (il blocc
 - Controlli all'avvio che fermano un servizio senza storage dei file, dominio o chiavi; `/salute/` risponde ai
   controlli interni del servizio di hosting con qualsiasi Host.
 
+### Presentazione online (docs/PRESENTAZIONE.md)
+- **`FASAS_PRESENTAZIONE=1`**: il FASAS online per mostrarlo, senza nulla da configurare. Database SQLite nel container
+  con lo schema già pronto nell'immagine, dati di esempio ricreati a ogni avvio con le date di oggi, chiavi pubbliche
+  di prova, utenti di prova senza verifica in due passaggi, niente backup; fascia rossa in ogni pagina.
+- `render.yaml` è ora la presentazione (Render › Blueprint › Apply, piano Free, domini fasas.online e www); la
+  versione cloud per i dati veri è in `deploy/render-cloud.yaml`.
+- Password riservata facoltativa (`FASAS_PRESENTAZIONE_PASSWORD`); prova dell'immagine in modalità presentazione nella CI.
+
 ### fasas.online (docs/FASAS_ONLINE.md)
 - **Database dedicato obbligatorio**: con tabelle di altre applicazioni nello schema (per esempio un progetto
   Supabase già usato da un'altra app) il FASAS non parte (`fasas.E107`) e non crea nulla; la protezione dalle API

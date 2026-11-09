@@ -8,7 +8,8 @@ from django.core.checks import Error, Tags, Warning, register
 
 @register("fasas")
 def cloud_checks(app_configs=None, **kwargs):
-    if not settings.FASAS_CLOUD:
+    # la versione di presentazione non ha bisogno di storage, dominio né chiavi: tutto è di prova e si ricrea
+    if not settings.FASAS_CLOUD or settings.FASAS_PRESENTAZIONE:
         return []
     problems = []
     database = settings.DATABASES["default"]

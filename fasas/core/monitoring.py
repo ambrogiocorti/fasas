@@ -191,7 +191,9 @@ def checks():
     results.append(("spazio_disco", level, f"{free:.1f} GB liberi"))
 
     backup = BackupRecord.objects.filter(status=BackupRecord.Status.OK).first()
-    if backup is None or backup.created_at < now - datetime.timedelta(hours=26):
+    if settings.FASAS_PRESENTAZIONE:
+        results.append(("backup", "ok", "versione di presentazione: dati di prova ricreati a ogni avvio, niente backup"))
+    elif backup is None or backup.created_at < now - datetime.timedelta(hours=26):
         results.append(("backup", "warning", "nessun backup riuscito nelle ultime 26 ore"))
     elif backup.verify_ok is False:
         results.append(("backup", "warning", "ultimo backup non verificato"))
@@ -232,7 +234,12 @@ def checks():
 
     runs = {run.name: run for run in JobRun.objects.all()}
     late, failed = [], []
+    from .scheduler import _skipped
+
+    skipped = _skipped()
     for name, minutes in JOB_INTERVALS.items():
+        if name in skipped:
+            continue
         run = runs.get(name)
         if name == "restore_test" and run is None:
             continue  # trimestrale: la prima può non essere ancora arrivata

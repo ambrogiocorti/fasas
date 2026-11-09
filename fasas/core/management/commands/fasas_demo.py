@@ -15,6 +15,13 @@ from fasas.audit.context import audit_context
 
 DEMO_PASSWORD = "Demo-Fasas-2026!"
 
+
+def demo_password():
+    """Password degli utenti di prova: quella pubblica, o FASAS_PRESENTAZIONE_PASSWORD per una presentazione online."""
+    import os
+
+    return os.environ.get("FASAS_PRESENTAZIONE_PASSWORD", "").strip() or DEMO_PASSWORD
+
 USERS = [
     ("admin", "Anna", "Amministratrice", "admin", ""),
     ("coordinatore", "Carlo", "Coordinatore", "coordinator", "Infermiere"),
@@ -86,7 +93,8 @@ class Command(BaseCommand):
         with audit_context(source="demo"):
             self._create()
         self.stdout.write(self.style.SUCCESS(
-            f"Dati demo creati. Utenti: {', '.join(u[0] for u in USERS)} – password: {DEMO_PASSWORD}"
+            f"Dati demo creati. Utenti: {', '.join(u[0] for u in USERS)} – password: "
+            f"{DEMO_PASSWORD if demo_password() == DEMO_PASSWORD else '(quella di FASAS_PRESENTAZIONE_PASSWORD)'}"
         ))
 
     def _create(self):
@@ -135,7 +143,7 @@ class Command(BaseCommand):
                 "email": f"{username}@example.invalid",
             })
             if created:
-                user.set_password(DEMO_PASSWORD)
+                user.set_password(demo_password())
                 user.save()
             users[role] = user
         return users
@@ -155,7 +163,7 @@ class Command(BaseCommand):
                 "first_name": first, "last_name": last, "role": "operator", "qualification": "OSS",
                 "email": f"{username}@example.invalid"})
             if created:
-                user.set_password(DEMO_PASSWORD)
+                user.set_password(demo_password())
                 user.save()
         cycle = ["M", "M", "P", "P", "N", "R", "R"]
         current = month_start()

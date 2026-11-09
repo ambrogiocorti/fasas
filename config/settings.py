@@ -61,7 +61,10 @@ if not SECRET_KEY:
 
 # Versione cloud (docs/CLOUD.md): un solo container dietro l'HTTPS del servizio di hosting, file statici serviti dal
 # FASAS (WhiteNoise), job periodici dal pianificatore integrato (niente Redis), file cifrati su object storage S3.
-FASAS_CLOUD = env_bool("FASAS_CLOUD", False)
+# Versione di presentazione (docs/PRESENTAZIONE.md): stessa versione cloud, ma con database SQLite nel container,
+# dati inventati ricreati a ogni avvio, chiavi pubbliche di prova e nessuna configurazione da fare. Mai dati reali.
+FASAS_PRESENTAZIONE = env_bool("FASAS_PRESENTAZIONE", False)
+FASAS_CLOUD = env_bool("FASAS_CLOUD", False) or FASAS_PRESENTAZIONE
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
@@ -86,7 +89,8 @@ FASAS_PUBLIC_HOSTS = public_hosts()
 # Dominio della struttura: il primo di FASAS_DOMAIN (es. «fasas.online,www.fasas.online»). Nella versione cloud gli
 # altri nomi (www, nome tecnico dell'hosting) rimandano qui: un solo indirizzo per cookie, QR dei telefoni e link.
 FASAS_CANONICAL_HOST = (_hosts("FASAS_DOMAIN") or [""])[0]
-FASAS_CANONICAL_REDIRECT = env_bool("FASAS_CANONICAL_REDIRECT", FASAS_CLOUD)
+# (nella presentazione no: il nome tecnico dell'hosting deve funzionare anche prima che il dominio sia collegato)
+FASAS_CANONICAL_REDIRECT = env_bool("FASAS_CANONICAL_REDIRECT", FASAS_CLOUD and not FASAS_PRESENTAZIONE)
 for _host in FASAS_PUBLIC_HOSTS:
     if _host not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(_host)
@@ -179,9 +183,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+FASAS_PRESENTAZIONE_DB = os.environ.get("FASAS_PRESENTAZIONE_DB", "/data/presentazione.sqlite3")
 DATABASES = {
     "default": dj_database_url.parse(
-        env_secret("DATABASE_URL") or f"sqlite:///{BASE_DIR / 'db.sqlite3'}",  # contiene la password: anche da file
+        env_secret("DATABASE_URL")  # contiene la password: anche da file
+        or (f"sqlite:///{FASAS_PRESENTAZIONE_DB}" if FASAS_PRESENTAZIONE else f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
         conn_max_age=int(os.environ.get("DATABASE_CONN_MAX_AGE", "60")),
         ssl_require=env_bool("DATABASE_SSL_REQUIRE", False),
     )
@@ -319,7 +325,7 @@ FASAS_TRUSTED_PROXY_COUNT = int(os.environ.get("FASAS_TRUSTED_PROXY_COUNT", "1" 
 FASAS_LOGIN_MAX_FAILURES = int(os.environ.get("FASAS_LOGIN_MAX_FAILURES", "5"))
 FASAS_LOGIN_LOCKOUT_MINUTES = int(os.environ.get("FASAS_LOGIN_LOCKOUT_MINUTES", "15"))
 # Verifica in due passaggi (codice dall'app sul telefono): obbligatoria per questi ruoli; vuoto = facoltativa per tutti
-FASAS_2FA_REQUIRED_ROLES = env_list("FASAS_2FA_REQUIRED_ROLES", "admin,coordinator,doctor")
+FASAS_2FA_REQUIRED_ROLES = env_list("FASAS_2FA_REQUIRED_ROLES", "" if FASAS_PRESENTAZIONE else "admin,coordinator,doctor")
 # Reti della struttura (CIDR): da fuori serve sempre la verifica, e la si può attivare solo da dentro. Vuoto = ovunque.
 FASAS_2FA_TRUSTED_NETWORKS = env_list("FASAS_2FA_TRUSTED_NETWORKS")
 FASAS_2FA_ISSUER = os.environ.get("FASAS_2FA_ISSUER", "FASAS")
@@ -377,11 +383,11 @@ FASAS_PUSH_ASYNC = env_bool("FASAS_PUSH_ASYNC", True)
 # Vero quando si usano le chiavi fisse di sviluppo, scritte qui sotto e quindi pubbliche: ogni pagina lo segnala
 # e l'avvio di prova rifiuta i dati veri (docs/INSTALLAZIONE_IN_STRUTTURA.md per l'uso reale).
 FASAS_DEV_KEYS_IN_USE = False
-if DEBUG and not FASAS_ENCRYPTION_KEYS:
+if (DEBUG or FASAS_PRESENTAZIONE) and not FASAS_ENCRYPTION_KEYS:
     # Chiave fissa SOLO per sviluppo: in produzione la mancanza della chiave è un errore.
     FASAS_ENCRYPTION_KEYS = ["ZGV2LW9ubHktZmFzYXMta2V5LWNoYW5nZS1tZS0wMDA="]
     FASAS_DEV_KEYS_IN_USE = True
-if DEBUG and not FASAS_BACKUP_KEY:
+if (DEBUG or FASAS_PRESENTAZIONE) and not FASAS_BACKUP_KEY:
     FASAS_BACKUP_KEY = "ZGV2LW9ubHktYmFja3VwLWtleS1jaGFuZ2UtbWUtMDA="
     FASAS_DEV_KEYS_IN_USE = True
 

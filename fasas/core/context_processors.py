@@ -5,9 +5,20 @@ from .menu import build_menu, role_of
 from .shifts import Shift, resolve_shift
 
 
+def presentation_info():
+    """Versione di presentazione online: utenti di prova e, se è quella pubblica, la password da mostrare."""
+    if not settings.FASAS_PRESENTAZIONE:
+        return None
+    from .management.commands.fasas_demo import DEMO_PASSWORD, USERS, demo_password
+
+    return {"users": [user[0] for user in USERS],
+            "password": DEMO_PASSWORD if demo_password() == DEMO_PASSWORD else ""}
+
+
 def fasas(request):
     flags = {
         "dev_keys_in_use": settings.FASAS_DEV_KEYS_IN_USE,  # installazione di prova: chiavi pubbliche
+        "presentazione": presentation_info(),
         "cie_enabled": settings.FASAS_CIE_ENABLED,
         "remote_signature_enabled": bool(settings.FASAS_CSC_SERVICE_URL),
     }

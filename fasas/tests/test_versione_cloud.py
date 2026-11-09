@@ -433,3 +433,44 @@ class DominioDellaStrutturaTest(SimpleTestCase):
 
         with mock.patch.dict(os.environ, {"FASAS_DOMAIN": "https://Fasas.online/, www.fasas.online"}):
             self.assertEqual(_hosts("FASAS_DOMAIN"), ["fasas.online", "www.fasas.online"])
+
+
+@override_settings(FASAS_PRESENTAZIONE=True)
+class PresentazioneTest(TestCase):
+    """Versione di presentazione online: dati inventati, niente configurazione, mai confusa con una vera."""
+
+    def test_pagina_di_accesso_con_avviso_utenti_e_password(self):
+        from fasas.core.management.commands.fasas_demo import DEMO_PASSWORD
+
+        page = self.client.get("/accesso/entra/").content.decode()
+        self.assertIn("Versione di presentazione", page)
+        self.assertIn("coordinatore", page)
+        self.assertIn(DEMO_PASSWORD, page)
+        with mock.patch.dict(os.environ, {"FASAS_PRESENTAZIONE_PASSWORD": "Una-Password-Riservata-1"}):
+            page = self.client.get("/accesso/entra/").content.decode()
+        self.assertIn("Versione di presentazione", page)
+        self.assertNotIn("Una-Password-Riservata-1", page)
+        self.assertNotIn(DEMO_PASSWORD, page)
+
+    def test_password_riservata_per_gli_utenti_di_prova(self):
+        with mock.patch.dict(os.environ, {"FASAS_PRESENTAZIONE_PASSWORD": "Una-Password-Riservata-1"}):
+            call_command("fasas_demo", "--ambiente-di-prova", stdout=io.StringIO())
+        admin = User.objects.get(username="admin")
+        self.assertTrue(admin.check_password("Una-Password-Riservata-1"))
+
+    def test_niente_backup_ne_apparecchi_della_struttura(self):
+        due = scheduler.due(rome(2026, 11, 6, 2, 29), rome(2026, 11, 6, 2, 31))
+        self.assertNotIn("backup", due)
+        self.assertNotIn("ups", due)
+        self.assertNotIn("continuity", due)
+        self.assertIn("close_shifts", due)
+        self.assertEqual(cloud_checks(), [])
+        from fasas.core import monitoring
+
+        checks = {name: state for name, state, _ in monitoring.checks()}
+        self.assertEqual(checks["backup"], "ok")
+
+    @override_settings(FASAS_PRESENTAZIONE=False)
+    def test_installazione_normale_senza_avviso(self):
+        self.assertNotIn("Versione di presentazione", self.client.get("/accesso/entra/").content.decode())
+        self.assertIn("backup", scheduler.due(rome(2026, 11, 6, 2, 29), rome(2026, 11, 6, 2, 31)))

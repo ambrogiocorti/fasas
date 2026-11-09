@@ -1,72 +1,29 @@
-# FASAS Digitale – versione cloud su Render (guida completa: docs/CLOUD.md; per fasas.online la soluzione
-# consigliata è un VPS: docs/FASAS_ONLINE.md). Database: un progetto Supabase NUOVO e dedicato al FASAS.
-# Render › New › Blueprint › questo repository: crea il servizio dal Dockerfile; le variabili con «sync: false»
-# si compilano al primo avvio (valori dal passo 1-4 della guida), quelle con «generateValue» le crea Render.
-#
-# Piano: «free» non costa nulla ma il servizio si addormenta dopo un periodo senza visite (la prima pagina dopo la
-# pausa arriva in circa un minuto) e i job pianificati girano solo da sveglio (al risveglio il FASAS recupera quelli
-# saltati, backup compreso). Per l'uso reale con gli ospiti scegliere un piano a pagamento sempre acceso
-# (es. «starter»): è una decisione della struttura, va autorizzata prima di cambiarlo.
+# FASAS Digitale – VERSIONE DI PRESENTAZIONE online su Render, piano gratuito (guida: docs/PRESENTAZIONE.md).
+# Render › New › Blueprint › questo repository › Apply: non c'è nulla da compilare.
+# Dati inventati, ricreati a ogni avvio; chiavi di cifratura pubbliche: MAI dati di persone reali.
+# Per i dati veri: docs/FASAS_ONLINE.md (server dedicato) o deploy/render-cloud.yaml (versione cloud con Supabase).
 services:
   - type: web
-    name: fasas
+    name: fasas-presentazione
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    region: frankfurt # UE, vicino alla regione Supabase consigliata (eu-central-1, Francoforte)
+    region: frankfurt
     plan: free
     healthCheckPath: /salute/
     domains:
       - fasas.online
       - www.fasas.online
-    # Nessuna pubblicazione automatica a ogni modifica su GitHub: si aggiorna con «Manual Deploy» dopo il collaudo
-    autoDeploy: false
+    # a ogni modifica del ramo su GitHub la presentazione si aggiorna da sola
+    autoDeploy: true
     envVars:
-      - key: FASAS_CLOUD
+      - key: FASAS_PRESENTAZIONE
         value: "1"
-      - key: DJANGO_DEBUG
-        value: "0"
       - key: DJANGO_SECRET_KEY
         generateValue: true
-      - key: FASAS_HEALTH_TOKEN
-        generateValue: true
-      - key: FASAS_ENCRYPTION_KEYS # da fasas_genkey; copia nella busta di custodia
-        sync: false
-      - key: FASAS_BACKUP_KEY # da fasas_genkey; copia nella busta di custodia
-        sync: false
-      - key: FASAS_DOMAIN # il primo è il dominio principale; gli altri (e il nome …onrender.com) rimandano lì
+      - key: FASAS_DOMAIN
         value: fasas.online,www.fasas.online
-      - key: DATABASE_URL # Supabase › Connect › Session pooler (porta 5432)
-        sync: false
-      - key: DATABASE_SSL_REQUIRE
-        value: "1"
-      - key: FASAS_S3_BUCKET
-        value: fasas-documenti
-      - key: FASAS_S3_ENDPOINT_URL # https://RIFERIMENTO.storage.supabase.co/storage/v1/s3
-        sync: false
-      - key: FASAS_S3_REGION # regione del progetto Supabase, es. eu-central-1
-        sync: false
-      - key: FASAS_S3_ACCESS_KEY # Supabase › Storage › Settings › S3 Connection › access key
-        sync: false
-      - key: FASAS_S3_SECRET_KEY
-        sync: false
-      - key: FASAS_OFFSITE_ENDPOINT # copia fuori sede dei backup (passo 5 della guida)
-        sync: false
-      - key: FASAS_OFFSITE_REGION
-        sync: false
-      - key: FASAS_OFFSITE_BUCKET
-        sync: false
-      - key: FASAS_OFFSITE_ACCESS_KEY
-        sync: false
-      - key: FASAS_OFFSITE_SECRET_KEY
-        sync: false
-      - key: FASAS_OFFSITE_LOCK_DAYS # 0 con un bucket Supabase; 30 con un servizio con Object Lock
-        sync: false
-      - key: FASAS_ADMIN_USERNAME # primo amministratore, creato al primo avvio
-        sync: false
-      - key: FASAS_ADMIN_PASSWORD # togliere dopo il primo accesso
-        sync: false
       - key: GUNICORN_WORKERS
         value: "1"
       - key: GUNICORN_THREADS
-        value: "8"
+        value: "4"

@@ -92,6 +92,14 @@ def matches(compiled, moment):
 
 
 COMPILED = [(name, job, compile_spec(spec)) for name, job, spec in SCHEDULE]
+# versione di presentazione: dati di prova ricreati a ogni avvio, niente backup né apparecchi della struttura
+PRESENTATION_SKIPPED = {"backup", "restore_test", "continuity", "ups"}
+
+
+def _skipped():
+    from django.conf import settings
+
+    return PRESENTATION_SKIPPED if settings.FASAS_PRESENTAZIONE else set()
 
 
 MINUTE = datetime.timedelta(minutes=1)
@@ -113,6 +121,7 @@ def due(after, until):
     indietro l'ora ripetuta fa ripartire solo i job che girano a ogni ora, non quelli giornalieri (backup…).
     """
     found = {}
+    skipped = _skipped()
     moment = _utc_minute(after) + MINUTE
     last = _utc_minute(until)
     # ora locale più avanzata già raggiunta nell'ultima ora: dentro l'ora ripetuta è quella prima del ritorno indietro
@@ -121,12 +130,12 @@ def due(after, until):
         local = _wall(moment)
         if local <= seen:  # ora ripetuta: ripartono solo i job che girano a ogni ora (turni, controlli frequenti)
             for _, job, compiled in COMPILED:
-                if len(compiled["hour"]) == 24 and matches(compiled, local):
+                if len(compiled["hour"]) == 24 and job not in skipped and matches(compiled, local):
                     found[job] = moment
         while seen < local:
             seen += MINUTE
             for _, job, compiled in COMPILED:
-                if matches(compiled, seen):
+                if job not in skipped and matches(compiled, seen):
                     found[job] = moment
         moment += MINUTE
     return found

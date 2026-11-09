@@ -21,3 +21,4 @@ htmlcov/
 # certificati della CSCA italiana scaricati dal sito del Ministero (pubblici, uno per installazione)
 /certificati-csca/
 node_modules/
+/presentazione/

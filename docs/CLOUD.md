@@ -1,6 +1,6 @@
 # Versione cloud: il FASAS su un dominio, con Supabase
 
-Il FASAS gira in un solo container presso un servizio di hosting (esempio pronto: **Render**, file `render.yaml`),
+Il FASAS gira in un solo container presso un servizio di hosting (esempio pronto: **Render**, file `deploy/render-cloud.yaml`),
 risponde al dominio della struttura (es. `https://fasas.miacooperativa.it`) e tiene dati e file su **Supabase**
 (database PostgreSQL e Storage). Nessun server in struttura, niente Redis né proxy da configurare.
 
@@ -37,7 +37,7 @@ Per l'installazione su un PC in struttura resta valida [INSTALLAZIONE_IN_STRUTTU
 | Dominio | quello che la struttura ha già | — |
 | Copia fuori sede con blocco delle modifiche | bucket Supabase (incluso, senza blocco) | es. Backblaze B2 con Object Lock (gratuito fino a una soglia di spazio) |
 
-`render.yaml` usa il piano **free**. Per l'uso reale con gli ospiti servono i piani sempre accesi: è una scelta
+`deploy/render-cloud.yaml` usa il piano **free**. Per l'uso reale con gli ospiti servono i piani sempre accesi: è una scelta
 della struttura e si fa dal pannello di Render e di Supabase (prezzi correnti sui loro siti).
 
 ## Passo 1 – Chiavi (sul proprio PC)
@@ -61,7 +61,7 @@ python -c "import base64,os,secrets; print('DJANGO_SECRET_KEY=' + secrets.token_
 
 1. **Nuovo progetto dedicato al FASAS** (mai un progetto già usato da un'altra applicazione: il FASAS si rifiuta
    di partire se trova tabelle non sue, errore `fasas.E107`), regione **UE** (consigliata Francoforte,
-   `eu-central-1`, la stessa di `render.yaml`). Il piano gratuito consente due progetti attivi. Annotare la password
+   `eu-central-1`, la stessa di `deploy/render-cloud.yaml`). Il piano gratuito consente due progetti attivi. Annotare la password
    del database.
 2. Applicare le migrazioni della cartella [`supabase/migrations`](../supabase/migrations), **nell'ordine**:
    - `…_fasas_schema_e_dati_iniziali.sql`: tabelle, vincoli, protezioni dell'audit, ruoli e permessi, configurazione
@@ -97,7 +97,8 @@ python -c "import base64,os,secrets; print('DJANGO_SECRET_KEY=' + secrets.token_
 
 ## Passo 4 – Render: il servizio
 
-1. Render › **New** › **Blueprint** › repository del FASAS su GitHub: legge `render.yaml`.
+1. Render › **New** › **Blueprint** › repository del FASAS su GitHub, **Blueprint Path** `deploy/render-cloud.yaml`
+   (il `render.yaml` della cartella principale è la versione di presentazione, [PRESENTAZIONE.md](PRESENTAZIONE.md)).
 2. Compilare le variabili richieste (elenco completo e commentato in [`.env.cloud.example`](../.env.cloud.example)):
    chiavi del passo 1, `FASAS_DOMAIN`, `DATABASE_URL` (passo 2.4), `FASAS_S3_*` (passo 3), copia fuori sede
    (passo 5), `FASAS_ADMIN_USERNAME` e `FASAS_ADMIN_PASSWORD` (almeno 10 caratteri, non banale).
@@ -106,7 +107,7 @@ python -c "import base64,os,secrets; print('DJANGO_SECRET_KEY=' + secrets.token_
 4. **Dominio**: Settings › Custom Domains › aggiungere `fasas.miacooperativa.it`; presso chi gestisce il dominio
    creare il record DNS indicato da Render (di solito CNAME `fasas` → `NOME.onrender.com`). Il certificato HTTPS
    arriva da solo. `FASAS_DOMAIN` deve essere proprio quel nome.
-5. Aggiornamenti: `render.yaml` non pubblica da solo a ogni modifica su GitHub. Dopo il collaudo di una nuova
+5. Aggiornamenti: `deploy/render-cloud.yaml` non pubblica da solo a ogni modifica su GitHub. Dopo il collaudo di una nuova
    versione: **Manual Deploy**. Lo schema del database si aggiorna da solo all'avvio: non c'è SQL da eseguire.
 
 Altri servizi che avviano un `Dockerfile` vanno bene allo stesso modo: stesse variabili, comando predefinito

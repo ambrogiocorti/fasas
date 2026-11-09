@@ -56,6 +56,12 @@ Backblaze B2 nel piano gratuito, gruppo di continuità; con lista della spesa e 
 `scripts/prepara_server.sh` fa la parte tecnica ed è provato a ogni modifica nella CI; la manutenzione del mese è
 `scripts/aggiorna_fasas.sh`, anche da casa con la VPN dell'amministratore (`scripts/accesso_remoto.sh`).
 
+## Presentazione online (dati inventati)
+
+Una copia del FASAS su internet per mostrarlo e provarlo, gratuita e senza nulla da configurare: Render › New ›
+Blueprint › questo repository (`render.yaml`). Dati di esempio ricreati a ogni avvio, mai dati reali:
+[docs/PRESENTAZIONE.md](docs/PRESENTAZIONE.md).
+
 ## Versione online (fasas.online)
 
 Server affittato in UE con lo stesso stack Docker, dominio `fasas.online`, HTTPS automatico, pubblicazione da GitHub
@@ -65,7 +71,7 @@ Actions con ritorno automatico alla versione precedente: [docs/FASAS_ONLINE.md](
 ## Versione cloud (dominio + Supabase)
 
 Senza server da gestire: [docs/CLOUD.md](docs/CLOUD.md). Un container presso un servizio di hosting (pronto
-`render.yaml` per Render), il dominio della struttura, database e file cifrati su Supabase con le migrazioni SQL in
+`deploy/render-cloud.yaml` per Render), il dominio della struttura, database e file cifrati su Supabase con le migrazioni SQL in
 [`supabase/migrations`](supabase/migrations). Sito e job nello stesso container (`FASAS_CLOUD=1`), senza Redis.
 
 Riferimenti tecnici per chi installa diversamente: [docs/CONTAINER.md](docs/CONTAINER.md) (Docker su un altro server),
