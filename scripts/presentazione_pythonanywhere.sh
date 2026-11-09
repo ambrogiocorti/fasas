@@ -16,7 +16,8 @@ say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 ok() { printf '  \033[32m✔\033[0m %s\n' "$*"; }
 die() { printf '\n\033[31mERRORE:\033[0m %s\n' "$*" >&2; exit 1; }
 
-USER_NAME=$(whoami)
+# i nomi dei siti su PythonAnywhere sono in minuscolo (es. AmbrogioCorti → ambrogiocorti.eu.pythonanywhere.com)
+USER_NAME=$(whoami | tr '[:upper:]' '[:lower:]')
 # «eu.pythonanywhere.com» per gli account europei; se la console non lo dice, lo si ricava dal sito già creato
 DOMAIN="${PYTHONANYWHERE_DOMAIN:-}"
 if [ -z "$DOMAIN" ]; then
@@ -40,7 +41,11 @@ if [ ! -x "$VENV/bin/python" ]; then
   "$PY" -m venv "$VENV"
 fi
 PY_VERSION=$("$VENV/bin/python" -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")')
-"$VENV/bin/pip" install --quiet --disable-pip-version-check --no-cache-dir --require-hashes -r requirements.lock
+echo "  Installo le librerie: la prima volta 5-15 minuti. NON interrompere, anche se sembra fermo."
+"$VENV/bin/pip" install --disable-pip-version-check --no-cache-dir --progress-bar off --require-hashes \
+  -r requirements.lock 2>&1 | grep --line-buffered -E '^(Collecting|Successfully|ERROR)' | sed -u 's/^/    /' || true
+"$VENV/bin/python" -c "import django, reportlab, cryptography" 2>/dev/null \
+  || die "librerie non installate del tutto: rilanciare lo script (riprende da dove si era fermato)."
 ok "librerie installate (Python $PY_VERSION, ambiente $VENV)"
 
 # --- 2. Configurazione della presentazione (una volta: la chiave segreta non cambia) ---------------------------
