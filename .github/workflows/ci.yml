@@ -258,7 +258,8 @@ jobs:
           page = requests.get(base + "/accesso/entra/", headers=headers)
           assert "Versione di presentazione" in page.text and "Demo-Fasas-2026!" in page.text, page.status_code
           token = page.cookies["csrftoken"]
-          login = requests.post(base + "/accesso/entra/", cookies=page.cookies, allow_redirects=False,
+          # cookie passati a mano: sono «Secure» e il client non li rimanderebbe su HTTP locale
+          login = requests.post(base + "/accesso/entra/", cookies=page.cookies.get_dict(), allow_redirects=False,
                                 headers={**headers, "Origin": "https://localhost", "Referer": "https://localhost/accesso/entra/"},
                                 data={"username": "operatore", "password": "Demo-Fasas-2026!", "csrfmiddlewaretoken": token})
           assert login.status_code == 302 and login.headers["Location"] == "/", login.status_code
