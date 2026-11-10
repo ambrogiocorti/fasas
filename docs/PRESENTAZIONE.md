@@ -32,16 +32,35 @@ PythonAnywhere (passo A4).
    In qualche minuto installa le librerie, crea i dati di esempio e collega il sito. Alla fine scrive tre impostazioni
    da controllare nella scheda **Web**: *Python version* (la stessa scelta al punto 2), *Virtualenv*
    (`/home/nomeutente/.virtualenvs/fasas`) e **Force HTTPS** su *Enabled*. Poi il pulsante verde **Reload**.
-4. **fasas.online** (facoltativo): nel repository `fasas-deploy`, che oggi pubblica `fasas.online` con GitHub Pages,
-   aggiungere il file `index.html`:
+4. **fasas.online** (facoltativo), con **https** gratuito tramite GitHub Pages. Il certificato lo rilascia chi
+   risponde per il dominio: se il DNS punta ai server di Register.it, `https://fasas.online` mostra un certificato
+   di Register.it (`*.dadapro.com`) e il browser lo blocca. Quindi:
 
-   ```html
-   <!doctype html><meta charset="utf-8"><title>FASAS Digitale</title>
-   <meta http-equiv="refresh" content="0; url=https://nomeutente.eu.pythonanywhere.com/">
-   <a href="https://nomeutente.eu.pythonanywhere.com/">FASAS Digitale – presentazione</a>
-   ```
+   1. **Register.it** › area clienti › dominio `fasas.online` › servizi: disattivare l'eventuale *redirect /
+      inoltro web* o sito vetrina; poi **Gestione DNS**: cancellare il record **A** di `@` (oggi `195.110.124.133`)
+      e il record di `www` (oggi verso `onstatic-it.setupdns.net`), e aggiungere:
 
-   Così chi apre `fasas.online` arriva alla presentazione (nella barra degli indirizzi compare quello di PythonAnywhere).
+      | Nome | Tipo | Valore |
+      |---|---|---|
+      | `@` | A | `185.199.108.153` |
+      | `@` | A | `185.199.109.153` |
+      | `@` | A | `185.199.110.153` |
+      | `@` | A | `185.199.111.153` |
+      | `www` | CNAME | `ambrogiocorti.github.io.` |
+
+   2. **GitHub** › repository `fasas-deploy` › *Settings* › *Pages*: *Source* sul ramo principale; *Custom domain*
+      `fasas.online` › **Save**. Quando compare «DNS check successful» (da pochi minuti a qualche ora) spuntare
+      **Enforce HTTPS**. Se la casella resta grigia per più di un giorno: togliere il dominio, salvare e rimetterlo.
+   3. Nello stesso repository, il file `index.html` che rimanda alla presentazione:
+
+      ```html
+      <!doctype html><meta charset="utf-8"><title>FASAS Digitale</title>
+      <meta http-equiv="refresh" content="0; url=https://nomeutente.eu.pythonanywhere.com/">
+      <a href="https://nomeutente.eu.pythonanywhere.com/">FASAS Digitale – presentazione</a>
+      ```
+
+   Così `https://fasas.online` funziona e porta alla presentazione (nella barra degli indirizzi compare poi quello di
+   PythonAnywhere: il piano gratuito non permette di usare un dominio proprio).
 
 Da sapere:
 
