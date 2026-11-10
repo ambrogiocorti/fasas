@@ -10,10 +10,10 @@ personali degli ospiti e del personale con il sistema FASAS Digitale, nei limiti
 
 | Ruolo nel FASAS | Ambito autorizzato (barrare) |
 |---|---|
-| ☐ Operatore | cartella degli ospiti per l'assistenza del turno: diario, parametri, somministrazioni, eventi, consegne |
-| ☐ Coordinatore sanitario | come l'operatore, più PAI, turni del personale, protocolli, report, magazzino |
+| ☐ Operatore | cartella degli ospiti per l'assistenza del turno: diario, parametri, somministrazioni, eventi, consegne, attività a orario; spese della piccola cassa con scontrino |
+| ☐ Coordinatore sanitario | come l'operatore, più PAI, turni e scadenze del personale, protocolli, report e indicatori di qualità, magazzino, cassa degli ospiti; area familiari (se attivata) |
 | ☐ Medico | cartella clinica, terapie e prescrizioni, validazione di protocolli e regole |
-| ☐ Amministrativo | anagrafica, presenze e rette; **non** la cartella clinica |
+| ☐ Amministrativo | anagrafica essenziale, presenze e rette, cassa e oggetti degli ospiti, scadenze del personale; **non** la cartella clinica |
 | ☐ Amministratore | utenti e configurazione; **non** la cartella clinica (vedi la designazione ad amministratore di sistema) |
 
 Permessi aggiuntivi o ridotti rispetto al ruolo: [descrivere e motivare, oppure «nessuno»].
