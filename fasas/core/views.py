@@ -23,6 +23,8 @@ from .models import ErrorEvent, JobRun, SystemConfig
 def dashboard(request):
     """Cruscotto diverso per ogni ruolo: ognuno vede ciò che gli compete (spec. §2)."""
     role = role_of(request.user)
+    if role == "family":
+        return redirect("families:home")
     context = BUILDERS[role](request)
     return render(request, f"core/dashboard_{role}.html", context)
 
@@ -52,8 +54,8 @@ def modules_view(request):
         before = modules.disabled(config)
         if action == "pilot":
             off = set(modules.PILOT_OFF)
-        elif action == "all":
-            off = set()
+        elif action == "all":  # tranne i moduli da accendere apposta (area familiari: parere del DPO)
+            off = set(modules.DEFAULT_OFF)
         else:
             chosen = set(request.POST.getlist("on"))
             off = {m.key for m in modules.MODULES if m.key not in chosen}
@@ -62,7 +64,7 @@ def modules_view(request):
             config.save(update_fields=["disabled_modules", "updated_at"])
             log_event(AuditLog.Action.CONFIG, config, changes={"moduli spenti": [
                 ", ".join(sorted(before)) or None, ", ".join(sorted(off)) or None]})
-            messages.success(request, "Moduli aggiornati." if off else "Tutti i moduli sono accesi.")
+            messages.success(request, "Moduli aggiornati." if off - modules.DEFAULT_OFF else "Tutti i moduli sono accesi.")
         else:
             messages.info(request, "Nessuna modifica.")
         return redirect("core:modules")

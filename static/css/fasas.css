@@ -746,3 +746,16 @@ html[data-text="larger"] { font-size: 19px; }
 .content p a:not(.btn), .content li a:not(.btn):not(.pill), .alert-body a:not(.btn) {
   text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px;
 }
+
+/* Indicatori di qualità: barre mensili senza JavaScript */
+.qbars { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; align-items: end; height: 96px;
+  margin: .4rem 0 .2rem; }
+.qbar { display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+.qbar span { display: block; background: var(--primary); border-radius: 3px 3px 0 0; min-height: 2px; opacity: .85; }
+.qbar.last span { opacity: 1; }
+.qbar-labels { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; font-size: .7rem;
+  color: var(--text-muted); text-align: center; }
+.trend-up { color: var(--danger-text); font-weight: 650; }
+.trend-down { color: var(--ok-text); font-weight: 650; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

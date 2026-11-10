@@ -11,5 +11,5 @@ class StaffingConfig(AppConfig):
         from . import models
 
         for model in (models.RotaSettings, models.StaffProfile, models.RotaMonth, models.RotaEntry,
-                      models.LeaveRequest, models.ShiftChange):
+                      models.LeaveRequest, models.ShiftChange, models.CredentialType, models.StaffCredential):
             register(model, guest_field=None)

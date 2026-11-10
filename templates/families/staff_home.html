@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Area familiari{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Area familiari</h1><span class="subtitle">Messaggi dei familiari e dei tutori, richieste di visita, collegamenti</span></div>
+  <div class="actions"><a class="btn btn-primary" href="{% url 'families:link_create' %}">{% icon "plus" %}Collega un familiare</a></div>
+</div>
+<div class="grid grid-2">
+  <div class="card"><h2>Messaggi da leggere</h2>
+    <ul class="list-plain">{% for link in unread_links %}
+      <li><a href="{% url 'families:staff_link' link.pk %}"><strong>{{ link.user.get_full_name|default:link.user.username }}</strong></a> per {{ link.guest }} <span class="pill pill-warn">{{ link.unread }}</span></li>
+    {% empty %}<li class="muted">Nessun messaggio nuovo.</li>{% endfor %}</ul></div>
+  <div class="card"><h2>Visite da confermare</h2>
+    <ul class="list-plain">{% for v in pending %}
+      <li><strong>{{ v.day|date:"D d/m" }} {{ v.time|time:"H:i" }}</strong> – {{ v.link.guest }}, {{ v.link.user.get_full_name|default:v.link.user.username }} ({{ v.people }} pers.){% if v.notes %}<br><small class="muted">{{ v.notes }}</small>{% endif %}
+        <form method="post" action="{% url 'families:visit_decide' v.pk %}" class="inline-form">{% csrf_token %}
+          <input type="text" name="note" placeholder="Nota (obbligatoria se non possibile)" aria-label="Nota per il familiare" maxlength="255">
+          <button class="btn btn-sm btn-primary" name="confirm" value="1">Conferma</button><button class="btn btn-sm" name="confirm" value="0">Non possibile</button></form></li>
+    {% empty %}<li class="muted">Nessuna richiesta in attesa.</li>{% endfor %}</ul></div>
+</div>
+<div class="card table-wrap"><h2>Visite confermate</h2><table>
+  <thead><tr><th>Quando</th><th>Ospite</th><th>Familiare</th><th class="num">Persone</th><th>Note</th></tr></thead>
+  <tbody>{% for v in upcoming %}<tr><td class="nowrap">{{ v.day|date:"D d/m" }} {{ v.time|time:"H:i" }}</td><td>{{ v.link.guest }}</td><td>{{ v.link.user.get_full_name|default:v.link.user.username }}</td><td class="num">{{ v.people }}</td><td>{{ v.notes }}</td></tr>
+  {% empty %}<tr><td colspan="5" class="empty">Nessuna visita confermata.</td></tr>{% endfor %}</tbody></table></div>
+<div class="card table-wrap"><h2>Collegamenti</h2><table>
+  <thead><tr><th>Ospite</th><th>Familiare o tutore</th><th>Vede</th><th>Base</th><th></th></tr></thead>
+  <tbody>{% for link in links %}<tr{% if not link.active %} style="opacity:.55"{% endif %}><td><a href="{% url 'families:staff_guest' link.guest.pk %}">{{ link.guest }}</a></td>
+    <td>{{ link.user.get_full_name|default:link.user.username }}<br><small class="muted">{{ link.get_relation_display }}{% if link.description %} · {{ link.description }}{% endif %}</small></td>
+    <td><small>messaggi e visite{% if link.can_see_documents %}, documenti condivisi{% endif %}{% if link.can_see_cash %}, cassa{% endif %}</small>{% if not link.active %}<br><span class="pill">revocato</span>{% endif %}</td>
+    <td><small>{{ link.basis }}</small></td>
+    <td class="num"><a class="btn btn-sm" href="{% url 'families:staff_link' link.pk %}">Messaggi</a></td></tr>
+  {% empty %}<tr><td colspan="5" class="empty">Nessun familiare collegato.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

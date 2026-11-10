@@ -21,6 +21,7 @@ class Module:
     exempt: tuple = ()          # pagine del namespace che restano sempre attive
     jobs: tuple = ()            # job periodici (fasas.core.jobs) che non partono a modulo spento
     pilot: bool = True          # acceso nella «configurazione per il pilota»
+    default_off: bool = False   # spento alla prima installazione (fasas.core.models.MODULES_OFF_BY_DEFAULT)
 
 
 MODULES = (
@@ -39,7 +40,9 @@ MODULES = (
            pilot=False),
     Module("imports", "Importazione dal cartaceo", "Caricamento di ospiti e documenti dal FASAS cartaceo.",
            namespaces=("imports",), pilot=False),
-    Module("staffing", "Turni del personale", "Calendario mensile, ferie e cambi turno.", namespaces=("staffing",)),
+    Module("staffing", "Turni e scadenze del personale", "Calendario mensile, ferie e cambi turno; scadenze di corsi "
+           "(sicurezza, BLSD, antincendio, HACCP), idoneità alla mansione e visite, con avvisi.",
+           namespaces=("staffing",), jobs=("staff_credentials",)),
     Module("billing", "Presenze e rette", "Presenze per la rendicontazione, rette e prospetti.",
            namespaces=("billing",)),
     Module("reports", "Report e pacchetto per l'ispezione", "Report periodici, programmati e il pacchetto per la "
@@ -48,11 +51,23 @@ MODULES = (
     Module("feedback", "Segnalazioni e indicatori del pilota", "Pulsante «Segnala un problema» per tutti e, per "
            "coordinatore e amministratore, le segnalazioni ricevute e gli indicatori (giro farmaci, registrazioni "
            "mancanti, checklist).", namespaces=("feedback",)),
+    Module("care", "Attività a orario", "Riposizionamenti, idratazione, controlli notturni e altre attività a orario "
+           "per ospite, con l'elenco del turno e l'avviso delle attività in ritardo.",
+           namespaces=("care",), jobs=("care_tasks",), pilot=False),
+    Module("personal", "Denaro e oggetti degli ospiti", "Piccola cassa personale di ogni ospite (versamenti, spese "
+           "con scontrino fotografato, rendiconto PDF per il tutore) e inventario degli oggetti personali.",
+           namespaces=("personal",), pilot=False),
+    Module("families", "Area familiari e tutori", "Familiari, tutori e amministratori di sostegno entrano con un "
+           "proprio utente e vedono solo gli ospiti collegati: messaggi con la struttura, richieste di visita, "
+           "documenti condivisi uno per uno e, per il tutore, il rendiconto della cassa. Spenta di default: "
+           "accenderla solo dopo il parere del DPO (valutazione d'impatto, informativa, accesso da fuori struttura).",
+           namespaces=("families",), pilot=False, default_off=True),
     Module("remote_signature", "Firma remota qualificata", "Firma presso un prestatore qualificato (a pagamento). "
            "Serve anche la configurazione del prestatore sul server.", pilot=False),
 )
 BY_KEY = {m.key: m for m in MODULES}
 PILOT_OFF = frozenset(m.key for m in MODULES if not m.pilot)
+DEFAULT_OFF = frozenset(m.key for m in MODULES if m.default_off)
 _BY_URL = {name: m for m in MODULES for name in m.url_names}
 _BY_NAMESPACE = {ns: m for m in MODULES for ns in m.namespaces}
 _BY_JOB = {job: m for m in MODULES for job in m.jobs}

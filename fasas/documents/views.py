@@ -169,7 +169,9 @@ def to_sign(request):
 
     if not (request.user.has_perm("signatures.sign_document") or request.user.has_perm("signatures.sign_with_cie")):
         raise PermissionDenied
+    from fasas.signatures.services import bulk_limit
+
+    credential = SigningCredential.objects.filter(user=request.user).first()
     return render(request, "documents/to_sign.html", {
-        "pending": documents_to_sign(),
-        "credential": SigningCredential.objects.filter(user=request.user).first(),
+        "pending": documents_to_sign(), "credential": credential, "bulk_limit": bulk_limit(credential),
     })

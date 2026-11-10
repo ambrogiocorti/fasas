@@ -7,6 +7,7 @@
     <span class="subtitle">{{ day|date:"l d F Y" }} · turno {{ shift_label|lower }} in corso · {{ guest_count }} ospiti presenti{% if absent_count %}, {{ absent_count }} assenti o ricoverati{% endif %}</span>
   </div>
   <div class="actions">
+    {% if modules.reports and perms.reports.view_quality_indicators %}<a class="btn btn-ghost" href="{% url 'reports:quality' %}">{% icon "activity" %}Indicatori di qualità</a>{% endif %}
     {% if perms.guests.add_guest %}<a class="btn" href="{% url 'guests:create' %}">{% icon "plus" %}Nuovo ospite</a>{% endif %}
     {% if not checked_in %}
       <form method="post" action="{% url 'daily:check_in' %}" class="inline-form">{% csrf_token %}<button class="btn btn-primary">{% icon "user-check" %}Prendo servizio</button></form>

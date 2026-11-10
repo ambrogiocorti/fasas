@@ -1,0 +1,46 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Firma di più documenti{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 920px">
+  <div class="card-head"><h1>Firma di {{ selected|length }} document{{ selected|length|pluralize:"o,i" }}</h1></div>
+  <p class="muted">Ogni documento riceve la propria firma PAdES e una nuova versione; gli originali restano archiviati.
+    {% if remote %}Con la firma remota basta un solo PIN e un solo OTP per tutti: al prestatore{% if provider_name %} ({{ provider_name }}){% endif %} vanno solo le impronte dei documenti, vincolate all'autorizzazione.{% else %}Con il certificato basta digitare la passphrase una volta.{% endif %}
+    Password, PIN e OTP non vengono salvati. Se una firma non riesce non viene salvata nessuna.</p>
+  <p><small>Firmi come <strong>{{ credential.certificate_subject|default:credential.get_kind_display }}</strong> · {{ credential.get_kind_display }}</small></p>
+  {% if too_many %}
+    <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">{% if remote %}Il tuo prestatore consente {{ limit }} firm{{ limit|pluralize:"a,e" }} con una sola autorizzazione{% else %}Si firmano al massimo {{ limit }} documenti per volta{% endif %}: <a href="{% url 'documents:to_sign' %}">torna all'elenco</a> e selezionane meno.</div></div>
+  {% endif %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Documento</th><th>Ospite</th><th>Versione</th><th></th></tr></thead>
+    <tbody>{% for p in selected %}
+      <tr><td><strong>{{ p.document.title }}</strong><br><small class="muted">{{ p.document.get_category_display }} · {{ p.version.original_name }}</small></td>
+        <td>{{ p.document.guest }}</td><td>v{{ p.version.number }} · {{ p.version.uploaded_at|date:"d/m/Y" }}</td>
+        <td class="num"><a class="btn btn-sm" href="{% url 'documents:view' p.version.pk %}" target="_blank" rel="noopener">Apri e leggi</a></td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% if not too_many %}
+    {% if remote and credential.remote_otp_type == 'online' %}
+      <div class="card" style="background: var(--surface-2)">
+        {% if token_active %}
+          <div class="alert alert-success">{% icon "smartphone" %}<div class="alert-body">SMS inviato: inserisci l'OTP ricevuto qui sotto entro pochi minuti.</div></div>
+        {% else %}
+          <form method="post" class="inline-form">{% csrf_token %}<input type="hidden" name="action" value="send_otp">
+            {% for p in selected %}<input type="hidden" name="v" value="{{ p.version.pk }}">{% endfor %}
+            {% if needs_password %}<label for="otp-password">Password del servizio di firma</label>
+            <input id="otp-password" type="password" name="password" autocomplete="off" required>{% endif %}
+            <button class="btn">{% icon "smartphone" %}Invia OTP via SMS</button>
+          </form>
+        {% endif %}
+      </div>
+    {% endif %}
+    <form method="post" novalidate>{% csrf_token %}
+      {% for p in selected %}<input type="hidden" name="v" value="{{ p.version.pk }}">{% endfor %}
+      {% include "partials/form_fields.html" %}
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">{% icon "pen" %}Firma {{ selected|length }} document{{ selected|length|pluralize:"o,i" }}</button>
+        <a class="btn" href="{% url 'documents:to_sign' %}">Annulla</a>
+      </div>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

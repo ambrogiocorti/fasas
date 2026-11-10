@@ -22,6 +22,9 @@ pomeriggio, notte).
 | Azioni di un protocollo | *Protocolli attivi*: spuntare le azioni fatte |
 | Checklist del turno | *Checklist turno*: ✔ fatto, «non applicabile» se non serve |
 | Ferie, permessi, cambi turno | *I miei turni* |
+| Riposizionamenti, idratazione, controlli notturni | *Attività del turno*: **Fatta** (o non fatta / rifiutata con il motivo); in rosso quelle in ritardo |
+| Spese per un ospite (parrucchiere, bar, acquisti) | scheda dell'ospite → **Denaro e oggetti** → **Spesa**, con la foto dello scontrino |
+| Corsi e idoneità in scadenza | *Le mie scadenze*: porta l'attestato al coordinatore |
 
 **Regole**
 - Registrare **subito**, con l'ora vera. Entro 24 ore si corregge liberamente; dopo serve una motivazione

@@ -11,6 +11,8 @@ class Role(models.TextChoices):
     OPERATOR = "operator", "Operatore"
     DOCTOR = "doctor", "Medico"
     ADMINISTRATIVE = "administrative", "Amministrativo"
+    # Area familiari (modulo spento di default): vede solo gli ospiti a cui è collegato e solo ciò che è condiviso
+    FAMILY = "family", "Familiare o tutore"
 
 
 class User(AbstractUser):

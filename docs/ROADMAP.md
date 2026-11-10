@@ -60,7 +60,11 @@ Stato al 08/11/2026, versione 0.10.0 «pilota» ([CHANGELOG](../CHANGELOG.md)). 
 | 🟡 | Codici a barre alla somministrazione | controllo della confezione nel giro farmaci (lettore o fotocamera); braccialetto dell'ospite da fare |
 | ✅ | Pacchetto «pronto per l'ispezione» | report unico per la vigilanza ATS |
 | ⬜ | Conservazione a norma | invio dei fascicoli chiusi a un conservatore accreditato |
-| ⬜ | Firma di più documenti con un'unica autorizzazione | firma massiva per i medici |
+| ✅ | Firma di più documenti con un'unica autorizzazione | una passphrase o un PIN+OTP (se il prestatore lo consente); CIE uno alla volta – [NOVITA_ASSISTENZA_E_FAMILIARI.md](NOVITA_ASSISTENZA_E_FAMILIARI.md) |
+| ✅ | Attività a orario per ospite | riposizionamenti, idratazione, controlli notturni, avviso dei ritardi |
+| ✅ | Denaro e oggetti personali degli ospiti | piccola cassa con scontrino cifrato, rendiconto per il tutore, inventario |
+| ✅ | Scadenze del personale | corsi, idoneità, visite con avvisi; periodicità da confermare con RSPP e medico competente |
+| ✅ | Indicatori di qualità nel tempo | cadute, lesioni, contenzioni, SOS, ricoveri per 1000 giornate di presenza |
 | 🟡 | FASAS Signer per Android | **congelato**: APK di prova compilabile a mano da GitHub, da collaudare con una CIE reale solo se la struttura attiva la firma con CIE |
 | 🟡 | FASAS Signer per iPhone | **congelato**: app SwiftUI compilabile a mano; per installarla servono l'Apple Developer Program (a pagamento) e TestFlight, poi il collaudo con una CIE reale |
 | ⬜ | Pacchetti installabili del FASAS Signer | eseguibili firmati per Windows (Authenticode) e macOS (notarizzazione Apple) |
@@ -71,7 +75,7 @@ Stato al 08/11/2026, versione 0.10.0 «pilota» ([CHANGELOG](../CHANGELOG.md)). 
 |---|---|---|
 | 🟡 | Più comunità | resta predisposto (decisione: va bene così per ora) |
 | ⬜ | Integrazioni regionali | Fascicolo Sanitario Elettronico, ricetta dematerializzata |
-| ⬜ | Area familiari | comunicazioni e visite, con le tutele di riservatezza |
+| 🟡 | Area familiari | fatta e **spenta di default**: si accende dopo il parere del DPO – [AREA_FAMILIARI_DPO.md](AREA_FAMILIARI_DPO.md) |
 
 ## Backup fuori sede – decisione
 

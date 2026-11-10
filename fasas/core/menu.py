@@ -14,6 +14,7 @@ DASHBOARD_LABELS = {
     "doctor": "Area medica",
     "admin": "Pannello di sistema",
     "administrative": "Amministrazione",
+    "family": "I miei cari",
 }
 
 
@@ -27,6 +28,7 @@ class Item:
     namespace: str | None = None  # oppure un intero namespace
     count: str | None = None    # chiave del contatore da mostrare
     module: str | None = None   # modulo accendibile (fasas.core.modules): spento = voce nascosta
+    exclude_roles: tuple = ()   # ruoli a cui la voce non si mostra (es. il familiare)
 
 
 @dataclass
@@ -43,12 +45,16 @@ class Section:
 # la clinica, il personale, l'archivio, l'amministrazione e il sistema.
 MENU = [
     Section(None, [
-        Item("Cruscotto", "dashboard", "core:dashboard", active=("core:dashboard",)),
+        Item("Cruscotto", "dashboard", "core:dashboard", active=("core:dashboard",), exclude_roles=("family",)),
+        Item("I miei cari", "heart", "families:home", "families.use_family_area", namespace="families",
+             module="families"),
         Item("Ospiti", "user", "guests:list", "guests.view_guest", namespace="guests"),
     ]),
     Section("Assistenza", [
         Item("Giro farmaci", "pill", "clinical:board", "clinical.add_therapyadministration", active=("clinical:board",)),
         Item("Evacuazioni", "timer", "daily:evacuations", "daily.view_evacuationrecord", active=("daily:evacuations",)),
+        Item("Attività del turno", "clock", "care:due", "care.view_caretaskcheck",
+             active=("care:due", "care:check"), count="care_late", module="care"),
         Item("Medicazioni da fare", "heart", "wounds:due", "wounds.add_dressing", active=("wounds:due",),
              module="wounds"),
         Item("Valutazioni da fare", "clipboard-check", "assessments:due", "assessments.add_assessment",
@@ -69,6 +75,9 @@ MENU = [
              active=("documents:to_sign", "documents:sign", "documents:sign_cie", "signatures:cie_request")),
         Item("Protocolli attivi", "flag", "protocols:activations", "protocols.view_protocolactivation",
              active=("protocols:activations", "protocols:activation_detail"), count="protocols", module="protocols"),
+        Item("Familiari", "users", "families:staff_home", "families.manage_family_area",
+             active=("families:staff_home", "families:staff_guest", "families:staff_link", "families:link_create",
+                     "families:link_update", "families:link_revoke"), count="families", module="families"),
         Item("Segnalazioni", "message", "feedback:list", "feedback.view_feedback", active=("feedback:list",),
              count="feedback", module="feedback"),
     ], icon="shield-check", key="controlli"),
@@ -87,12 +96,18 @@ MENU = [
              module="staffing"),
         Item("Ferie e cambi turno", "check-circle", "staffing:requests", "staffing.change_leaverequest",
              active=("staffing:requests",), count="rota_requests", module="staffing"),
+        Item("Scadenze del personale", "id-card", "staffing:credentials", "staffing.view_staffcredential",
+             active=("staffing:credentials", "staffing:credential_create", "staffing:credential_user",
+                     "staffing:credential_types", "staffing:credential_type_create", "staffing:credential_type_update"),
+             count="staff_deadlines", module="staffing"),
     ], icon="users", key="personale"),
     Section("Archivio e report", [
-        Item("Report", "file-text", "reports:list", "reports.view_generatedreport", namespace="reports",
-             module="reports"),
+        Item("Report", "file-text", "reports:list", "reports.view_generatedreport",
+             active=("reports:list", "reports:download", "reports:guest_export"), module="reports"),
         Item("Pacchetto per l'ispezione", "clipboard", "reports:inspection", "reports.add_generatedreport",
              active=("reports:inspection",), module="reports"),
+        Item("Indicatori di qualità", "activity", "reports:quality", "reports.view_quality_indicators",
+             active=("reports:quality",), module="reports"),
         Item("Indicatori del pilota", "chart", "feedback:metrics", "feedback.view_pilot_metrics",
              active=("feedback:metrics",), module="feedback"),
         Item("Ricerca avanzata", "search", "search:search", "guests.view_guest", namespace="search"),
@@ -106,6 +121,8 @@ MENU = [
              active=("billing:fees", "billing:fee_create", "billing:fee_update", "billing:settings"), module="billing"),
         Item("Prospetti e incassi", "receipt", "billing:statements", "billing.view_feestatement",
              active=("billing:statements", "billing:statement"), module="billing"),
+        Item("Denaro degli ospiti", "receipt", "personal:overview", "personal.view_cashmovement", namespace="personal",
+             module="personal"),
     ], icon="wallet", key="amministrazione"),
     Section("Sistema", [
         Item("Utenti e permessi", "users", "accounts:user_list", "accounts.view_user",
@@ -129,6 +146,8 @@ MENU = [
     ], icon="sliders", key="sistema"),
     Section(None, key="fine", items=[
         Item("Notifiche", "bell", "notifications:list", active=("notifications:list",), count="notifications"),
+        Item("Le mie scadenze", "calendar-check", "staffing:my_credentials", active=("staffing:my_credentials",),
+             module="staffing", exclude_roles=("family",)),
         Item("Impostazioni", "sliders", "core:settings", active=("core:settings", "accounts:profile",
                                                               "accounts:password_change", "signatures:credential")),
     ]),
@@ -153,6 +172,18 @@ def counts_for(user, unread, on):
         from fasas.feedback.models import Feedback
 
         counts["feedback"] = Feedback.objects.filter(status=Feedback.Status.NEW).count()
+    if on["care"] and user.has_perm("care.view_caretaskcheck"):
+        from fasas.care.services import late_slots
+
+        counts["care_late"] = len(late_slots()) or None
+    if on["families"] and user.has_perm("families.manage_family_area"):
+        from fasas.families.services import pending_visits, unread_for_staff
+
+        counts["families"] = (unread_for_staff() + pending_visits()) or None
+    if on["staffing"] and user.has_perm("staffing.view_staffcredential"):
+        from fasas.staffing.credentials import matrix
+
+        counts["staff_deadlines"] = sum(r["problems"] for r in matrix()["rows"]) or None
     if on["staffing"] and user.has_perm("staffing.change_leaverequest"):
         from fasas.staffing.views import pending_requests_count
 
@@ -172,6 +203,8 @@ def build_menu(request, unread=0):
         items = []
         for item in section.items:
             if item.module and not on[item.module]:
+                continue
+            if item.exclude_roles and role_of(user) in item.exclude_roles:
                 continue
             perms = (item.perm,) if isinstance(item.perm, str) else (item.perm or ())
             if perms and not any(user.has_perm(p) for p in perms):

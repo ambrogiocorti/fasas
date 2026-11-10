@@ -72,6 +72,14 @@ class Community(models.Model):
         _forget("community", "config")
 
 
+# Moduli spenti alla prima installazione (devono essere accesi apposta, es. dopo il parere del DPO)
+MODULES_OFF_BY_DEFAULT = ("families",)
+
+
+def default_disabled_modules():
+    return list(MODULES_OFF_BY_DEFAULT)
+
+
 class SystemConfig(models.Model):
     class EvacuationMode(models.TextChoices):
         DAILY = "A", "Modalità A – registrazione giornaliera SI/NO"
@@ -170,7 +178,7 @@ class SystemConfig(models.Model):
         help_text="Attivare solo dopo il parere sul regolamento dei dispositivi medici (docs/DISPOSITIVO_MEDICO.md).")
 
     # Moduli spenti (fasas.core.modules): nascosti, pagine «funzione spenta», promemoria fermi; i dati restano.
-    disabled_modules = models.JSONField("moduli spenti", default=list, blank=True)
+    disabled_modules = models.JSONField("moduli spenti", default=default_disabled_modules, blank=True)
 
     updated_at = models.DateTimeField(auto_now=True)
 

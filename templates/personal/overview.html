@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Denaro degli ospiti{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Denaro e oggetti degli ospiti</h1><span class="subtitle">Piccola cassa personale di ogni ospite: versamenti, spese con scontrino, rendiconto per il tutore</span></div>
+</div>
+<div class="card table-wrap"><table>
+  <thead><tr><th>Ospite</th><th>Camera</th><th class="num">Saldo</th><th class="num">Oggetti in struttura</th><th></th></tr></thead>
+  <tbody>{% for row in rows %}
+    <tr><td><a href="{% url 'personal:guest' row.guest.pk %}"><strong>{{ row.guest.last_name }} {{ row.guest.first_name }}</strong></a></td>
+      <td>{{ row.guest.room|default:"—" }}</td>
+      <td class="num mono">{{ row.balance|floatformat:2 }} €</td>
+      <td class="num">{{ row.items }}</td>
+      <td class="num"><a class="btn btn-sm" href="{% url 'personal:guest' row.guest.pk %}">Apri</a></td></tr>
+  {% empty %}<tr><td colspan="5" class="empty">Nessun ospite presente.</td></tr>{% endfor %}</tbody>
+  {% if rows %}<tfoot><tr><th colspan="2">Totale custodito</th><th class="num mono">{{ total|floatformat:2 }} €</th><th colspan="2"></th></tr></tfoot>{% endif %}
+</table></div>
+{% endblock %}

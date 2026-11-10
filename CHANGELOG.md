@@ -12,7 +12,28 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
 
 ## Non ancora rilasciato
 
-Nuova modalità d'installazione, senza funzioni nuove per il personale (il blocco del pilota resta).
+Nuova modalità d'installazione e sei funzioni nuove (spente nella «configurazione per il pilota», l'area
+familiari spenta di default ovunque).
+
+### Assistenza, amministrazione, personale, familiari (docs/NOVITA_ASSISTENZA_E_FAMILIARI.md)
+- **Attività a orario per ospite**: piano (orari fissi o «ogni N ore», per turno), elenco del turno con spunta,
+  regole delle registrazioni (niente doppioni, turni chiusi, annullamento con motivo), avviso al coordinatore
+  delle attività in ritardo ogni 15 minuti, riquadro nel cruscotto dell'operatore.
+- **Denaro e oggetti personali**: piccola cassa per ospite con saldo che non va sotto zero, scontrino fotografato
+  (ridotto, senza EXIF, cifrato), annullamento con motivo, rendiconto PDF per il tutore, inventario degli oggetti;
+  l'ufficio amministrativo non vede dati sanitari.
+- **Scadenze del personale**: tipi proposti (sicurezza, BLSD, antincendio, primo soccorso, preposto, HACCP,
+  idoneità) con periodicità modificabili, quadro per dipendente, attestati cifrati, CSV, avvisi giornalieri al
+  coordinatore, all'ufficio e al diretto interessato («Le mie scadenze»).
+- **Indicatori di qualità**: 12 mesi di cadute, cadute con conseguenze, eventi gravi, nuove lesioni da pressione,
+  contenzioni, SOS e ricoveri per 1000 giornate di presenza, confronto con la media, CSV.
+- **Firma di più documenti in una volta**: una passphrase (certificato) o un solo PIN e OTP (firma remota in
+  lotto con le impronte vincolate all'autorizzazione, se il prestatore lo consente); tutto o niente.
+- **Area familiari e tutori** (spenta di default, da accendere dopo il parere del DPO – docs/AREA_FAMILIARI_DPO.md):
+  ruolo «Familiare o tutore», collegamenti con base giuridica, messaggi, visite, documenti condivisi uno per uno,
+  cassa per il tutore; il familiare non può aprire nessun'altra pagina del FASAS.
+- Presentazione e prova locale: dati di esempio per tutte le novità, utente `familiare`, certificato di prova
+  (firma non qualificata) per il medico della demo.
 
 ### Versione cloud (docs/CLOUD.md)
 - **Il FASAS su un dominio senza server in struttura**: un container (`FASAS_CLOUD=1`) con sito e pianificatore dei

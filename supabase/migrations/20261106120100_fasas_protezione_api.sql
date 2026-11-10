@@ -6,7 +6,7 @@
 --   1. Row Level Security attiva su ogni tabella del FASAS, senza alcuna policy: via API nessuna riga;
 --   2. nessun privilegio ai ruoli delle API (anon, authenticated, service_role) su tabelle, sequenze e funzioni del
 --      FASAS e, se il progetto contiene solo il FASAS, nemmeno sulle tabelle create in futuro.
--- Agisce solo sulle 100 tabelle del FASAS elencate qui sotto: tabelle di altre applicazioni non vengono toccate.
+-- Agisce solo sulle 110 tabelle del FASAS elencate qui sotto: tabelle di altre applicazioni non vengono toccate.
 -- Il FASAS ripete gli stessi passi dopo ogni aggiornamento (fasas/core/supabase.py). È sicuro rieseguire il file.
 
 DO $$
@@ -38,6 +38,8 @@ DECLARE
         'billing_feestatement',
         'billing_guestfeeline',
         'billing_statementsequence',
+        'care_caretask',
+        'care_caretaskcheck',
         'clinical_clinicalevent',
         'clinical_parameterreading',
         'clinical_parametertype',
@@ -64,6 +66,10 @@ DECLARE
         'django_session',
         'documents_document',
         'documents_documentversion',
+        'families_familylink',
+        'families_familymessage',
+        'families_shareddocument',
+        'families_visitrequest',
         'feedback_feedback',
         'guests_admissionevent',
         'guests_allergy',
@@ -79,6 +85,8 @@ DECLARE
         'offline_offlinerecord',
         'pai_pai',
         'pai_paigoal',
+        'personal_cashmovement',
+        'personal_personalitem',
         'pharmacy_drug',
         'pharmacy_druginteraction',
         'pharmacy_officiallistimport',
@@ -102,11 +110,13 @@ DECLARE
         'signatures_signerapprelease',
         'signatures_signerdevice',
         'signatures_signingcredential',
+        'staffing_credentialtype',
         'staffing_leaverequest',
         'staffing_rotaentry',
         'staffing_rotamonth',
         'staffing_rotasettings',
         'staffing_shiftchange',
+        'staffing_staffcredential',
         'staffing_staffprofile',
         'wounds_dressing',
         'wounds_dressingplan',

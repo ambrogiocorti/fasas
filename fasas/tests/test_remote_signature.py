@@ -64,6 +64,8 @@ class FakeCSCService:
     def __init__(self):
         self.otp_sent = 0
         self.authorized = {}
+        self.authorizations = 0
+        self.multisign = 1
 
     def _check_token(self, request):
         if request.headers.get("Authorization") != "Bearer tok-1":
@@ -93,7 +95,7 @@ class FakeCSCService:
                      "validFrom": (NOW - datetime.timedelta(days=1)).strftime("%Y%m%d%H%M%SZ"),
                      "validTo": (NOW + datetime.timedelta(days=700)).strftime("%Y%m%d%H%M%SZ")},
             "authMode": "explicit", "PIN": {"presence": "true"}, "OTP": {"presence": "true", "type": "online"},
-            "multisign": 1, "SCAL": "2",
+            "multisign": self.multisign, "SCAL": "2",
         })
 
     async def send_otp(self, request):
@@ -110,6 +112,9 @@ class FakeCSCService:
             return web.json_response({"error": "invalid_otp"}, status=400)
         if not body.get("hash"):
             return web.json_response({"error": "invalid_request", "error_description": "hash required"}, status=400)
+        if int(body.get("numSignatures", 1)) != len(body["hash"]) or len(body["hash"]) > self.multisign:
+            return web.json_response({"error": "invalid_request", "error_description": "numSignatures"}, status=400)
+        self.authorizations += 1
         self.authorized["sad-1"] = list(body["hash"])
         return web.json_response({"SAD": "sad-1", "expiresIn": 300})
 

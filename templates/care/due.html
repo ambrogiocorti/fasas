@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Attività del turno{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Attività del turno</h1>
+  <div class="actions"><span class="pill">{{ shift_name }} · {{ day|date:"d/m/Y" }}</span> <span class="pill {% if late %}pill-danger{% else %}pill-ok{% endif %}">{{ done }}/{{ slots|length }} fatte{% if late %} · {{ late|length }} in ritardo{% endif %}</span></div></div>
+<p class="muted">Riposizionamenti, idratazione, controlli e le altre attività a orario decise dall'équipe per ogni ospite. «Fatta» registra l'ora di adesso; per un altro esito (non fatta, rifiutata) serve una nota.</p>
+{% if late_before %}
+<div class="card table-wrap"><h2>Rimaste dal turno precedente</h2>
+  <table><thead><tr><th>Ora</th><th>Ospite</th><th>Attività</th><th></th></tr></thead><tbody>
+  {% for s in late_before %}{% include "care/_row.html" %}{% endfor %}
+  </tbody></table></div>
+{% endif %}
+<div class="card table-wrap">
+  <table><thead><tr><th>Ora</th><th>Ospite</th><th>Attività</th><th></th></tr></thead>
+  <tbody>{% for s in slots %}{% include "care/_row.html" %}
+  {% empty %}<tr><td colspan="4" class="empty">Nessuna attività a orario in questo turno.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

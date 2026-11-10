@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Familiari – {{ guest }}{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="page-head"><h2>Familiari e tutori</h2>
+  <div class="actions">{% if not guest.is_archived %}<a class="btn btn-primary" href="{% url 'families:link_create' %}?ospite={{ guest.pk }}">{% icon "plus" %}Collega un familiare</a>{% endif %}</div></div>
+<div class="card table-wrap"><table>
+  <thead><tr><th>Familiare o tutore</th><th>Vede</th><th>Base del collegamento</th><th></th></tr></thead>
+  <tbody>{% for link in links %}<tr{% if not link.active %} style="opacity:.55"{% endif %}>
+    <td><strong>{{ link.user.get_full_name|default:link.user.username }}</strong><br><small class="muted">{{ link.get_relation_display }}{% if link.description %} · {{ link.description }}{% endif %}</small></td>
+    <td><small>messaggi e visite{% if link.can_see_documents %}, documenti condivisi{% endif %}{% if link.can_see_cash %}, cassa personale{% endif %}</small>
+      {% if not link.active %}<br><span class="pill">revocato il {{ link.revoked_at|date:"d/m/Y" }}: {{ link.revoke_reason }}</span>{% endif %}</td>
+    <td><small>{{ link.basis }}</small></td>
+    <td class="num nowrap"><a class="btn btn-sm" href="{% url 'families:staff_link' link.pk %}">{% icon "message" %}Messaggi</a>
+      <a class="btn btn-sm btn-ghost" href="{% url 'families:link_update' link.pk %}">{% icon "pencil" %}</a>
+      {% if link.active %}<a class="btn btn-sm btn-ghost" href="{% url 'families:link_revoke' link.pk %}">Revoca</a>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">Nessun familiare collegato.</td></tr>{% endfor %}</tbody></table></div>
+<div class="card table-wrap"><h3>Documenti condivisi con i familiari</h3>
+  <p class="muted small">Li vedono solo i collegamenti con «vede i documenti condivisi», sempre nell'ultima versione. Ogni apertura resta nell'audit.</p>
+  <table><thead><tr><th>Documento</th><th>Condiviso</th><th>Nota</th><th></th></tr></thead><tbody>
+  {% for s in shares %}<tr><td>{{ s.document.title }}<br><small class="muted">{{ s.document.get_category_display }}</small></td><td>{{ s.shared_at|date:"d/m/Y" }} da {{ s.shared_by.get_full_name|default:s.shared_by }}</td><td>{{ s.note }}</td>
+    <td class="num"><form method="post" action="{% url 'families:unshare' s.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm btn-ghost">Non condividere più</button></form></td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">Nessun documento condiviso.</td></tr>{% endfor %}</tbody></table>
+  {% if not guest.is_archived %}<form method="post" novalidate>{% csrf_token %}{% include "partials/form_fields.html" with form=share_form compact=True %}
+    <div class="form-actions"><button class="btn">{% icon "upload" %}Condividi</button></div></form>{% endif %}
+</div>
+{% endblock %}

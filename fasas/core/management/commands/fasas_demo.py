@@ -28,6 +28,7 @@ USERS = [
     ("operatore", "Olga", "Operatrice", "operator", "OSS"),
     ("medico", "Marta", "Medico", "doctor", "Medico di struttura"),
     ("amministrativo", "Paolo", "Amministrativo", "administrative", "Ufficio amministrativo"),
+    ("familiare", "Elena", "Rossi", "family", "Sorella di Mario Rossi, amministratrice di sostegno"),
 ]
 
 GUESTS = [
@@ -85,6 +86,7 @@ class Command(BaseCommand):
                     users = self._users()
                     self._billing(users)
                     self._rota(users)
+                    self._novita(users)
             self.stdout.write("Dati presenti: i dati demo non vengono ricaricati.")
             return
         if Guest.objects.exists() and not options["force"]:
@@ -328,3 +330,205 @@ class Command(BaseCommand):
         run_periodic_checks()
         self._billing(users)
         self._rota(users)
+        self._novita(users)
+
+    # --- Novità: attività a orario, cassa, scadenze del personale, indicatori, firma multipla, familiari ----------
+
+    def _novita(self, users):
+        from fasas.guests.models import Guest
+
+        guests = {g.first_name: g for g in Guest.objects.exclude(status="archived")}
+        if not guests:
+            return
+        with audit_context(user=users["coordinator"]):
+            self._demo_care(users, guests)
+            self._demo_cash(users, guests)
+            self._demo_credentials(users)
+            self._demo_quality(users, guests)
+            self._demo_signing(users, guests)
+            self._demo_families(users, guests)
+
+    def _demo_care(self, users, guests):
+        from fasas.care import services
+        from fasas.care.models import CareTask
+
+        if CareTask.objects.exists():
+            return
+        start = timezone.localdate() - datetime.timedelta(days=7)
+        plans = [
+            ("Giulia", {"kind": "repositioning", "every_hours": 2, "first_time": datetime.time(0),
+                        "instructions": "Alternare fianco destro, sinistro e supino; controllare i talloni."}),
+            ("Luca", {"kind": "hydration", "times": ["10:00", "16:00", "20:00"],
+                      "instructions": "Almeno un bicchiere d'acqua; annotare se rifiuta."}),
+            ("Mario", {"kind": "night_check", "times": ["23:00", "01:00", "03:00", "05:00"], "shifts": ["N"],
+                       "instructions": "Controllo del respiro e della posizione (rischio crisi notturne)."}),
+        ]
+        now = timezone.now()
+        for name, data in plans:
+            if name not in guests:
+                continue
+            task = CareTask.objects.create(guest=guests[name], start_date=start, created_by=users["coordinator"], **data)
+            # spunta delle attività già passate di oggi, tranne una lasciata «in ritardo» da mostrare
+            slots = [s for s in services.shift_slots(*services.resolve_shift(now)) if s.task == task
+                     and s.moment < now - datetime.timedelta(minutes=40)]
+            for slot in slots[:-1]:
+                try:
+                    services.register_check(task, users["operator"], slot.day, slot.time, now=now,
+                                            occurred_at=slot.moment + datetime.timedelta(minutes=5))
+                except services.CareError:
+                    pass
+
+    def _demo_cash(self, users, guests):
+        from fasas.personal.models import CashMovement, PersonalItem
+        from fasas.personal.services import add_movement
+
+        if CashMovement.objects.exists():
+            return
+        today = timezone.localdate()
+        office = users["administrative"]
+        for guest in guests.values():
+            add_movement(guest, office, "deposit", "150.00", "Versamento mensile", today - datetime.timedelta(days=35),
+                         counterpart=f"Elena {guest.last_name} (amministratrice di sostegno)")
+            add_movement(guest, users["operator"], "expense", "18.00", "Parrucchiere", today - datetime.timedelta(days=20),
+                         counterpart="Salone Bellezza (fittizio)")
+            add_movement(guest, users["operator"], "expense", "6.50", "Merenda in gita", today - datetime.timedelta(days=9))
+            add_movement(guest, office, "deposit", "100.00", "Versamento mensile", today - datetime.timedelta(days=4),
+                         counterpart=f"Elena {guest.last_name} (amministratrice di sostegno)")
+            add_movement(guest, users["operator"], "withdrawal", "10.00", "Contanti per il bar del centro diurno",
+                         today - datetime.timedelta(days=2))
+            PersonalItem.objects.create(guest=guest, name="Orologio da polso", description="Cinturino blu",
+                                        received_on=guest.admission_date, received_from="Familiare",
+                                        created_by=office)
+            PersonalItem.objects.create(guest=guest, name="Radio portatile", value=Decimal("25.00"),
+                                        received_on=today - datetime.timedelta(days=60), created_by=office)
+
+    def _demo_credentials(self, users):
+        from fasas.staffing.credentials import add_credential
+        from fasas.staffing.models import CredentialType, StaffCredential
+
+        if StaffCredential.objects.exists():
+            return
+        today = timezone.localdate()
+        types = {t.name.split(" ")[0]: t for t in CredentialType.objects.all()}
+        plan = [
+            (users["operator"], "Sicurezza", today - datetime.timedelta(days=400), None),
+            (users["operator"], "BLSD", today - datetime.timedelta(days=700), None),  # scade a breve
+            (users["operator"], "Idoneità", today - datetime.timedelta(days=340), today + datetime.timedelta(days=25)),
+            (users["coordinator"], "Sicurezza", today - datetime.timedelta(days=200), None),
+            (users["coordinator"], "BLSD", today - datetime.timedelta(days=800), None),  # scaduto
+            (users["coordinator"], "Preposto", today - datetime.timedelta(days=100), None),
+            (users["coordinator"], "Antincendio", today - datetime.timedelta(days=500), None),
+            (users["coordinator"], "Idoneità", today - datetime.timedelta(days=100), today + datetime.timedelta(days=265)),
+        ]
+        for user, key, obtained, expires in plan:
+            if key in types:
+                add_credential(user, types[key], obtained, users["coordinator"], expires_on=expires,
+                               provider="Ente formatore di fantasia")
+
+    def _demo_quality(self, users, guests):
+        """Storico di un anno (cadute, una contenzione, un ricovero, una lesione) per vedere gli indicatori."""
+        from fasas.clinical.models import ClinicalEvent, Restraint
+        from fasas.guests.models import AdmissionEvent
+        from fasas.wounds.models import Wound
+
+        if ClinicalEvent.objects.filter(event_type="fall").exists():
+            return
+        now = timezone.now()
+        rng = random.Random(7)
+        names = list(guests)
+        for months_ago in range(11, -1, -1):
+            for _ in range(rng.choice([0, 1, 1, 2, 3])):
+                moment = now - datetime.timedelta(days=30 * months_ago + rng.randint(0, 25), hours=rng.randint(0, 12))
+                if moment > now:
+                    continue
+                serious = rng.random() < 0.2
+                ClinicalEvent.objects.create(
+                    guest=guests[rng.choice(names)], event_type="fall", occurred_at=moment,
+                    severity="high" if serious else "low", description="Caduta (dato di fantasia per la demo).",
+                    injuries="Ematoma all'anca" if serious else "")
+        if "Mario" in guests:
+            Restraint.objects.create(guest=guests["Mario"], restraint_type="bed_rails", occurred_at=now - datetime.timedelta(days=150),
+                                     ended_at=now - datetime.timedelta(days=120), reason="Rischio di caduta notturna dopo crisi",
+                                     alternatives_tried="Letto basso, sensore di presenza", authorized_by=users["doctor"],
+                                     authorization_date=timezone.localdate() - datetime.timedelta(days=150),
+                                     responsible_operator=users["operator"])
+        if "Luca" in guests:
+            day = timezone.localdate() - datetime.timedelta(days=95)
+            AdmissionEvent.objects.create(guest=guests["Luca"], kind="hospitalization", date=day,
+                                          notes="Ricovero per iperglicemia (dato di fantasia)")
+            AdmissionEvent.objects.create(guest=guests["Luca"], kind="return", date=day + datetime.timedelta(days=4))
+        if "Giulia" in guests:
+            Wound.objects.create(guest=guests["Giulia"], kind="pressure", site="heel", side="left", origin="in_house",
+                                 stage="1", occurred_at=now - datetime.timedelta(days=50))
+
+    def _demo_signing(self, users, guests):
+        """Documenti da firmare e un certificato DI PROVA per il medico (firma non qualificata, solo per provare)."""
+        from fasas.documents.models import Document
+        from fasas.documents.services import create_document
+        from fasas.reports.pdf import Document as PdfDocument
+        from fasas.signatures.models import SigningCredential
+        from fasas.signatures.services import register_pkcs12
+
+        if Document.objects.filter(title__startswith="Relazione periodica").exists():
+            return
+        for guest in list(guests.values())[:3]:
+            pdf = PdfDocument(f"Relazione periodica – {guest.first_name} {guest.last_name}", "Documento di fantasia per la demo")
+            pdf.text("Contenuto di esempio: nessun dato sanitario reale.")
+            create_document(guest, Document.Category.MEDICAL_REPORT, f"Relazione periodica {guest.first_name}",
+                            user=users["coordinator"], data=pdf.build(), filename="relazione.pdf")
+        if not SigningCredential.objects.filter(user=users["doctor"]).exists():
+            register_pkcs12(users["doctor"], _test_certificate(demo_password()), demo_password())
+
+    def _demo_families(self, users, guests):
+        from fasas.core.models import SystemConfig
+        from fasas.documents.models import Document
+        from fasas.documents.services import create_document
+        from fasas.families import services
+        from fasas.families.models import FamilyLink
+        from fasas.reports.pdf import Document as PdfDocument
+
+        family = users.get("family")
+        if family is None or "Mario" not in guests or FamilyLink.objects.exists():
+            return
+        # Nella demo l'area familiari è accesa per mostrarla; in struttura resta spenta fino al parere del DPO
+        config = SystemConfig.get()
+        config.disabled_modules = [k for k in (config.disabled_modules or []) if k != "families"]
+        config.save(update_fields=["disabled_modules"])
+        mario = guests["Mario"]
+        link = FamilyLink.objects.create(user=family, guest=mario, relation="support", description="sorella",
+                                         basis="Decreto di nomina dell'amministratore di sostegno (fittizio)",
+                                         can_see_documents=True, can_see_cash=True, created_by=users["coordinator"])
+        services.send_message(link, family, "Buongiorno, domenica vorrei portare Mario a pranzo fuori. È possibile?", True)
+        services.send_message(link, users["coordinator"], "Buongiorno Elena, certo: lo prepariamo per le 12. "
+                              "Ricordi la terapia delle 13 che le consegniamo in busta.", False)
+        services.send_message(link, family, "Perfetto, grazie!", True)
+        sunday = timezone.localdate() + datetime.timedelta(days=(6 - timezone.localdate().weekday()) or 7)
+        services.request_visit(link, family, sunday, datetime.time(12), 2, "Pranzo fuori con Mario")
+        services.request_visit(link, family, sunday + datetime.timedelta(days=7), datetime.time(16), 1)
+        pdf = PdfDocument("Programma delle attività del mese", "Documento di fantasia per la demo")
+        pdf.text("Laboratorio di pittura il martedì, uscita al mercato il giovedì, musica il venerdì.")
+        document = create_document(mario, Document.Category.OTHER, "Programma delle attività del mese",
+                                   user=users["coordinator"], data=pdf.build(), filename="attivita.pdf")
+        services.share_document(document, users["coordinator"], "Il programma di questo mese")
+
+
+def _test_certificate(passphrase):
+    """Certificato autofirmato DI PROVA per il medico della demo: la firma non è qualificata e lo dice."""
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.primitives.serialization import pkcs12
+    from cryptography.x509.oid import NameOID
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Marta Medico (CERTIFICATO DI PROVA, non valido)")])
+    now = datetime.datetime.now(datetime.timezone.utc)
+    cert = (x509.CertificateBuilder().subject_name(name).issuer_name(name).public_key(key.public_key())
+            .serial_number(x509.random_serial_number()).not_valid_before(now - datetime.timedelta(days=1))
+            .not_valid_after(now + datetime.timedelta(days=365))
+            .add_extension(x509.KeyUsage(digital_signature=True, content_commitment=True, key_encipherment=False,
+                                         data_encipherment=False, key_agreement=False, key_cert_sign=False,
+                                         crl_sign=False, encipher_only=False, decipher_only=False), critical=True)
+            .sign(key, hashes.SHA256()))
+    return pkcs12.serialize_key_and_certificates(b"prova", key, cert, None,
+                                                 serialization.BestAvailableEncryption(passphrase.encode()))

@@ -7,7 +7,7 @@ from .models import Role
 MANAGED_APPS = [
     "core", "accounts", "audit", "guests", "documents", "signatures", "pharmacy", "clinical", "daily",
     "protocols", "appointments", "pai", "notifications", "reports", "backups", "assessments",
-    "wounds", "feedback",
+    "wounds", "feedback", "care", "personal", "families",
 ]
 
 # Consultazione della cartella: serve a chi assiste l'ospite (operatore, coordinatore, medico).
@@ -24,6 +24,7 @@ VIEW_CARE = [
     "notifications.view_notification",
     "assessments.view_assessment",
     "wounds.view_wound", "wounds.view_woundcheck", "wounds.view_dressingplan", "wounds.view_dressing",
+    "care.view_caretask", "care.view_caretaskcheck",
 ]
 
 # Operatore (spec. §2): registrazioni giornaliere, farmaci somministrati, eventi, parametri, diario.
@@ -46,6 +47,11 @@ OPERATOR = VIEW_CARE + [
     "assessments.add_assessment",
     # Lesioni: segnala una nuova lesione, registra rilevazioni (misure, foto) e medicazioni eseguite
     "wounds.add_wound", "wounds.add_woundcheck", "wounds.add_dressing",
+    # Attività a orario (riposizionamenti, idratazione, controlli notturni): le spunta chi è in turno
+    "care.add_caretaskcheck",
+    # Denaro e oggetti personali: registra versamenti, spese con scontrino e oggetti consegnati
+    "personal.view_cashmovement", "personal.add_cashmovement",
+    "personal.view_personalitem", "personal.add_personalitem", "personal.change_personalitem",
     # Continuità senza rete: pacchetto del turno sul dispositivo e foglio di emergenza stampabile
     "offline.use_offline",
     # Segnalazioni del pilota: tutti possono segnalare un problema
@@ -87,7 +93,16 @@ COORDINATOR = OPERATOR + [
     # Lesioni: piano di medicazione, chiusura (guarigione), annullamento con motivo
     "wounds.add_dressingplan", "wounds.change_wound",
     "wounds.delete_wound", "wounds.delete_woundcheck", "wounds.delete_dressing",
+    # Attività a orario: piano per ospite, modifica, fine e annullamento delle spunte con motivo
+    "care.add_caretask", "care.change_caretask", "care.delete_caretaskcheck",
+    # Cassa degli ospiti: annulla un movimento sbagliato, con motivo
+    "personal.void_cashmovement",
+    # Area familiari (se accesa): collegamenti, risposte ai messaggi, conferma delle visite, documenti condivisi
+    "families.manage_family_area", "families.view_familylink", "families.add_familylink",
+    "families.change_familylink",
     "reports.view_generatedreport", "reports.add_generatedreport",
+    # Indicatori di qualità nel tempo (cadute, lesioni, contenzioni, SOS, ricoveri al mese)
+    "reports.view_quality_indicators",
     "reports.view_reportschedule", "reports.add_reportschedule", "reports.change_reportschedule",
     "reports.view_reporttemplate", "reports.add_reporttemplate", "reports.change_reporttemplate",
     # Passaggio dal cartaceo: importa anagrafiche, terapie, giacenze e documenti scansionati
@@ -103,6 +118,9 @@ COORDINATOR = OPERATOR + [
     "staffing.view_leaverequest", "staffing.change_leaverequest", "staffing.view_shiftchange",
     "staffing.change_shiftchange", "staffing.view_rotasettings", "staffing.change_rotasettings",
     "staffing.view_staffprofile", "staffing.change_staffprofile",
+    # Scadenze del personale: corsi, idoneità alla mansione e visite (quadro, registrazione, avvisi)
+    "staffing.view_staffcredential", "staffing.add_staffcredential", "staffing.delete_staffcredential",
+    "staffing.view_credentialtype", "staffing.add_credentialtype", "staffing.change_credentialtype",
 ]
 
 # Medico (spec. §2): modifica le terapie, prescrive i farmaci, firma digitalmente i documenti sanitari.
@@ -126,6 +144,7 @@ DOCTOR = VIEW_CARE + [
     "assessments.add_assessment", "assessments.delete_assessment",
     "wounds.add_wound", "wounds.add_woundcheck", "wounds.add_dressingplan", "wounds.change_wound",
     "wounds.delete_wound", "wounds.delete_woundcheck", "wounds.delete_dressing",
+    "reports.view_quality_indicators",
 ]
 
 # Amministratore (spec. §2): utenti, configurazione, protocolli, notifiche, audit log, backup.
@@ -164,7 +183,17 @@ ADMINISTRATIVE = [
     # Consultazione del calendario turni (ore pianificate per le paghe)
     "staffing.view_rotamonth",
     "feedback.add_feedback",
+    # Denaro e oggetti personali degli ospiti: tiene la cassa, prepara il rendiconto per il tutore
+    "personal.view_cashmovement", "personal.add_cashmovement", "personal.void_cashmovement",
+    "personal.view_personalitem", "personal.add_personalitem", "personal.change_personalitem",
+    # Scadenze del personale: l'ufficio tiene attestati e giudizi di idoneità
+    "staffing.view_staffcredential", "staffing.add_staffcredential", "staffing.delete_staffcredential",
+    "staffing.view_credentialtype", "staffing.add_credentialtype", "staffing.change_credentialtype",
 ]
+
+# Familiare, tutore o amministratore di sostegno (area familiari, spenta di default): nessun accesso alla
+# cartella; le pagine dell'area controllano a quali ospiti è collegato e cosa può vedere.
+FAMILY = ["families.use_family_area"]
 
 ROLE_PERMISSIONS = {
     Role.OPERATOR: OPERATOR,
@@ -172,6 +201,7 @@ ROLE_PERMISSIONS = {
     Role.DOCTOR: DOCTOR,
     Role.ADMIN: ADMIN,
     Role.ADMINISTRATIVE: ADMINISTRATIVE,
+    Role.FAMILY: FAMILY,
 }
 
 

@@ -17,7 +17,8 @@ def set_off(*keys):
 
 class ModulesTests(FasasTestCase):
     def test_all_modules_on_by_default(self):
-        self.assertTrue(all(modules.states().values()))
+        # tutti accesi tranne l'area familiari, che si accende solo dopo il parere del DPO
+        self.assertEqual({k for k, on in modules.states().items() if not on}, set(modules.DEFAULT_OFF))
 
     def test_disabled_module_hides_menu_and_page(self):
         self.login(self.coordinator)
@@ -70,7 +71,7 @@ class ModulesTests(FasasTestCase):
         self.assertTrue(modules.is_on("staffing") and modules.is_on("billing") and modules.is_on("feedback"))
         self.assertTrue(AuditLog.objects.filter(action=AuditLog.Action.CONFIG).exists())
         self.client.post(url, {"action": "all"})
-        self.assertEqual(modules.disabled(), set())
+        self.assertEqual(modules.disabled(), {"families"})  # l'area familiari si accende solo apposta (DPO)
 
     def test_one_by_one(self):
         self.login(self.admin)

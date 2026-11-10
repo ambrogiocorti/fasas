@@ -44,6 +44,8 @@ SCHEDULE = [
      {"hour": "4", "minute": "15", "day_of_month": "1", "month_of_year": "1,4,7,10"}),
     ("pulizia-importazioni", "imports_cleanup", {"hour": "3", "minute": "50"}),
     ("pulizia-firme-cie", "cie_cleanup", {"minute": "*/10"}),
+    ("attivita-in-ritardo", "care_tasks", {"minute": "*/15"}),
+    ("scadenze-personale", "staff_credentials", {"hour": "7", "minute": "20"}),
 ]
 
 # campo: (minimo, massimo)

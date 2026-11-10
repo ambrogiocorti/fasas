@@ -30,6 +30,12 @@ class NotificationKind(models.TextChoices):
     DRESSING_DUE = "dressing_due", "Medicazione o rivalutazione di una lesione in ritardo"
     POWER = "power", "Corrente assente o tornata (gruppo di continuità)"
     FEEDBACK = "feedback", "Nuova segnalazione dal pilota"
+    CARE_LATE = "care_late", "Attività a orario in ritardo (riposizionamento, idratazione…)"
+    STAFF_DEADLINES = "staff_deadlines", "Scadenze del personale (corsi, idoneità, visite)"
+    MY_DEADLINE = "my_deadline", "Le mie scadenze (corsi, idoneità, visite)"
+    FAMILY_MESSAGE = "family_message", "Messaggio da un familiare o tutore"
+    FAMILY_VISIT = "family_visit", "Richiesta di visita da un familiare"
+    FAMILY_UPDATE = "family_update", "Novità dalla struttura (area familiari)"
 
 
 DEFAULT_ROLES = {
@@ -60,6 +66,12 @@ DEFAULT_ROLES = {
     NotificationKind.DRESSING_DUE: ["coordinator"],
     NotificationKind.POWER: ["admin", "coordinator", "operator"],
     NotificationKind.FEEDBACK: ["admin"],
+    NotificationKind.CARE_LATE: ["coordinator"],
+    NotificationKind.STAFF_DEADLINES: ["coordinator", "administrative"],
+    NotificationKind.MY_DEADLINE: [],
+    NotificationKind.FAMILY_MESSAGE: ["coordinator"],
+    NotificationKind.FAMILY_VISIT: ["coordinator"],
+    NotificationKind.FAMILY_UPDATE: [],
 }
 
 # Tipi inviati di default anche come notifica push sui dispositivi iscritti (modificabile dall'amministratore).
@@ -97,6 +109,11 @@ REQUIRED_PERMISSION = {
     NotificationKind.ROTA_ANSWER: "staffing.view_rotamonth",
     NotificationKind.SYSTEM_ERROR: "core.view_errorevent",
     NotificationKind.FEEDBACK: "feedback.view_feedback",
+    NotificationKind.CARE_LATE: "care.view_caretaskcheck",
+    NotificationKind.STAFF_DEADLINES: "staffing.view_staffcredential",
+    NotificationKind.FAMILY_MESSAGE: "families.manage_family_area",
+    NotificationKind.FAMILY_VISIT: "families.manage_family_area",
+    NotificationKind.FAMILY_UPDATE: "families.use_family_area",
 }
 
 

@@ -1,0 +1,40 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Denaro e oggetti – {{ guest }}{% endblock %}
+{% block content %}
+{% include "personal/_guest_head.html" %}
+<div class="page-head"><h2>Piccola cassa</h2>
+  <div class="actions">
+    {% if perms.personal.add_cashmovement and not guest.is_archived %}
+      <a class="btn btn-primary" href="{% url 'personal:movement' guest.pk %}?tipo=deposit">{% icon "plus" %}Versamento</a>
+      <a class="btn" href="{% url 'personal:movement' guest.pk %}?tipo=expense">{% icon "receipt" %}Spesa</a>
+    {% endif %}
+    <a class="btn btn-ghost" href="{% url 'personal:statement' guest.pk %}">{% icon "download" %}Rendiconto PDF</a>
+  </div></div>
+<div class="card stat"><span class="label">Saldo attuale</span><span class="value mono">{{ balance|floatformat:2 }} €</span>
+  <p class="muted small">I movimenti non si cancellano: un errore si annulla con il motivo e resta visibile. Gli scontrini sono conservati cifrati.</p></div>
+<div class="card table-wrap"><h3>Movimenti</h3><table>
+  <thead><tr><th>Data</th><th>Tipo</th><th>Descrizione</th><th class="num">Importo</th><th>Registrato da</th><th></th></tr></thead>
+  <tbody>{% for m in movements %}
+    <tr{% if m.is_voided %} class="voided"{% endif %}><td class="nowrap">{{ m.occurred_on|date:"d/m/Y" }}</td>
+      <td>{{ m.get_kind_display }}</td>
+      <td>{{ m.description }}{% if m.counterpart %}<br><small class="muted">{{ m.counterpart }}</small>{% endif %}{% if m.is_voided %}<br><small>annullato da {{ m.voided_by.get_full_name|default:m.voided_by }}: {{ m.void_reason }}</small>{% endif %}</td>
+      <td class="num mono">{% if m.kind == 'deposit' %}+{% else %}−{% endif %}{{ m.amount|floatformat:2 }} €</td>
+      <td>{{ m.created_by.get_full_name|default:m.created_by|default:"—" }}</td>
+      <td class="num nowrap">{% if m.receipt_storage %}<a class="btn btn-sm" href="{% url 'personal:receipt' m.pk %}" target="_blank" rel="noopener">{% icon "receipt" %}Scontrino</a>{% endif %}
+        {% if not m.is_voided and perms.personal.void_cashmovement %}<a class="btn btn-sm btn-ghost" href="{% url 'personal:movement_void' m.pk %}">Annulla</a>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="6" class="empty">Nessun movimento.</td></tr>{% endfor %}</tbody>
+</table></div>
+<div class="page-head"><h2>Oggetti personali</h2>
+  <div class="actions">{% if perms.personal.add_personalitem and not guest.is_archived %}<a class="btn" href="{% url 'personal:item' guest.pk %}">{% icon "plus" %}Oggetto</a>{% endif %}</div></div>
+<div class="card table-wrap"><table>
+  <thead><tr><th>Oggetto</th><th class="num">Q.tà</th><th>Consegnato</th><th>Stato</th><th class="num">Valore</th><th></th></tr></thead>
+  <tbody>{% for i in items %}
+    <tr{% if i.status != 'present' %} style="opacity:.6"{% endif %}><td><strong>{{ i.name }}</strong>{% if i.description %}<br><small class="muted">{{ i.description }}</small>{% endif %}</td>
+      <td class="num">{{ i.quantity }}</td>
+      <td>{{ i.received_on|date:"d/m/Y" }}{% if i.received_from %}<br><small class="muted">da {{ i.received_from }}</small>{% endif %}</td>
+      <td>{{ i.get_status_display }}{% if i.status_date %} il {{ i.status_date|date:"d/m/Y" }}{% endif %}{% if i.notes %}<br><small class="muted">{{ i.notes }}</small>{% endif %}</td>
+      <td class="num mono">{% if i.value is not None %}{{ i.value|floatformat:2 }} €{% else %}—{% endif %}</td>
+      <td class="num">{% if perms.personal.change_personalitem %}<a class="btn btn-sm" href="{% url 'personal:item_update' i.pk %}">Modifica</a>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="6" class="empty">Nessun oggetto registrato.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

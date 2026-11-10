@@ -130,6 +130,9 @@ INSTALLED_APPS = [
     "fasas.billing",
     "fasas.staffing",
     "fasas.feedback",
+    "fasas.care",
+    "fasas.personal",
+    "fasas.families",
     "fasas.api",
 ]
 
@@ -154,6 +157,7 @@ MIDDLEWARE = [
     "fasas.core.middleware.RemoteAccessMiddleware",
     "fasas.core.middleware.LoginRequiredMiddleware",
     "fasas.core.middleware.ModuleSwitchMiddleware",
+    "fasas.families.middleware.FamilyScopeMiddleware",
 ]
 
 # File statici serviti dal FASAS stesso quando davanti non c'è un proxy che li serve (versione cloud)

@@ -11,6 +11,9 @@ Il ruolo **non vede la cartella clinica**: solo presenze, rette e prospetti.
 | Rette | *Rette*: una voce per pagante (ATS, Comune, famiglia) con tariffa giornaliera e percentuali per ricovero e assenze; per un cambio di tariffa chiudere la voce e crearne una nuova |
 | Prospetti | *Prospetti e incassi* → genera (bozze), controlla, **emetti** (numero progressivo), PDF ed Excel |
 | Incassi | prospetto → registra incasso; gli scaduti sono elencati in alto |
+| Cassa personale degli ospiti | *Denaro degli ospiti*: versamenti, spese con scontrino, annullamento con motivo; **Rendiconto PDF** per il tutore |
+| Oggetti personali consegnati | stessa pagina dell'ospite → **Oggetto** |
+| Corsi e idoneità del personale | *Scadenze del personale*: registra l'attestato, export CSV |
 | Annullare un prospetto emesso | prospetto → annulla con motivo (resta nello storico) |
 | Regole di conteggio | *Rette* → impostazioni: giorno di uscita e di rientro, dati dell'ente gestore |
 

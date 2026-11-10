@@ -163,6 +163,10 @@ class BaseProvider:
     def sign_pdf(self, pdf_bytes: bytes, credential, secrets: dict, reason: str, location: str) -> bytes:
         raise NotImplementedError
 
+    def sign_pdfs(self, pdfs, credential, secrets, reason, location):
+        """Firma più PDF con gli stessi segreti; il primo errore ferma tutto prima di salvare qualsiasi cosa."""
+        return [self.sign_pdf(pdf, credential, secrets, reason, location) for pdf in pdfs]
+
 
 class PKCS12Provider(BaseProvider):
     name = "pkcs12"
@@ -194,18 +198,24 @@ class RemoteCSCProvider(BaseProvider):
     name = "remote"
 
     def sign_pdf(self, pdf_bytes, credential, secrets, reason, location):
+        return self.sign_pdfs([pdf_bytes], credential, secrets, reason, location)[0]
+
+    def sign_pdfs(self, pdfs, credential, secrets, reason, location):
+        """Una sola autorizzazione (PIN e OTP) per tutti i documenti, se il prestatore lo consente."""
         from . import csc
 
         if not credential.remote_credential_id:
             raise SignatureError("Firma remota non configurata per il tuo utente: completare la configurazione.")
         config = csc.CSCConfig.from_settings()
-        field_name = next_field_name(pdf_bytes)
-        signed, _ = csc.run(csc.sign_pdf_remote(
-            config, credential, pdf_bytes, username=credential.remote_user_id,
+
+        def metadata_for(field_name):
+            return lambda info: signature_metadata(field_name, reason, location, [info.signing_cert, *info.chain])
+
+        signed, _ = csc.run(csc.sign_pdfs_remote(
+            config, credential, pdfs, username=credential.remote_user_id,
             password=secrets.get("password", ""), pin=secrets.get("pin", ""), otp=secrets.get("otp", ""),
-            token=secrets.get("token"), reason=reason, location=location, timestamper=timestamper(),
-            build_metadata=lambda info: signature_metadata(field_name, reason, location,
-                                                           [info.signing_cert, *info.chain]),
+            token=secrets.get("token"), reason=reason, timestamper=timestamper(),
+            build_metadata=[metadata_for(next_field_name(pdf)) for pdf in pdfs],
         ))
         return signed
 

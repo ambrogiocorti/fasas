@@ -16,6 +16,7 @@ urlpatterns = [
     path("versione/<int:pk>/scarica/", views.version_download, name="download"),
     path("versione/<int:pk>/visualizza/", views.version_view, name="view"),
     path("versione/<int:pk>/firma/", signature_views.sign_version_view, name="sign"),
+    path("firma-multipla/", signature_views.sign_many_view, name="sign_many"),
     path("versione/<int:pk>/firma-cie/", signature_views.cie_sign_view, name="sign_cie"),
     path("versione/<int:pk>/verifica-firma/", signature_views.verify_version_view, name="verify"),
 ]

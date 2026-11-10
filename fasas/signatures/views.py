@@ -27,7 +27,7 @@ from . import cie, external, fea_terms
 from .forms import CIESignForm, CredentialForm, FasasPinForm, RemoteCredentialForm, SendOTPForm, SignForm
 from .models import FEAAcceptance, SignatureRequest, SignerDevice, SigningCredential
 from .providers import SignatureError, signature_level, verify_pdf
-from .services import register_pkcs12, register_remote, request_otp, sign_version
+from .services import bulk_limit, register_pkcs12, register_remote, request_otp, sign_version, sign_versions
 
 TOKEN_KEY = "fasas_csc_token"
 TOKEN_MINUTES = 5
@@ -232,6 +232,77 @@ def sign_version_view(request, pk):
         "form": form, "version": version, "guest": version.document.guest, "credential": credential,
         "remote": remote, "token_active": bool(token), "needs_password": settings.FASAS_CSC_AUTH == "basic",
         "provider_name": settings.FASAS_CSC_PROVIDER_NAME,
+    })
+
+
+@permission_required("signatures.sign_document", raise_exception=True)
+def sign_many_view(request):
+    """Firma di più documenti in una volta: una passphrase, oppure un solo PIN e OTP se il prestatore lo consente."""
+    from urllib.parse import urlencode
+
+    from fasas.documents.views import documents_to_sign
+
+    pending = {p["version"].pk: p for p in documents_to_sign()}
+    wanted = []
+    for raw in request.POST.getlist("v") or request.GET.getlist("v"):
+        if raw.isdigit() and int(raw) in pending and int(raw) not in wanted:
+            wanted.append(int(raw))
+    if not wanted:
+        messages.error(request, "Selezionare almeno un documento da firmare.")
+        return redirect("documents:to_sign")
+    selected = [pending[pk] for pk in wanted]
+    here = f"{reverse('documents:sign_many')}?{urlencode([('v', pk) for pk in wanted])}"
+    for item in selected:
+        if (gate := cie_gate(request, item["document"].guest, item["document"], next_url=here)) is not None:
+            return gate
+    credential = SigningCredential.objects.filter(user=request.user).first()
+    if credential is None:
+        messages.error(request, "Prima di firmare configura il tuo strumento di firma.")
+        return redirect("signatures:credential")
+    remote = credential.kind == SigningCredential.Kind.REMOTE
+    if remote and not remote_on():
+        messages.error(request, "La firma remota qualificata è spenta in questa struttura (Configurazione › Moduli).")
+        return redirect("documents:to_sign")
+    limit = bulk_limit(credential)
+    token = _session_token(request, credential) if remote else None
+
+    if request.method == "POST" and request.POST.get("action") == "send_otp" and remote:
+        otp_form = SendOTPForm(request.POST)
+        otp_form.is_valid()
+        try:
+            token = request_otp(request.user, otp_form.cleaned_data.get("password", ""))
+        except SignatureError as exc:
+            messages.error(request, str(exc))
+        else:
+            request.session[TOKEN_KEY] = {
+                "value": encrypt(token.encode()).decode(), "credential": credential.remote_credential_id,
+                "expires": (timezone.now() + datetime.timedelta(minutes=TOKEN_MINUTES)).isoformat(),
+            }
+            messages.success(request, "OTP inviato via SMS: vale per tutti i documenti selezionati.")
+        return redirect(here)
+
+    form = SignForm(request.POST or None, credential=credential, has_token=bool(token))
+    form.fields["confirm"].label = f"Ho letto i {len(selected)} documenti elencati e intendo firmarli"
+    if len(selected) == 1:
+        form.fields["confirm"].label = "Ho letto il documento e intendo firmarlo"
+    if request.method == "POST" and form.is_valid():
+        if len(selected) > limit:
+            form.add_error(None, f"Si possono firmare al massimo {limit} documenti per volta.")
+        else:
+            try:
+                signatures = sign_versions([p["version"] for p in selected], request.user,
+                                           {**form.secrets(), "token": token}, form.cleaned_data["reason"])
+            except SignatureError as exc:
+                form.add_error(None, str(exc))
+            else:
+                request.session.pop(TOKEN_KEY, None)
+                messages.success(request, f"Firmati {len(signatures)} documenti "
+                                          f"({signatures[0].signature_format}): creata una nuova versione per ciascuno.")
+                return redirect("documents:to_sign")
+    return render(request, "signatures/sign_many.html", {
+        "form": form, "selected": selected, "credential": credential, "remote": remote, "limit": limit,
+        "too_many": len(selected) > limit, "token_active": bool(token),
+        "needs_password": settings.FASAS_CSC_AUTH == "basic", "provider_name": settings.FASAS_CSC_PROVIDER_NAME,
     })
 
 

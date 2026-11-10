@@ -57,6 +57,17 @@
       <ul class="list-plain">{% for d in relevant_diary %}<li><strong>{{ d.guest }}</strong> <small class="muted">{{ d.occurred_at|date:"d/m H:i" }} · {{ d.created_by|default:"—" }}</small><br>{{ d.text|truncatechars:180 }}</li>{% endfor %}</ul>{% endif %}
   </div>
 
+  {% if care_total %}
+  <div class="card">
+    <div class="card-head"><h2>Attività a orario <small class="muted">{{ care_done }}/{{ care_total }} nel turno</small></h2><div class="actions"><a class="btn btn-sm btn-primary" href="{% url 'care:due' %}">{% icon "clock" %}Apri</a></div></div>
+    <ul class="list-plain">
+      {% for s in care_late %}<li><span class="pill pill-danger mono">{{ s.time|time:"H:i" }}</span> <a href="{% url 'care:guest' s.guest.pk %}">{{ s.guest }}</a> – {{ s.task.name }} <span class="pill pill-danger">in ritardo</span></li>{% endfor %}
+      {% for s in care_next %}<li><span class="pill mono">{{ s.time|time:"H:i" }}</span> <a href="{% url 'care:guest' s.guest.pk %}">{{ s.guest }}</a> – {{ s.task.name }}</li>{% endfor %}
+      {% if not care_late and not care_next %}<li class="muted">Nessuna attività in ritardo o nella prossima ora.</li>{% endif %}
+    </ul>
+  </div>
+  {% endif %}
+
   {% if evacuation_missing or evacuation_alerts %}
   <div class="card">
     <div class="card-head"><h2>Evacuazioni</h2><div class="actions"><a class="btn btn-sm" href="{% url 'daily:evacuations' %}">Registra</a></div></div>

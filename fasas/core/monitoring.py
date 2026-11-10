@@ -29,6 +29,7 @@ JOB_INTERVALS = {
     "pai_reviews": 24 * 60, "assessments": 24 * 60, "wounds": 24 * 60, "reports": 24 * 60,
     "report_retention": 24 * 60, "backup": 24 * 60, "continuity": 5, "ups": 1,
     "audit_verify": 24 * 60, "imports_cleanup": 24 * 60, "cie_cleanup": 10, "restore_test": 95 * 24 * 60,
+    "care_tasks": 15, "staff_credentials": 24 * 60,
 }
 
 

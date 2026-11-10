@@ -49,6 +49,7 @@ def register_remote(user, username, password, credential_id=""):
     credential.remote_credential_id = remote.credential_id
     credential.remote_pin_required = remote.pin_required
     credential.remote_otp_type = remote.otp_type
+    credential.remote_multisign = remote.multisign
     credential.certificate_subject = remote.subject
     credential.certificate_issuer = remote.issuer
     credential.certificate_serial = remote.serial
@@ -73,25 +74,54 @@ def request_otp(user, password=""):
     return csc.run(csc.request_otp(config, credential, credential.remote_user_id, password))
 
 
-@transaction.atomic
+MAX_BULK = 20  # documenti per volta con il certificato (con la firma remota decide anche il prestatore)
+
+
+def bulk_limit(credential):
+    if credential is not None and credential.kind == SigningCredential.Kind.REMOTE:
+        return max(1, min(MAX_BULK, credential.remote_multisign or 1))
+    return MAX_BULK
+
+
 def sign_version(version, user, secrets, reason="", location=""):
     """secrets: {"passphrase"} per il certificato PKCS#12, {"password", "pin", "otp", "token"} per la firma remota."""
+    return sign_versions([version], user, secrets, reason, location)[0]
+
+
+def sign_versions(versions, user, secrets, reason="", location=""):
+    """
+    Firma più documenti in una volta: una passphrase per il certificato, oppure un solo PIN e OTP per la firma
+    remota quando il prestatore consente più firme per autorizzazione. Tutto o niente: i PDF si firmano in memoria
+    e si salvano solo se tutte le firme sono riuscite.
+    """
     if isinstance(secrets, str):
         secrets = {"passphrase": secrets}
+    versions = list(versions)
     if not user.has_perm("signatures.sign_document"):
         raise SignatureError("Non hai il permesso di firmare documenti.")
-    if not version.is_pdf:
-        raise SignatureError("Si possono firmare in formato PAdES solo documenti PDF.")
+    if not versions:
+        raise SignatureError("Nessun documento selezionato.")
+    for version in versions:
+        if not version.is_pdf:
+            raise SignatureError("Si possono firmare in formato PAdES solo documenti PDF.")
     credential = getattr(user, "signing_credential", None)
     if credential is None:
         raise SignatureError("Nessuna credenziale di firma configurata per il tuo utente.")
     if not credential.is_valid_now:
         raise SignatureError("Il certificato di firma è scaduto o non ancora valido.")
+    if len(versions) > bulk_limit(credential):
+        raise SignatureError(f"Si possono firmare al massimo {bulk_limit(credential)} documenti per volta.")
 
-    source = read_version(version, user=user, audit=False)
-    location = location or str(version.document.guest.community)
+    sources = [read_version(version, user=user, audit=False) for version in versions]
+    location = location or str(versions[0].document.guest.community)
     level = signature_level()
-    signed = provider_for(credential).sign_pdf(source, credential, secrets, reason, location)
+    signed = provider_for(credential).sign_pdfs(sources, credential, secrets, reason, location)
+    with transaction.atomic():
+        return [_store_signed(version, data, user, credential, reason, level)
+                for version, data in zip(versions, signed, strict=True)]
+
+
+def _store_signed(version, signed, user, credential, reason, level):
     signed_version = add_version(
         version.document, signed, version.original_name.rsplit(".", 1)[0] + "_firmato.pdf", user,
         note=f"Firmato digitalmente da {user}", content_type="application/pdf", is_signed=True,

@@ -187,3 +187,64 @@ class ShiftChange(models.Model):
 
     def __str__(self):
         return f"{self.get_kind_display()} {self.date:%d/%m} {self.requester} ↔ {self.colleague}"
+
+
+class CredentialType(models.Model):
+    """Corso, idoneità o visita che il personale deve avere in regola (es. BLSD, antincendio, idoneità alla mansione)."""
+
+    class Category(models.TextChoices):
+        TRAINING = "training", "Corso di formazione"
+        FITNESS = "fitness", "Idoneità e visite del medico competente"
+        OTHER = "other", "Altro (titolo professionale, iscrizione…)"
+
+    name = models.CharField("nome", max_length=120, unique=True)
+    category = models.CharField("tipo", max_length=10, choices=Category.choices, default=Category.TRAINING)
+    validity_months = models.PositiveSmallIntegerField(
+        "validità (mesi)", null=True, blank=True,
+        help_text="Vuoto = senza scadenza fissa (si indica la data di scadenza a ogni registrazione). "
+                  "Periodicità proposte da verificare con l'RSPP e il medico competente.")
+    warn_days = models.PositiveSmallIntegerField("avviso (giorni prima)", default=60)
+    roles = models.JSONField("obbligatorio per i ruoli", default=list, blank=True,
+                             help_text="Ruoli per cui manca se non registrato. Vuoto = solo per chi è designato.")
+    reference = models.CharField("riferimento", max_length=200, blank=True)
+    active = models.BooleanField("in uso", default=True)
+    order = models.PositiveSmallIntegerField("ordine", default=0)
+
+    class Meta:
+        verbose_name = "tipo di scadenza del personale"
+        verbose_name_plural = "tipi di scadenza del personale"
+        ordering = ["order", "name"]
+
+    def __str__(self):
+        return self.name
+
+    def required_for(self, user):
+        return user.role in (self.roles or [])
+
+
+class StaffCredential(models.Model):
+    """Attestato di un corso o giudizio di idoneità di un dipendente. La registrazione più recente è quella valida."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name="dipendente", on_delete=models.PROTECT,
+                             related_name="credentials")
+    type = models.ForeignKey(CredentialType, verbose_name="tipo", on_delete=models.PROTECT, related_name="credentials")
+    obtained_on = models.DateField("conseguito / visita del")
+    expires_on = models.DateField("scadenza", null=True, blank=True,
+                                  help_text="Se vuota si calcola dalla validità del tipo.")
+    provider = models.CharField("ente o medico", max_length=120, blank=True)
+    notes = models.CharField("note", max_length=255, blank=True,
+                             help_text="Non indicare diagnosi né dati sanitari: basta l'esito consegnato al datore di lavoro.")
+    certificate_storage = models.CharField(max_length=255, blank=True, editable=False)
+    certificate_sha256 = models.CharField(max_length=64, blank=True, editable=False)
+    certificate_type = models.CharField(max_length=60, blank=True, editable=False)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                                   related_name="+", editable=False)
+
+    class Meta:
+        verbose_name = "scadenza del personale"
+        verbose_name_plural = "scadenze del personale"
+        ordering = ["-obtained_on", "-created_at"]
+
+    def __str__(self):
+        return f"{self.type} – {self.user}"

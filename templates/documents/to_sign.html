@@ -11,20 +11,32 @@
 {% elif not credential.is_valid_now %}
   <div class="alert alert-danger">{% icon "alert-circle" %}<div class="alert-body">Il tuo certificato di firma è scaduto o non ancora valido.</div></div>
 {% endif %}
+{% with bulk=perms.signatures.sign_document %}
+<form method="get" action="{% url 'documents:sign_many' %}">
+{% if bulk and credential and pending|length > 1 %}
+  <div class="card"><div class="card-head"><h2>Firma di più documenti in una volta</h2>
+    <button class="btn btn-primary" type="submit">{% icon "pen" %}Firma i selezionati</button></div>
+    <p class="muted small">Seleziona i documenti già letti e firmali insieme: con il certificato basta una passphrase,
+      con la firma remota un solo PIN e OTP {% if credential.kind == 'remote' %}(il tuo prestatore ne consente {{ bulk_limit }} per volta){% else %}(fino a {{ bulk_limit }} per volta){% endif %}.
+      {% if perms.signatures.sign_with_cie and cie_enabled %}Con la CIE per ora si firma un documento alla volta: ogni firma richiede la carta appoggiata al telefono.{% endif %}</p></div>
+{% endif %}
 <div class="card table-wrap">
   <table>
-    <thead><tr><th>Documento</th><th>Ospite</th><th>Categoria</th><th>Versione</th><th></th></tr></thead>
+    <thead><tr>{% if bulk and credential %}<th><span class="sr-only">Seleziona</span></th>{% endif %}<th>Documento</th><th>Ospite</th><th>Categoria</th><th>Versione</th><th></th></tr></thead>
     <tbody>
     {% for p in pending %}
-      <tr><td><a href="{{ p.document.get_absolute_url }}"><strong>{{ p.document.title }}</strong></a><br><small class="muted">{{ p.version.original_name }}</small></td>
+      <tr>{% if bulk and credential %}<td><input type="checkbox" name="v" value="{{ p.version.pk }}" aria-label="Seleziona {{ p.document.title }}"></td>{% endif %}
+        <td><a href="{{ p.document.get_absolute_url }}"><strong>{{ p.document.title }}</strong></a><br><small class="muted">{{ p.version.original_name }}</small></td>
         <td><a href="{{ p.document.guest.get_absolute_url }}">{{ p.document.guest }}</a></td>
         <td>{{ p.document.get_category_display }}</td>
         <td>v{{ p.version.number }} · {{ p.version.uploaded_at|date:"d/m/Y" }}</td>
         <td class="num nowrap"><a class="btn btn-sm" href="{% url 'documents:view' p.version.pk %}" target="_blank" rel="noopener">Apri</a>
           {% if perms.signatures.sign_document %}<a class="btn btn-sm btn-primary" href="{% url 'documents:sign' p.version.pk %}">{% icon "pen" %}Firma</a>{% endif %}
           {% if perms.signatures.sign_with_cie and cie_enabled %}<a class="btn btn-sm btn-primary" href="{% url 'documents:sign_cie' p.version.pk %}">{% icon "id-card" %}Firma con CIE</a>{% endif %}</td></tr>
-    {% empty %}<tr><td colspan="5" class="empty">Nessun documento in attesa di firma.</td></tr>{% endfor %}
+    {% empty %}<tr><td colspan="6" class="empty">Nessun documento in attesa di firma.</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>
+</form>
+{% endwith %}
 {% endblock %}

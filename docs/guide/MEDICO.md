@@ -7,6 +7,8 @@
 | Prescrivere, modificare, sospendere, terminare | scheda dell'ospite → *Terapie* → **Prescrivi**; quadro di tutti gli ospiti in *Terapie in corso* |
 | Farmaci SOS | nella prescrizione: indicazione, massimo nelle 24 ore, intervallo minimo, se serve la validazione |
 | Validare i SOS somministrati | *SOS da validare* |
+| Firmare più documenti insieme | *Documenti da firmare*: spunta i documenti già letti → **Firma i selezionati** (una passphrase; con la firma remota un PIN e un OTP se il prestatore lo consente; con la CIE uno alla volta) |
+| Andamento di cadute, contenzioni, lesioni, SOS, ricoveri | *Archivio e report › Indicatori di qualità* |
 | Validare protocolli automatici | *Impostazioni › Protocolli automatici* → **Valida**: soglie e azioni. Prima della validazione un protocollo non si attiva; ogni modifica richiede una nuova validazione |
 | Validare le interazioni tra farmaci | *Impostazioni › Interazioni farmacologiche* (spente per default finché non c'è il parere sul regolamento dei dispositivi medici) |
 | Regola sui limiti dei SOS | con il coordinatore e l'amministratore: *Configurazione generale* → conferma motivata oppure blocco |

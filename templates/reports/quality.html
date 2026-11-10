@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Indicatori di qualità{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Indicatori di qualità</h1><span class="subtitle">Ultimi 12 mesi (l'ultimo è in corso) · frequenze per 1000 giornate di presenza, così si confrontano mesi con un numero diverso di ospiti</span></div>
+  <div class="actions"><a class="btn" href="?formato=csv">{% icon "download" %}CSV per Excel</a></div>
+</div>
+<div class="grid grid-2">
+  {% for i in indicators %}
+  <div class="card">
+    <div class="card-head"><h2>{{ i.label }}</h2>
+      {% if i.trend == 'up' %}<span class="trend-up" title="Mese scorso oltre il 20% sopra la media dei mesi precedenti">▲ in aumento</span>{% elif i.trend == 'down' %}<span class="trend-down" title="Mese scorso oltre il 20% sotto la media dei mesi precedenti">▼ in calo</span>{% endif %}</div>
+    <p class="muted small">{{ i.help }}</p>
+    <div class="qbars" role="img" aria-label="{{ i.label }} mese per mese: {% for b in i.bars %}{{ b.month|date:'M' }} {{ b.value }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+      {% for b in i.bars %}<div class="qbar{% if forloop.last %} last{% endif %}" title="{{ b.month|date:'F Y' }}: {{ b.value }}{% if b.rate is not None %} ({{ b.rate }}{% if i.rate %} per 1000 gg{% else %}% degli ospiti{% endif %}){% endif %}"><span style="height: {{ b.height }}%"></span></div>{% endfor %}
+    </div>
+    <div class="qbar-labels" aria-hidden="true">{% for b in i.bars %}<span>{{ b.month|date:"M"|slice:":3" }}</span>{% endfor %}</div>
+    <p class="small">Totale 12 mesi: <strong>{{ i.total }}</strong> · mese scorso: <strong>{{ i.last|default_if_none:"—" }}</strong>{% if i.rate %} per 1000 gg{% else %}% degli ospiti{% endif %}{% if i.average is not None %} · media dei mesi precedenti: {{ i.average }}{% endif %}</p>
+  </div>
+  {% endfor %}
+</div>
+<div class="card table-wrap"><h3>Tabella mese per mese</h3><table>
+  <thead><tr><th>Indicatore</th>{% for m in months %}<th class="num">{{ m|date:"M y" }}</th>{% endfor %}</tr></thead>
+  <tbody>
+    <tr><td>Giornate di presenza</td>{% for d in guest_days %}<td class="num">{{ d }}</td>{% endfor %}</tr>
+    <tr><td>Ospiti in carico</td>{% for g in guests %}<td class="num">{{ g }}</td>{% endfor %}</tr>
+    {% for i in indicators %}<tr><td>{{ i.label }}</td>{% for b in i.bars %}<td class="num">{{ b.value }}{% if b.value and b.rate is not None %}<br><small class="muted">{{ b.rate }}</small>{% endif %}</td>{% endfor %}</tr>{% endfor %}
+  </tbody>
+</table></div>
+<p class="muted small">Contano solo le registrazioni valide (non annullate). Le giornate di presenza vanno dall'ingresso alla dimissione e comprendono i ricoveri. I dati sono aggregati e non contengono nomi: utili per la riunione d'équipe, la relazione annuale e le verifiche dell'ATS.</p>
+{% endblock %}

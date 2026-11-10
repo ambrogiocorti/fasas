@@ -106,6 +106,7 @@ class GeneratedReport(models.Model):
         verbose_name = "report generato"
         verbose_name_plural = "report generati"
         ordering = ["-generated_at"]
+        permissions = [("view_quality_indicators", "Può vedere gli indicatori di qualità nel tempo")]
         constraints = [
             models.UniqueConstraint(
                 fields=["schedule", "period_start", "period_end", "format"], condition=models.Q(schedule__isnull=False),

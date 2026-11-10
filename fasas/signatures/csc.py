@@ -81,6 +81,7 @@ class RemoteCredential:
     auth_mode: str
     usable: bool
     problem: str = ""
+    multisign: int = 1
 
 
 def _error_message(status, data):
@@ -102,6 +103,13 @@ def _parse_csc_time(value):
         except ValueError:
             continue
     return None
+
+
+def _multisign(data):
+    try:
+        return max(1, int(data.get("multisign", 1) or 1))
+    except (TypeError, ValueError):
+        return 1
 
 
 def _presence(block):
@@ -181,7 +189,7 @@ class CSCClient:
             valid_from=_parse_csc_time(cert.get("validFrom")), valid_to=_parse_csc_time(cert.get("validTo")),
             pin_required=_presence(data.get("PIN")),
             otp_type=str(otp.get("type", "offline")).lower() if _presence(otp) else "",
-            auth_mode=auth_mode, usable=not problem, problem=problem,
+            auth_mode=auth_mode, usable=not problem, problem=problem, multisign=_multisign(data),
         ), data
 
     async def send_otp(self, token, credential_id):
@@ -244,6 +252,20 @@ async def request_otp(config, credential, username, password, token=None):
 async def sign_pdf_remote(config, credential, pdf_bytes, *, username="", password="", pin="", otp="", token=None,
                           reason="", location="", build_metadata, timestamper=None):
     """Firma il PDF con la credenziale remota. build_metadata(signer) restituisce i PdfSignatureMetadata."""
+    signed, remote = await sign_pdfs_remote(config, credential, [pdf_bytes], username=username, password=password,
+                                            pin=pin, otp=otp, token=token, reason=reason,
+                                            build_metadata=[build_metadata], timestamper=timestamper)
+    return signed[0], remote
+
+
+async def sign_pdfs_remote(config, credential, pdfs, *, username="", password="", pin="", otp="", token=None,
+                           reason="", build_metadata, timestamper=None):
+    """
+    Firma più PDF con una sola autorizzazione (un PIN e un OTP): gli hash di tutti i documenti vanno insieme a
+    credentials/authorize (vincolati alla SAD quando il prestatore lavora in SCAL2) e poi a signatures/signHash.
+    Possibile solo se il prestatore lo consente («multisign» in credentials/info). build_metadata: una funzione
+    per documento. Restituisce (lista dei PDF firmati nello stesso ordine, credenziale remota).
+    """
     from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
     from pyhanko.sign import signers
     from pyhanko.sign.signers.csc_signer import CSCSigner
@@ -257,21 +279,32 @@ async def sign_pdf_remote(config, credential, pdf_bytes, *, username="", passwor
         if not remote.usable:
             raise SignatureError(f"Credenziale non utilizzabile: {remote.problem}.")
         credential_info = credential_certificates(raw)
+        if len(pdfs) > credential_info.max_batch_size:
+            raise SignatureError(
+                f"Il prestatore consente al massimo {credential_info.max_batch_size} firme con una sola "
+                f"autorizzazione: selezionare meno documenti.")
         manager = FasasAuthorizationManager(info_session, credential_info, client, pin, otp,
                                             description=reason[:500] or None)
-        signer = CSCSigner(http, manager, sign_timeout=config.timeout)
-        writer = IncrementalPdfFileWriter(BytesIO(pdf_bytes), strict=False)
-        meta = build_metadata(credential_info)
-        try:
-            out = await signers.PdfSigner(meta, signer=signer, timestamper=timestamper).async_sign_pdf(writer)
-        except SignatureError:
-            raise
-        except Exception as exc:
-            cause = exc.__cause__ or exc
-            if isinstance(cause, SignatureError):
-                raise cause from exc
-            raise SignatureError(f"Firma remota non riuscita: {cause}") from exc
-        return out.getvalue(), remote
+        signer = CSCSigner(http, manager, sign_timeout=config.timeout, batch_autocommit=True, batch_size=len(pdfs))
+
+        async def sign_one(pdf_bytes, metadata):
+            writer = IncrementalPdfFileWriter(BytesIO(pdf_bytes), strict=False)
+            out = await signers.PdfSigner(metadata(credential_info), signer=signer,
+                                          timestamper=timestamper).async_sign_pdf(writer)
+            return out.getvalue()
+
+        results = await asyncio.gather(*(sign_one(pdf, meta) for pdf, meta in zip(pdfs, build_metadata, strict=True)),
+                                       return_exceptions=True)
+        errors = [r for r in results if isinstance(r, BaseException)]
+        if errors:
+            # in un lotto l'errore vero (PIN, OTP) è di chi ha chiesto l'autorizzazione; gli altri restano senza firma
+            for exc in errors:
+                cause = exc.__cause__ or exc
+                if isinstance(exc, SignatureError) or isinstance(cause, SignatureError):
+                    raise (exc if isinstance(exc, SignatureError) else cause) from exc
+            cause = errors[0].__cause__ or errors[0]
+            raise SignatureError(f"Firma remota non riuscita: {cause}") from errors[0]
+        return results, remote
 
 
 def credential_certificates(raw):

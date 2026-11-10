@@ -1,0 +1,50 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}{{ guest.first_name }} {{ guest.last_name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ guest.first_name }} {{ guest.last_name }}</h1><span class="subtitle">{{ link.get_relation_display }}{% if link.description %} · {{ link.description }}{% endif %}{% if guest.room %} · camera {{ guest.room }}{% endif %}</span></div>
+</div>
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>{% icon "message" %} Messaggi con la struttura</h2></div>
+    <p class="muted small">Per le urgenze telefona alla struttura: i messaggi si leggono negli orari di lavoro. Non scrivere qui dati sanitari che non servono.</p>
+    <div class="list-plain" style="max-height: 420px; overflow-y: auto">
+      {% for m in thread %}
+        <div style="margin: .4rem 0; {% if m.from_family %}text-align:right{% endif %}">
+          <div class="pill {% if m.from_family %}pill-ok{% endif %}" style="white-space: normal; text-align: left; display: inline-block; max-width: 85%">{{ m.body|linebreaksbr }}</div>
+          <br><small class="muted">{% if m.from_family %}Tu{% else %}{{ m.author.get_full_name|default:"La struttura" }}{% endif %} · {{ m.created_at|date:"d/m H:i" }}{% if m.from_family and m.read_at %} · letto{% endif %}</small>
+        </div>
+      {% empty %}<p class="empty">Nessun messaggio. Scrivi qui sotto per contattare la struttura.</p>{% endfor %}
+    </div>
+    <form method="post" novalidate>{% csrf_token %}{% include "partials/form_fields.html" with form=message_form compact=True %}
+      <div class="form-actions"><button class="btn btn-primary">{% icon "message" %}Invia</button></div></form>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>{% icon "calendar" %} Visite</h2></div>
+    <ul class="list-plain">{% for v in visits %}
+      <li><span class="pill {% if v.status == 'confirmed' %}pill-ok{% elif v.status == 'declined' %}pill-danger{% elif v.status == 'pending' %}pill-warn{% endif %}">{{ v.get_status_display }}</span>
+        {{ v.day|date:"l d/m/Y" }} alle {{ v.time|time:"H:i" }} · {{ v.people }} person{{ v.people|pluralize:"a,e" }}
+        {% if v.decision_note %}<br><small class="muted">{{ v.decision_note }}</small>{% endif %}
+        {% if v.status in 'pending confirmed' and v.day >= today %}<form method="post" action="{% url 'families:visit_cancel' link.pk v.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-sm btn-ghost">Annulla</button></form>{% endif %}</li>
+    {% empty %}<li class="muted">Nessuna visita in programma.</li>{% endfor %}</ul>
+    <h3>Chiedi una visita</h3>
+    <form method="post" novalidate>{% csrf_token %}{% include "partials/form_fields.html" with form=visit_form compact=True %}
+      <div class="form-actions"><button class="btn">{% icon "calendar-check" %}Invia la richiesta</button></div></form>
+  </div>
+</div>
+{% if link.can_see_documents %}
+<div class="card table-wrap"><h2>{% icon "file-text" %} Documenti condivisi</h2>
+  <table><thead><tr><th>Documento</th><th>Data</th><th>Nota</th><th></th></tr></thead><tbody>
+  {% for s in documents %}<tr><td>{{ s.document.title }}</td><td>{{ s.shared_at|date:"d/m/Y" }}</td><td>{{ s.note }}</td>
+    <td class="num"><a class="btn btn-sm" href="{% url 'families:document' link.pk s.pk %}" target="_blank" rel="noopener">Apri</a></td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">Nessun documento condiviso.</td></tr>{% endfor %}
+  </tbody></table></div>
+{% endif %}
+{% if cash is not None %}
+<div class="card"><h2>{% icon "wallet" %} Cassa personale</h2>
+  <p>Saldo attuale: <strong class="mono">{{ cash|floatformat:2 }} €</strong></p>
+  <form method="get" action="{% url 'families:cash' link.pk %}" class="inline-form"><label for="mese">Rendiconto del mese</label>
+    <input id="mese" type="month" name="mese" max="{{ today|date:'Y-m' }}" value="{{ today|date:'Y-m' }}"><button class="btn btn-sm">{% icon "download" %}Scarica PDF</button></form>
+</div>
+{% endif %}
+{% endblock %}

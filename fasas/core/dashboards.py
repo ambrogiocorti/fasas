@@ -108,6 +108,16 @@ def operator(request):
         "notifications": unread_for(user)[:5],
         "my_shifts": upcoming_shifts(user, 7),
     })
+    from .modules import is_on
+
+    if is_on("care", config) and user.has_perm("care.view_caretaskcheck"):
+        from fasas.care.services import shift_slots
+
+        slots = shift_slots(day, shift, present)
+        ctx.update({"care_total": len(slots), "care_done": sum(1 for s in slots if s.done),
+                    "care_late": [s for s in slots if s.late(now)][:8],
+                    "care_next": [s for s in slots if not s.done and not s.late(now)
+                                  and s.moment <= now + datetime.timedelta(minutes=60)][:8]})
     return ctx
 
 

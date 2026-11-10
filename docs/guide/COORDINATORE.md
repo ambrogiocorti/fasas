@@ -11,6 +11,11 @@
 | Protocolli aperti e azioni da fare | *Protocolli attivi* |
 | Medicazioni e rivalutazioni | *Medicazioni da fare*; piano di medicazione e chiusura (guarita) dalla pagina della lesione |
 | Scale scadute o mai fatte | *Valutazioni da fare* |
+| Piano delle attività a orario (riposizionamento ogni 2 ore, idratazione, controlli notturni) | scheda ospite → **Attività** → *Nuova attività*; avviso se restano indietro |
+| Cassa degli ospiti, scontrini, rendiconto per il tutore | *Amministrazione › Denaro degli ospiti*; un movimento sbagliato si annulla con motivo |
+| Corsi, idoneità e visite del personale | *Personale › Scadenze del personale* (quadro, registrazione dell'attestato, CSV) |
+| Cadute, lesioni, contenzioni, SOS, ricoveri mese per mese | *Archivio e report › Indicatori di qualità* (per 1000 giornate di presenza) |
+| Familiari e tutori (se l'area è accesa) | *Da controllare › Familiari*: messaggi, visite da confermare, collegamenti e documenti condivisi |
 | Turni chiusi, consegne | *Chiusura turni* |
 
 **Cartella dell'ospite**

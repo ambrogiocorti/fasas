@@ -97,3 +97,16 @@ def inspection(request):
                  "scaduti, protocolli, documenti in scadenza, backup e verifica del registro delle operazioni. "
                  "Contiene dati sanitari: va consegnato solo a chi effettua l'ispezione.",
     })
+
+
+@permission_required("reports.view_quality_indicators", raise_exception=True)
+def quality(request):
+    """Indicatori di qualità degli ultimi 12 mesi, per il coordinatore (e il medico), con esportazione CSV."""
+    from . import quality as indicators
+
+    data = indicators.monthly()
+    if request.GET.get("formato") == "csv":
+        response = HttpResponse(indicators.export_csv(data), content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="indicatori-qualita-{data["today"]:%Y%m%d}.csv"'
+        return response
+    return render(request, "reports/quality.html", data)

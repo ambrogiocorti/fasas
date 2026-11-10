@@ -33,6 +33,9 @@ class SigningCredential(models.Model):
     remote_credential_id = models.CharField("identificativo credenziale (CSC)", max_length=255, blank=True)
     remote_pin_required = models.BooleanField("richiede PIN", default=False)
     remote_otp_type = models.CharField("tipo OTP", max_length=10, choices=OTPType.choices, blank=True)
+    remote_multisign = models.PositiveSmallIntegerField(
+        "firme per autorizzazione", default=1,
+        help_text="Quanti documenti il prestatore consente di firmare con un solo PIN e OTP (CSC «multisign»).")
     certificate_subject = models.CharField("titolare certificato", max_length=255, blank=True)
     certificate_issuer = models.CharField("emittente", max_length=255, blank=True)
     certificate_serial = models.CharField("seriale", max_length=100, blank=True)

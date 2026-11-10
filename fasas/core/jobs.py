@@ -28,6 +28,8 @@ JOBS = {
     "restore_test": ("fasas.backups.restore_test.scheduled_restore_test", "Prova di ripristino con verbale (trimestrale)"),
     "imports_cleanup": ("fasas.imports.documents.cleanup_stale", "Cancellazione dei file di importazioni non confermate"),
     "cie_cleanup": ("fasas.signatures.cie.cleanup_stale", "Chiusura delle richieste di firma con CIE scadute"),
+    "care_tasks": ("fasas.care.services.late_reminders", "Avvisi delle attività a orario in ritardo"),
+    "staff_credentials": ("fasas.staffing.credentials.reminders", "Scadenze del personale (corsi, idoneità, visite)"),
 }
 
 

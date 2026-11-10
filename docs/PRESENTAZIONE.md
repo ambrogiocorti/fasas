@@ -76,8 +76,9 @@ Come si comporta su Render:
 | Costo | piano Free di Render: nessun costo |
 | Dopo 15 minuti senza visite | il servizio si addormenta; la prima pagina dopo la pausa arriva in circa un minuto. **Aprire il link qualche minuto prima della presentazione** |
 | A ogni risveglio o aggiornamento | i dati tornano quelli di esempio, con le date di oggi: quello che si è inserito sparisce |
-| Utenti | admin, coordinatore, operatore, medico, amministrativo (password nella pagina di accesso); niente verifica in due passaggi, per entrare subito |
+| Utenti | admin, coordinatore, operatore, medico, amministrativo, familiare (password nella pagina di accesso); niente verifica in due passaggi, per entrare subito |
 | Aggiornamenti | a ogni modifica del ramo su GitHub Render ricostruisce e ripubblica da solo |
+| Cosa mostrare di nuovo | attività del turno (operatore), cassa e rendiconto (amministrativo), scadenze del personale e indicatori di qualità (coordinatore), firma di più documenti (medico: il certificato è DI PROVA, passphrase uguale alla password degli utenti, firma non qualificata), area familiari (utente `familiare`; accesa solo nella demo) – [NOVITA_ASSISTENZA_E_FAMILIARI.md](NOVITA_ASSISTENZA_E_FAMILIARI.md) |
 | Non attivi | backup, copia fuori sede, firma con CIE reale, notifiche push sul telefono |
 
 Per una presentazione riservata: Render › servizio › **Environment** › aggiungere `FASAS_PRESENTAZIONE_PASSWORD` con una
