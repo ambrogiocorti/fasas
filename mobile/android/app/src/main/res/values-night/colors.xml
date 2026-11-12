@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Stessi colori della piattaforma FASAS (static/css/fasas.css), tema scuro -->
+<resources>
+    <color name="fasas_bg">#0C1117</color>
+    <color name="fasas_surface">#141A22</color>
+    <color name="fasas_surface_2">#19212B</color>
+    <color name="fasas_surface_3">#212B37</color>
+    <color name="fasas_border">#27313D</color>
+    <color name="fasas_text">#E7ECF2</color>
+    <color name="fasas_text_2">#BCC6D2</color>
+    <color name="fasas_muted">#8B97A6</color>
+    <color name="fasas_primary">#5EA5E8</color>
+    <color name="fasas_primary_pressed">#82BBEF</color>
+    <color name="fasas_primary_soft">#15273A</color>
+    <color name="fasas_primary_text">#A1CBF3</color>
+    <color name="fasas_on_primary">#07121D</color>
+    <color name="fasas_ok">#4FC27C</color>
+    <color name="fasas_ok_soft">#11281A</color>
+    <color name="fasas_warn">#E9A443</color>
+    <color name="fasas_warn_soft">#2B2112</color>
+    <color name="fasas_warn_text">#F2C27C</color>
+    <color name="fasas_danger">#F2776C</color>
+    <color name="fasas_danger_soft">#311615</color>
+    <color name="fasas_brand_start">#2A74BD</color>
+    <color name="fasas_brand_end">#164F86</color>
+</resources>

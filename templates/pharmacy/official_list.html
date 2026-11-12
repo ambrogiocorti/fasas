@@ -1,0 +1,42 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Elenco ufficiale dei medicinali{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Elenco ufficiale dei medicinali</h1><span class="subtitle">Confezioni autorizzate dagli open data AIFA (licenza CC BY 4.0, fonte: Agenzia Italiana del Farmaco). Serve a compilare i farmaci senza errori e a riconoscere le confezioni con il lettore di codici a barre.</span></div>
+  <div class="actions"><a class="btn" href="{% url 'pharmacy:drug_list' %}">{% icon "pill" %}Catalogo farmaci</a></div>
+</div>
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Stato</h2>
+    {% if last %}
+      <p><strong>{{ count }}</strong> confezioni, caricate il {{ last.created_at|date:"d/m/Y H:i" }}{% if last.user %} da {{ last.user }}{% endif %} dal file <span class="mono">{{ last.source_name }}</span>.</p>
+      <p class="muted"><small>Impronta SHA-256 del file: <span class="mono">{{ last.sha256|truncatechars:24 }}</span></small></p>
+    {% else %}
+      <div class="alert alert-info">{% icon "info" %}<div class="alert-body">Elenco non ancora caricato: i farmaci si possono comunque inserire a mano.</div></div>
+    {% endif %}
+  </div>
+  {% if perms.pharmacy.import_official_list %}
+  <form method="post" enctype="multipart/form-data" class="card">
+    {% csrf_token %}
+    <h2>Carica o aggiorna</h2>
+    <ol class="muted">
+      <li>Dal sito AIFA, pagina «Open data», scaricare l'elenco delle confezioni (CSV o Excel).</li>
+      <li>Caricarlo qui. L'elenco precedente viene sostituito; i farmaci già inseriti nel FASAS non cambiano.</li>
+    </ol>
+    <input type="file" name="file" accept=".csv,.txt,.xlsx" required aria-label="File dell'elenco">
+    <div class="form-actions"><button class="btn btn-primary">{% icon "upload" %}Carica l'elenco</button></div>
+  </form>
+  {% endif %}
+</div>
+<form method="get" class="card filters">
+  <label style="flex:1 1 20rem">Cerca per nome, principio attivo o codice AIC <input type="search" name="q" value="{{ query }}" autofocus></label>
+  <button class="btn">{% icon "search" %}Cerca</button>
+</form>
+{% if query %}
+<div class="card table-wrap">
+  <table><thead><tr><th>AIC</th><th>Medicinale</th><th>Confezione</th><th>Principio attivo</th><th>ATC</th><th>Titolare</th><th>Stato</th></tr></thead>
+  <tbody>{% for p in results %}<tr><td class="mono">{{ p.aic }}</td><td>{{ p.name }}</td><td>{{ p.description }}</td><td>{{ p.ingredients }}</td><td class="mono">{{ p.atc }}</td><td>{{ p.holder }}</td><td>{{ p.status }}</td></tr>
+  {% empty %}<tr><td colspan="7" class="muted">Nessuna confezione trovata.</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endif %}
+{% endblock %}

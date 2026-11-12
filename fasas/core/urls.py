@@ -1,0 +1,14 @@
+from django.urls import path
+
+from . import views
+
+app_name = "core"
+
+urlpatterns = [
+    path("", views.dashboard, name="dashboard"),
+    path("configurazione/", views.system_config, name="config"),
+    path("configurazione/moduli/", views.modules_view, name="modules"),
+    path("impostazioni/", views.settings_hub, name="settings"),
+    path("salute/", views.health, name="health"),
+    path("sistema/errori/", views.error_list, name="errors"),
+]

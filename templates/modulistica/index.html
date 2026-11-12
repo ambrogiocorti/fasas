@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Modulistica{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Modulistica</h1><span class="subtitle">Informative, autorizzazioni, consensi e richieste: si compilano online o si stampano. Testi modificabili, pubblicazione e distribuzione al personale</span></div>
+  <div class="actions"><a class="btn" href="{% url 'modulistica:settings' %}">{% icon "sliders" %}Intestazione</a>
+    <a class="btn btn-primary" href="{% url 'modulistica:create' %}">{% icon "plus" %}Nuovo modulo</a></div>
+</div>
+{% if not settings_obj.complete %}<div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Completare l'<a href="{% url 'modulistica:settings' %}">intestazione</a> (titolare, sede, recapiti, DPO): oggi nei moduli compaiono campi da compilare.</div></div>{% endif %}
+<div class="card table-wrap"><table>
+  <thead><tr><th>Modulo</th><th>Per</th><th>Stato</th><th>Firma</th><th class="num">Personale</th><th class="num">Ospiti</th><th></th></tr></thead>
+  <tbody>{% for r in rows %}{% with t=r.t %}
+    <tr{% if t.status == 'archived' %} style="opacity:.55"{% endif %}><td><a href="{% url 'modulistica:edit' t.pk %}"><strong>{{ t.title }}</strong></a><br><small class="muted mono">{{ t.code }} · v{{ t.version }}</small></td>
+      <td><small>{{ t.audiences|join:", " }}</small></td>
+      <td><span class="pill {% if t.status == 'published' %}pill-ok{% elif t.status == 'draft' %}pill-warn{% endif %}">{{ t.get_status_display }}</span></td>
+      <td><small>{% if t.requires_signature %}su carta o digitale{% else %}conferma online{% endif %}</small></td>
+      <td class="num">{% if t.for_staff %}{{ r.done }}/{{ r.assigned }}{% else %}—{% endif %}</td>
+      <td class="num">{% if t.for_guests or t.for_family %}{{ r.guest_count }}{% else %}—{% endif %}</td>
+      <td class="num nowrap"><a class="btn btn-sm" href="{% url 'modulistica:blank_pdf' t.pk %}" target="_blank" rel="noopener">{% icon "printer" %}PDF</a>
+        {% if t.for_staff and t.status == 'published' %}<a class="btn btn-sm" href="{% url 'modulistica:distribute' t.pk %}">{% icon "users" %}Distribuisci</a>{% endif %}</td></tr>
+  {% endwith %}{% empty %}<tr><td colspan="7" class="empty">Nessun modulo.</td></tr>{% endfor %}</tbody>
+</table></div>
+<p class="muted small">La conferma online registra chi ha risposto, quando e con quale utente: non è una firma. I moduli che richiedono la firma si stampano già compilati, si firmano a mano e se ne carica la scansione (oppure si firmano digitalmente dai documenti dell'ospite). L'amministratore vede quali dipendenti hanno compilato i moduli del personale; per gli ospiti vede solo i conteggi.</p>
+{% endblock %}

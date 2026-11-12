@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Firma con CIE{% endblock %}
+{% block content %}
+{% include "guests/_header.html" with compact=True %}
+<div class="page-head">
+  <div><h1>{% icon "id-card" %} Firma con CIE – {{ document.title }}</h1>
+    <span class="subtitle">Versione {{ version.number }} · {{ version.original_name }} · impronta <span class="mono" title="{{ version.sha256 }}">{{ version.sha256|truncatechars:20 }}</span></span></div>
+  <div class="actions"><a class="btn" href="{{ document.get_absolute_url }}">{% icon "arrow-left" %}Torna al documento</a></div>
+</div>
+<div class="sign-layout">
+  <div class="card sign-preview">
+    <div class="card-head"><h2>Anteprima del documento</h2><a class="btn btn-sm" href="{{ preview_url }}" target="_blank" rel="noopener">Apri a schermo intero</a></div>
+    <iframe src="{{ preview_url }}" title="Anteprima di {{ document.title }}" class="pdf-frame"></iframe>
+  </div>
+  <div class="card">
+    <h2>Firma elettronica avanzata con la tua CIE</h2>
+    <p class="muted">Firmi con la Carta d'Identità Elettronica appoggiata al lettore del computer dove è in esecuzione <strong>FASAS Signer</strong>. È una <strong>firma elettronica avanzata (FEA)</strong>, non qualificata. Il PIN si digita solo su FASAS Signer e va solo alla carta: il FASAS non lo riceve mai.</p>
+    {% if not enabled %}
+      <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">La firma con CIE è disattivata su questo server.</div></div>
+    {% elif not is_current %}
+      <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Questa non è l'ultima versione del documento: si può firmare solo la versione corrente.</div></div>
+    {% else %}
+      {% if not trust_configured %}<div class="alert alert-danger">{% icon "alert-circle" %}<div class="alert-body">L'amministratore non ha ancora configurato le CA della CIE: senza, la firma non può essere verificata e non viene avviata.</div></div>{% endif %}
+      {% if not fiscal_code %}<div class="alert alert-danger">{% icon "alert-circle" %}<div class="alert-body">Nel tuo profilo manca il codice fiscale: serve per controllare che la carta appoggiata sia la tua.</div></div>{% endif %}
+      {% if not devices %}<div class="alert alert-warning">{% icon "monitor" %}<div class="alert-body">Nessun FASAS Signer abbinato: <a href="{% url 'signatures:credential' %}#cie">abbinalo nelle impostazioni</a>.</div></div>{% endif %}
+      <ol class="steps">
+        <li>Controlla il documento nell'anteprima.</li>
+        <li>Conferma qui sotto: il documento viene bloccato finché la firma non termina.</li>
+        <li>Su FASAS Signer verifica che il codice di controllo coincida, appoggia la CIE e digita le ultime 4 cifre del PIN.</li>
+      </ol>
+      <form method="post" novalidate style="margin-top:1rem">{% csrf_token %}
+        {% include "partials/form_fields.html" %}
+        <div class="form-actions"><button class="btn btn-primary" type="submit">{% icon "id-card" %}Avvia la firma con CIE</button>
+          <a class="btn" href="{{ document.get_absolute_url }}">Annulla</a></div>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

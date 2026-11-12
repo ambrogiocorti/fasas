@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Messaggi – {{ link }}{% endblock %}
+{% block content %}
+{% include "guests/_header.html" with compact=True %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>{{ link.user.get_full_name|default:link.user.username }}</h2><span class="muted">{{ link.get_relation_display }}{% if link.description %} · {{ link.description }}{% endif %}</span></div>
+    <div style="max-height: 480px; overflow-y: auto">
+      {% for m in thread %}
+        <div style="margin: .4rem 0; {% if not m.from_family %}text-align:right{% endif %}">
+          <div class="pill {% if not m.from_family %}pill-ok{% endif %}" style="white-space: normal; text-align: left; display: inline-block; max-width: 85%">{{ m.body|linebreaksbr }}</div>
+          <br><small class="muted">{{ m.author.get_full_name|default:m.author.username }} · {{ m.created_at|date:"d/m H:i" }}{% if m.read_at %} · letto{% endif %}</small>
+        </div>
+      {% empty %}<p class="empty">Nessun messaggio.</p>{% endfor %}
+    </div>
+    {% if link.active %}<form method="post" novalidate>{% csrf_token %}{% include "partials/form_fields.html" with compact=True %}
+      <div class="form-actions"><button class="btn btn-primary">{% icon "message" %}Rispondi</button></div></form>
+    {% else %}<p class="muted">Collegamento revocato: non si possono inviare messaggi.</p>{% endif %}
+  </div>
+  <div class="card"><h2>Visite</h2>
+    <ul class="list-plain">{% for v in visits %}
+      <li><span class="pill {% if v.status == 'confirmed' %}pill-ok{% elif v.status == 'declined' %}pill-danger{% elif v.status == 'pending' %}pill-warn{% endif %}">{{ v.get_status_display }}</span> {{ v.day|date:"D d/m/Y" }} {{ v.time|time:"H:i" }} · {{ v.people }} pers.{% if v.notes %}<br><small class="muted">{{ v.notes }}</small>{% endif %}
+        {% if v.status == 'pending' %}<form method="post" action="{% url 'families:visit_decide' v.pk %}" class="inline-form">{% csrf_token %}<input type="hidden" name="next" value="{% url 'families:staff_link' link.pk %}">
+          <input type="text" name="note" placeholder="Nota" aria-label="Nota per il familiare" maxlength="255">
+          <button class="btn btn-sm btn-primary" name="confirm" value="1">Conferma</button><button class="btn btn-sm" name="confirm" value="0">Non possibile</button></form>{% endif %}</li>
+    {% empty %}<li class="muted">Nessuna visita.</li>{% endfor %}</ul>
+    <p><a href="{% url 'families:staff_guest' guest.pk %}">Familiari e documenti condivisi di {{ guest }}</a></p>
+  </div>
+</div>
+{% endblock %}

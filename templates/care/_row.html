@@ -1,0 +1,17 @@
+{% load fasas_tags %}<tr>
+  <td class="mono">{{ s.time|time:"H:i" }}{% if s.day != day %} <small class="muted">{{ s.day|date:"d/m" }}</small>{% endif %}</td>
+  <td><a href="{% url 'care:guest' s.guest.pk %}"><strong>{{ s.guest }}</strong></a>{% if s.guest.room %}<br><small class="muted">Camera {{ s.guest.room }}</small>{% endif %}</td>
+  <td>{{ s.task.name }}{% if s.task.instructions %}<br><small class="muted">{{ s.task.instructions|truncatechars:90 }}</small>{% endif %}</td>
+  <td class="num">{% if s.check %}
+      <span class="pill {% if s.check.status == 'done' %}pill-ok{% else %}pill-warn{% endif %}">{{ s.check.get_status_display }} alle {{ s.check.occurred_at|time:"H:i" }}</span>
+      <br><small class="muted">{{ s.check.created_by.get_full_name|default:s.check.created_by }}{% if s.check.notes %} · {{ s.check.notes|truncatechars:60 }}{% endif %}</small>
+    {% else %}
+      {% if s.late %}<span class="pill pill-danger">in ritardo</span>{% endif %}
+      {% if perms.care.add_caretaskcheck %}
+      <form method="post" action="{% url 'care:check_quick' %}" class="inline-form">{% csrf_token %}
+        <input type="hidden" name="task" value="{{ s.task.pk }}"><input type="hidden" name="day" value="{{ s.day|date:'Y-m-d' }}"><input type="hidden" name="time" value="{{ s.time|time:'H:i' }}"><input type="hidden" name="next" value="{{ request.path }}">
+        <button class="btn btn-sm btn-ok" aria-label="Fatta: {{ s.task.name }} delle {{ s.time|time:'H:i' }}, {{ s.guest }}">{% icon "check" %}Fatta</button></form>
+      <a class="btn btn-sm" href="{% url 'care:check' %}?task={{ s.task.pk }}&amp;day={{ s.day|date:'Y-m-d' }}&amp;time={{ s.time|time:'H:i' }}">Altro esito…</a>
+      {% endif %}
+    {% endif %}</td>
+</tr>

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Rendiconto – {{ guest }}{% endblock %}
+{% block content %}
+{% include "personal/_guest_head.html" with compact=True %}
+<div class="card" style="max-width: 720px">
+  <div class="card-head"><h1>Rendiconto della cassa personale</h1></div>
+  <p class="muted">PDF con saldo iniziale, entrate, uscite e saldo finale del periodo, da consegnare al tutore o all'amministratore di sostegno. Lo scaricamento resta nell'audit.</p>
+  <form method="get" novalidate>
+    {% include "partials/form_fields.html" %}
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">Scarica il PDF</button>
+      <a class="btn" href="{% url 'personal:guest' guest.pk %}">Indietro</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

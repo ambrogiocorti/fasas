@@ -1,0 +1,451 @@
+"""
+Impostazioni del sistema FASAS Digitale.
+
+Tutta la configurazione sensibile arriva da variabili d'ambiente (vedi .env.example).
+In produzione il database è PostgreSQL (Supabase) tramite DATABASE_URL.
+"""
+import codecs
+import io
+import os
+from pathlib import Path
+
+import dj_database_url
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def load_env_file(path):
+    """Legge .env in UTF-8 o UTF-16 (su Windows PowerShell salva «echo ... > .env» in UTF-16)."""
+    if not path.exists():
+        return
+    raw = path.read_bytes()
+    encoding = "utf-16" if raw.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)) else "utf-8-sig"
+    load_dotenv(stream=io.StringIO(raw.decode(encoding)))
+
+
+load_env_file(BASE_DIR / ".env")
+
+
+def env_bool(name, default=False):
+    return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_list(name, default=""):
+    return [item.strip() for item in os.environ.get(name, default).split(",") if item.strip()]
+
+
+def env_secret(name, default=""):
+    """
+    Segreto letto da file quando possibile, così le chiavi non stanno nel .env né nell'ambiente dei processi:
+    1) NOME_FILE=/percorso (segreti di Docker, file con permessi 600);
+    2) credenziali di systemd (LoadCredential=NOME:/percorso → $CREDENTIALS_DIRECTORY/NOME);
+    3) altrimenti la variabile d'ambiente NOME.
+    """
+    path = os.environ.get(f"{name}_FILE")
+    if not path and os.environ.get("CREDENTIALS_DIRECTORY"):
+        candidate = Path(os.environ["CREDENTIALS_DIRECTORY"]) / name
+        path = str(candidate) if candidate.exists() else ""
+    if path:
+        return Path(path).read_text(encoding="utf-8").strip()
+    return os.environ.get(name, default)
+
+
+DEBUG = env_bool("DJANGO_DEBUG", False)
+SECRET_KEY = env_secret("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "dev-only-insecure-key-change-me"
+    else:
+        raise RuntimeError("DJANGO_SECRET_KEY deve essere impostata in produzione")
+
+# Versione cloud (docs/CLOUD.md): un solo container dietro l'HTTPS del servizio di hosting, file statici serviti dal
+# FASAS (WhiteNoise), job periodici dal pianificatore integrato (niente Redis), file cifrati su object storage S3.
+# Versione di presentazione (docs/PRESENTAZIONE.md): stessa versione cloud, ma con database SQLite nel container,
+# dati inventati ricreati a ogni avvio, chiavi pubbliche di prova e nessuna configurazione da fare. Mai dati reali.
+FASAS_PRESENTAZIONE = env_bool("FASAS_PRESENTAZIONE", False)
+FASAS_CLOUD = env_bool("FASAS_CLOUD", False) or FASAS_PRESENTAZIONE
+
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
+
+
+def _hosts(*names):
+    hosts = []
+    for name in names:
+        for value in env_list(name):
+            host = value.lower().removeprefix("https://").removeprefix("http://").split("/")[0].strip()
+            if host and host not in hosts:
+                hosts.append(host)
+    return hosts
+
+
+def public_hosts():
+    """Dominio pubblico (FASAS_DOMAIN, anche più di uno) e nome assegnato dal servizio di hosting (Render)."""
+    return _hosts("FASAS_DOMAIN", "RENDER_EXTERNAL_HOSTNAME")
+
+
+FASAS_PUBLIC_HOSTS = public_hosts()
+# Dominio della struttura: il primo di FASAS_DOMAIN (es. «fasas.online,www.fasas.online»). Nella versione cloud gli
+# altri nomi (www, nome tecnico dell'hosting) rimandano qui: un solo indirizzo per cookie, QR dei telefoni e link.
+FASAS_CANONICAL_HOST = (_hosts("FASAS_DOMAIN") or [""])[0]
+# (nella presentazione no: il nome tecnico dell'hosting deve funzionare anche prima che il dominio sia collegato)
+FASAS_CANONICAL_REDIRECT = env_bool("FASAS_CANONICAL_REDIRECT", FASAS_CLOUD and not FASAS_PRESENTAZIONE)
+for _host in FASAS_PUBLIC_HOSTS:
+    if _host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_host)
+    if f"https://{_host}" not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(f"https://{_host}")
+
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.humanize",
+    "rest_framework",
+    "rest_framework.authtoken",
+    "fasas.core",
+    "fasas.accounts",
+    "fasas.audit",
+    "fasas.guests",
+    "fasas.documents",
+    "fasas.signatures",
+    "fasas.pharmacy",
+    "fasas.clinical",
+    "fasas.daily",
+    "fasas.protocols",
+    "fasas.appointments",
+    "fasas.pai",
+    "fasas.assessments",
+    "fasas.wounds",
+    "fasas.notifications",
+    "fasas.reports",
+    "fasas.backups",
+    "fasas.search",
+    "fasas.imports",
+    "fasas.offline",
+    "fasas.billing",
+    "fasas.staffing",
+    "fasas.feedback",
+    "fasas.care",
+    "fasas.personal",
+    "fasas.families",
+    "fasas.modulistica",
+    "fasas.api",
+]
+
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    # /salute/ risponde prima dei controlli su Host e reti: i controlli dei servizi di hosting arrivano da indirizzi
+    # interni con un Host qualsiasi. La risposta non contiene dati (il dettaglio solo con FASAS_HEALTH_TOKEN).
+    "fasas.core.middleware.HealthCheckMiddleware",
+    # versione cloud: www e nome tecnico dell'hosting rimandano al dominio della struttura (FASAS_CANONICAL_HOST)
+    "fasas.core.middleware.CanonicalDomainMiddleware",
+    "fasas.core.middleware.ApiSwitchMiddleware",
+    "fasas.core.middleware.AllowedNetworksMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "fasas.core.middleware.CommunityMiddleware",
+    "fasas.core.middleware.SessionIdleTimeoutMiddleware",
+    "fasas.audit.middleware.AuditContextMiddleware",
+    "fasas.core.middleware.RemoteAccessMiddleware",
+    "fasas.core.middleware.LoginRequiredMiddleware",
+    "fasas.core.middleware.ModuleSwitchMiddleware",
+    "fasas.families.middleware.FamilyScopeMiddleware",
+]
+
+# File statici serviti dal FASAS stesso quando davanti non c'è un proxy che li serve (versione cloud)
+FASAS_SERVE_STATIC = env_bool("FASAS_SERVE_STATIC", FASAS_CLOUD)
+if FASAS_SERVE_STATIC:
+    MIDDLEWARE.insert(MIDDLEWARE.index("fasas.core.middleware.CanonicalDomainMiddleware") + 1,
+                      "whitenoise.middleware.WhiteNoiseMiddleware")
+
+ROOT_URLCONF = "config.urls"
+SERIALIZATION_MODULES = {"fasasjson": "fasas.core.exactjson"}  # backup JSON con orari esatti (microsecondi)
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "fasas.core.context_processors.fasas",
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = "config.wsgi.application"
+
+FASAS_PRESENTAZIONE_DB = os.environ.get("FASAS_PRESENTAZIONE_DB", "/data/presentazione.sqlite3")
+DATABASES = {
+    "default": dj_database_url.parse(
+        env_secret("DATABASE_URL")  # contiene la password: anche da file
+        or (f"sqlite:///{FASAS_PRESENTAZIONE_DB}" if FASAS_PRESENTAZIONE else f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
+        conn_max_age=int(os.environ.get("DATABASE_CONN_MAX_AGE", "60")),
+        ssl_require=env_bool("DATABASE_SSL_REQUIRE", False),
+    )
+}
+# Ogni richiesta è atomica: una modifica e il suo audit log vengono salvati insieme o per niente.
+DATABASES["default"]["ATOMIC_REQUESTS"] = True
+# Connessioni riusate controllate prima dell'uso: i pooler (Supabase) chiudono quelle rimaste ferme
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
+if str(DATABASES["default"].get("PORT") or "") == "6543":
+    # pooler di Supabase in modalità transazione: niente istruzioni preparate lato server (meglio la porta 5432)
+    DATABASES["default"].setdefault("OPTIONS", {})["prepare_threshold"] = None
+if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
+    # SQLite (prove e sviluppo): transazioni IMMEDIATE evitano «database is locked» con richieste contemporanee
+    DATABASES["default"].setdefault("OPTIONS", {}).update({"transaction_mode": "IMMEDIATE", "timeout": 20})
+
+AUTH_USER_MODEL = "accounts.User"
+AUTHENTICATION_BACKENDS = ["fasas.accounts.backends.FasasPermissionBackend"]
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "core:dashboard"
+LOGOUT_REDIRECT_URL = "accounts:login"
+
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 10}},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+
+LANGUAGE_CODE = "it-it"
+TIME_ZONE = "Europe/Rome"
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = "static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# I file caricati sono sempre cifrati prima di essere scritti sullo storage
+# e non sono mai serviti direttamente: passano da viste autenticate e tracciate.
+MEDIA_ROOT = Path(os.environ.get("FASAS_MEDIA_ROOT", BASE_DIR / "media"))
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage" if FASAS_SERVE_STATIC
+                    else "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+# File cifrati su object storage compatibile S3 (versione cloud: Supabase Storage, bucket privato).
+# Le chiavi S3 sono solo del server: non sono la chiave «service_role» di Supabase e non vanno mai nel browser.
+FASAS_S3_BUCKET = os.environ.get("FASAS_S3_BUCKET", "")
+# Disco persistente montato su /data (alternativa allo storage S3 nella versione cloud, se il servizio lo offre)
+FASAS_PERSISTENT_DISK = env_bool("FASAS_PERSISTENT_DISK", False)
+if FASAS_S3_BUCKET:
+    from botocore.config import Config as _BotoConfig
+
+    _s3_endpoint = os.environ.get("FASAS_S3_ENDPOINT_URL", "").strip()
+    _s3_supabase = ".supabase.co" in _s3_endpoint  # Supabase Storage: niente intestazioni ACL, indirizzi «path»
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": FASAS_S3_BUCKET,
+            "endpoint_url": _s3_endpoint or None,
+            "region_name": os.environ.get("FASAS_S3_REGION") or None,
+            "access_key": os.environ.get("FASAS_S3_ACCESS_KEY") or None,  # altrimenti AWS_ACCESS_KEY_ID
+            "secret_key": env_secret("FASAS_S3_SECRET_KEY") or None,
+            "default_acl": os.environ.get("FASAS_S3_DEFAULT_ACL", "" if _s3_supabase else "private") or None,
+            "querystring_auth": True,
+            "file_overwrite": False,
+            "client_config": _BotoConfig(
+                signature_version="s3v4",
+                s3={"addressing_style": os.environ.get("FASAS_S3_ADDRESSING_STYLE", "path" if _s3_supabase else "auto")},
+                retries={"max_attempts": 5, "mode": "standard"}, connect_timeout=20, read_timeout=120,
+                # i servizi compatibili S3 (Supabase compreso) non accettano tutte le impronte aggiunte da boto3 recenti
+                request_checksum_calculation="when_required", response_checksum_validation="when_required",
+            ),
+        },
+    }
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# --- Sicurezza -------------------------------------------------------------
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+CSRF_COOKIE_HTTPONLY = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
+# Sistema interno della comunità: non va inserito nella lista HSTS preload dei browser.
+SILENCED_SYSTEM_CHECKS = ["security.W021"]
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
+    SECURE_REDIRECT_EXEMPT = [r"^salute/$"]  # il controllo di salute arriva anche in HTTP interno (container, proxy)
+    SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_HSTS_SECONDS", "31536000"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Chiavi di cifratura dei file (Fernet, separate da virgola: la prima cifra, le altre decifrano
+# per consentire la rotazione). Generare con: python manage.py fasas_genkey
+FASAS_ENCRYPTION_KEYS = [k.strip() for k in env_secret("FASAS_ENCRYPTION_KEYS").split(",") if k.strip()]
+# Chiave AES-256 dei backup (base64 url-safe, 32 byte). Va conservata fuori dal server.
+FASAS_BACKUP_KEY = env_secret("FASAS_BACKUP_KEY")
+FASAS_BACKUP_DIR = Path(os.environ.get("FASAS_BACKUP_DIR", BASE_DIR / "backups"))
+# Copia fuori sede su object storage compatibile S3 in UE, con blocco delle modifiche (docs/BACKUP.md)
+# Gruppo di continuità: file di stato scritto da NUT (scripts/gruppo_continuita.sh); vuoto = non configurato
+FASAS_UPS_STATUS_FILE = os.environ.get("FASAS_UPS_STATUS_FILE", "")
+# Disco di continuità: SSD esterno sempre collegato, copia cifrata ogni 5 minuti (docs/BACKUP.md)
+FASAS_CONTINUITY_DIR = os.environ.get("FASAS_CONTINUITY_DIR", "")
+FASAS_CONTINUITY_KEEP_HOURS = int(os.environ.get("FASAS_CONTINUITY_KEEP_HOURS", "24"))
+FASAS_CONTINUITY_KEEP_DAYS = int(os.environ.get("FASAS_CONTINUITY_KEEP_DAYS", "7"))
+FASAS_OFFSITE_ENDPOINT = os.environ.get("FASAS_OFFSITE_ENDPOINT", "")  # es. https://s3.<regione>.<fornitore>
+FASAS_OFFSITE_REGION = os.environ.get("FASAS_OFFSITE_REGION", "")
+FASAS_OFFSITE_BUCKET = os.environ.get("FASAS_OFFSITE_BUCKET", "")
+FASAS_OFFSITE_ACCESS_KEY = os.environ.get("FASAS_OFFSITE_ACCESS_KEY", "")
+FASAS_OFFSITE_SECRET_KEY = env_secret("FASAS_OFFSITE_SECRET_KEY")
+FASAS_OFFSITE_ADDRESSING_STYLE = os.environ.get(
+    "FASAS_OFFSITE_ADDRESSING_STYLE", "path" if ".supabase.co" in FASAS_OFFSITE_ENDPOINT else "auto")
+FASAS_OFFSITE_CONTENT_MD5 = env_bool("FASAS_OFFSITE_CONTENT_MD5", ".supabase.co" not in FASAS_OFFSITE_ENDPOINT)
+FASAS_OFFSITE_PREFIX = os.environ.get("FASAS_OFFSITE_PREFIX", "fasas")
+FASAS_OFFSITE_LOCK_DAYS = int(os.environ.get("FASAS_OFFSITE_LOCK_DAYS", "30"))
+FASAS_OFFSITE_LOCK_MODE = os.environ.get("FASAS_OFFSITE_LOCK_MODE", "COMPLIANCE")  # COMPLIANCE | GOVERNANCE
+FASAS_OFFSITE_KEEP_DAILY = int(os.environ.get("FASAS_OFFSITE_KEEP_DAILY", "30"))
+FASAS_OFFSITE_KEEP_MONTHLY = int(os.environ.get("FASAS_OFFSITE_KEEP_MONTHLY", "12"))
+# Database vuoto su cui provare il ripristino dei backup PostgreSQL (prova trimestrale). Vuoto = prova parziale.
+FASAS_RESTORE_TEST_DATABASE_URL = os.environ.get("FASAS_RESTORE_TEST_DATABASE_URL", "")
+# Schemi del database salvati da pg_dump (vuoto = tutto il database). Su Supabase solo «public»: gli altri schemi
+# (auth, storage, realtime…) sono del servizio, non del FASAS, e non si possono ripristinare con l'utente del FASAS.
+FASAS_BACKUP_PG_SCHEMAS = env_list(
+    "FASAS_BACKUP_PG_SCHEMAS", "public" if "supabase." in str(DATABASES["default"].get("HOST") or "") else "")
+# Reti autorizzate (CIDR). Vuoto = nessuna restrizione di rete applicativa.
+FASAS_ALLOWED_NETWORKS = env_list("FASAS_ALLOWED_NETWORKS")
+# Proxy fidati davanti al FASAS (per leggere l'IP vero da X-Forwarded-For). In cloud c'è quello del servizio di hosting.
+FASAS_TRUSTED_PROXY_COUNT = int(os.environ.get("FASAS_TRUSTED_PROXY_COUNT", "1" if FASAS_CLOUD else "0"))
+# Tentativi di accesso falliti prima del blocco temporaneo
+FASAS_LOGIN_MAX_FAILURES = int(os.environ.get("FASAS_LOGIN_MAX_FAILURES", "5"))
+FASAS_LOGIN_LOCKOUT_MINUTES = int(os.environ.get("FASAS_LOGIN_LOCKOUT_MINUTES", "15"))
+# Verifica in due passaggi (codice dall'app sul telefono): obbligatoria per questi ruoli; vuoto = facoltativa per tutti
+FASAS_2FA_REQUIRED_ROLES = env_list("FASAS_2FA_REQUIRED_ROLES", "" if FASAS_PRESENTAZIONE else "admin,coordinator,doctor")
+# Reti della struttura (CIDR): da fuori serve sempre la verifica, e la si può attivare solo da dentro. Vuoto = ovunque.
+FASAS_2FA_TRUSTED_NETWORKS = env_list("FASAS_2FA_TRUSTED_NETWORKS")
+FASAS_2FA_ISSUER = os.environ.get("FASAS_2FA_ISSUER", "FASAS")
+# Firma digitale (docs/FIRMA_DIGITALE.md). Ogni medico sceglie il proprio strumento: certificato PKCS#12
+# o firma remota qualificata presso un prestatore (QTSP) tramite API CSC.
+FASAS_SIGNATURE_TSA_URL = os.environ.get("FASAS_SIGNATURE_TSA_URL", "")  # marca temporale RFC 3161
+FASAS_SIGNATURE_TSA_USER = os.environ.get("FASAS_SIGNATURE_TSA_USER", "")
+FASAS_SIGNATURE_TSA_PASSWORD = env_secret("FASAS_SIGNATURE_TSA_PASSWORD")
+# Protocolli automatici: si attivano solo dopo la validazione di soglie e azioni da parte del medico della struttura
+FASAS_PROTOCOLS_REQUIRE_VALIDATION = env_bool("FASAS_PROTOCOLS_REQUIRE_VALIDATION", True)
+# Punti di controllo notturni dell'audit con marca temporale della TSA qui sopra (se configurata)
+FASAS_AUDIT_TIMESTAMP = env_bool("FASAS_AUDIT_TIMESTAMP", True)
+FASAS_SIGNATURE_LEVEL = os.environ.get("FASAS_SIGNATURE_LEVEL", "")  # B-B, B-T, B-LT, B-LTA (vuoto: B-T se c'è la TSA)
+FASAS_SIGNATURE_TRUST_ROOTS = os.environ.get("FASAS_SIGNATURE_TRUST_ROOTS", "")  # file PEM con le CA dei QTSP
+FASAS_CSC_SERVICE_URL = os.environ.get("FASAS_CSC_SERVICE_URL", "")  # URL base delle API CSC del prestatore
+FASAS_CSC_API_VERSION = os.environ.get("FASAS_CSC_API_VERSION", "v1")
+FASAS_CSC_AUTH = os.environ.get("FASAS_CSC_AUTH", "basic")  # basic | oauth2 | token
+FASAS_CSC_OAUTH_TOKEN_URL = os.environ.get("FASAS_CSC_OAUTH_TOKEN_URL", "")
+FASAS_CSC_CLIENT_ID = os.environ.get("FASAS_CSC_CLIENT_ID", "")
+FASAS_CSC_CLIENT_SECRET = env_secret("FASAS_CSC_CLIENT_SECRET")
+FASAS_CSC_OAUTH_SCOPE = os.environ.get("FASAS_CSC_OAUTH_SCOPE", "service")
+FASAS_CSC_TOKEN = env_secret("FASAS_CSC_TOKEN")
+FASAS_CSC_TIMEOUT = int(os.environ.get("FASAS_CSC_TIMEOUT", "30"))
+FASAS_CSC_PROVIDER_NAME = os.environ.get("FASAS_CSC_PROVIDER_NAME", "")  # nome mostrato ai medici, es. «InfoCert»
+
+# Firma con CIE (firma elettronica avanzata, FASAS Signer). Vedi docs/FIRMA_CIE.md.
+FASAS_CIE_ENABLED = env_bool("FASAS_CIE_ENABLED", True)
+FASAS_CIE_TRUST_ROOTS = os.environ.get("FASAS_CIE_TRUST_ROOTS", "")  # PEM con le CA della CIE (Ministero dell'Interno)
+FASAS_CIE_INTERMEDIATES = os.environ.get("FASAS_CIE_INTERMEDIATES", "")  # PEM con eventuali CA intermedie
+# CIE senza PIN della carta (protocollo NIS): certificati della CSCA italiana, https://csca-ita.interno.gov.it
+# (cartella con i file .cer scaricati o file PEM). Se non indicata: la cartella «certificati-csca» del FASAS, se c'è.
+FASAS_CIE_CSCA = os.environ.get("FASAS_CIE_CSCA", "") or (
+    str(BASE_DIR / "certificati-csca") if (BASE_DIR / "certificati-csca").is_dir() else "")
+FASAS_CIE_REVOCATION = os.environ.get("FASAS_CIE_REVOCATION", "soft-fail")  # soft-fail | hard-fail | off
+FASAS_CIE_TIMESTAMP = env_bool("FASAS_CIE_TIMESTAMP", True)  # marca temporale se è configurata una TSA reale
+FASAS_CIE_REQUEST_MINUTES = int(os.environ.get("FASAS_CIE_REQUEST_MINUTES", "5"))
+FASAS_CIE_PAIRING_MINUTES = int(os.environ.get("FASAS_CIE_PAIRING_MINUTES", "10"))
+# App FASAS Signer per Android distribuita dal FASAS (Firma › App per il telefono): si accetta solo questo pacchetto
+FASAS_SIGNER_ANDROID_PACKAGE = os.environ.get("FASAS_SIGNER_ANDROID_PACKAGE", "it.fasas.signer.android")
+FASAS_CIE_ALLOW_HTTP = env_bool("FASAS_CIE_ALLOW_HTTP", DEBUG)  # solo sviluppo: in produzione il Signer usa HTTPS
+# Prima della prima firma con CIE il firmatario firma con la CIE l'accettazione delle condizioni (DPCM 22/02/2013, art. 57)
+FASAS_FEA_REQUIRE_ACCEPTANCE = env_bool("FASAS_FEA_REQUIRE_ACCEPTANCE", True)
+# Firma e verifica con il PIN della carta disponibili solo dopo il collaudo in questa struttura: almeno una firma di
+# prova riuscita con una CIE vera (catena verificata con le CA della CIE). Spegnere solo nei test automatici.
+FASAS_CIE_PIN_REQUIRES_TEST = env_bool("FASAS_CIE_PIN_REQUIRES_TEST", True)
+FASAS_FEA_TERMS_FILE = os.environ.get("FASAS_FEA_TERMS_FILE", "")  # testo approvato dal legale (vuoto = bozza)
+FASAS_FEA_RETENTION_YEARS = int(os.environ.get("FASAS_FEA_RETENTION_YEARS", "20"))
+
+# Notifiche push (Web Push). Chiave generata con «manage.py fasas_vapid_keys»; in sviluppo se ne deriva una da SECRET_KEY.
+FASAS_VAPID_PRIVATE_KEY = env_secret("FASAS_VAPID_PRIVATE_KEY")
+FASAS_VAPID_SUBJECT = os.environ.get("FASAS_VAPID_SUBJECT", "mailto:amministrazione@fasas.invalid")
+FASAS_PUSH_SHOW_DETAILS = env_bool("FASAS_PUSH_SHOW_DETAILS", False)  # titolo e messaggio completi sul telefono
+FASAS_PUSH_ASYNC = env_bool("FASAS_PUSH_ASYNC", True)
+
+# Vero quando si usano le chiavi fisse di sviluppo, scritte qui sotto e quindi pubbliche: ogni pagina lo segnala
+# e l'avvio di prova rifiuta i dati veri (docs/INSTALLAZIONE_IN_STRUTTURA.md per l'uso reale).
+FASAS_DEV_KEYS_IN_USE = False
+if (DEBUG or FASAS_PRESENTAZIONE) and not FASAS_ENCRYPTION_KEYS:
+    # Chiave fissa SOLO per sviluppo: in produzione la mancanza della chiave è un errore.
+    FASAS_ENCRYPTION_KEYS = ["ZGV2LW9ubHktZmFzYXMta2V5LWNoYW5nZS1tZS0wMDA="]
+    FASAS_DEV_KEYS_IN_USE = True
+if (DEBUG or FASAS_PRESENTAZIONE) and not FASAS_BACKUP_KEY:
+    FASAS_BACKUP_KEY = "ZGV2LW9ubHktYmFja3VwLWtleS1jaGFuZ2UtbWUtMDA="
+    FASAS_DEV_KEYS_IN_USE = True
+
+# --- Email (notifiche) -----------------------------------------------------
+EMAIL_BACKEND = os.environ.get("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = env_secret("EMAIL_HOST_PASSWORD")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "fasas@localhost")
+
+# --- API REST (base per la futura app mobile) ------------------------------
+# Spenta di default: senza FASAS_API_ENABLED=1 gli indirizzi /api/v1/ rispondono 404 (una porta in meno su internet).
+# Non riguarda l'API dei dispositivi di firma (/api/firma/v1/), che segue FASAS_CIE_ENABLED.
+FASAS_API_ENABLED = env_bool("FASAS_API_ENABLED", False)
+FASAS_API_TOKEN_DAYS = int(os.environ.get("FASAS_API_TOKEN_DAYS", "30"))  # dopo, il token scade e si rientra
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "fasas.api.authentication.ExpiringTokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+        "fasas.api.permissions.ModelPermissions",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 50,
+}
+
+# --- Attività pianificate (Celery) -----------------------------------------
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", False)
+
+# Monitoraggio (docs/MONITORAGGIO.md): dettaglio di /salute/ solo con questo token; spazio minimo su disco
+FASAS_HEALTH_TOKEN = env_secret("FASAS_HEALTH_TOKEN")
+FASAS_HEALTH_MIN_FREE_GB = float(os.environ.get("FASAS_HEALTH_MIN_FREE_GB", "1" if FASAS_CLOUD else "5"))
+FASAS_ERROR_RECORDING = env_bool("FASAS_ERROR_RECORDING", True)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+        # registro degli errori nel database, senza messaggi né dati (fasas.core.monitoring)
+        "record": {"class": "fasas.core.monitoring.ErrorRecordHandler", "level": "ERROR"},
+    },
+    "loggers": {
+        "fasas": {"handlers": ["console", "record"], "level": os.environ.get("FASAS_LOG_LEVEL", "INFO")},
+        "django.request": {"handlers": ["record"], "level": "ERROR"},
+        # un certificato non presente tra le CA fidate del server è un esito normale della verifica, non un errore
+        "pyhanko": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+        "pyhanko_certvalidator": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+    },
+}

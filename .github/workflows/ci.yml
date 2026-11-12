@@ -1,0 +1,425 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        database: [sqlite, postgres]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fasas
+          POSTGRES_PASSWORD: fasas
+          POSTGRES_DB: fasas
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DJANGO_DEBUG: "0"
+      DJANGO_SECURE_SSL_REDIRECT: "0"
+      DJANGO_SECRET_KEY: ci-only-secret-key-not-for-production-0123456789
+      FASAS_ENCRYPTION_KEYS: Y2ktb25seS1mYXNhcy1lbmNyeXB0aW9uLWtleS0wMDA=
+      FASAS_BACKUP_KEY: Y2ktb25seS1mYXNhcy1iYWNrdXAta2V5LTAwMDAwMDA=
+      FASAS_LOG_LEVEL: WARNING
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: SoftHSM2 (modulo PKCS#11 reale per i test del FASAS Signer)
+        run: sudo apt-get update && sudo apt-get install -y softhsm2
+      - run: pip install --require-hashes -r requirements.lock
+      - run: pip install "moto[s3]>=5.0" "ruff>=0.6" -r signer/requirements.txt
+      - run: ruff check fasas config signer
+      - name: Imposta database
+        if: matrix.database == 'postgres'
+        run: echo "DATABASE_URL=postgres://fasas:fasas@localhost:5432/fasas" >> "$GITHUB_ENV"
+      - run: python manage.py makemigrations --check --dry-run
+      - run: python manage.py check --deploy
+      - run: python manage.py test fasas.tests
+
+  test-windows:
+    # Verifica che il sistema funzioni anche sui PC Windows della comunità
+    runs-on: windows-latest
+    env:
+      DJANGO_DEBUG: "0"
+      DJANGO_SECURE_SSL_REDIRECT: "0"
+      DJANGO_SECRET_KEY: ci-only-secret-key-not-for-production-0123456789
+      FASAS_ENCRYPTION_KEYS: Y2ktb25seS1mYXNhcy1lbmNyeXB0aW9uLWtleS0wMDA=
+      FASAS_BACKUP_KEY: Y2ktb25seS1mYXNhcy1iYWNrdXAta2V5LTAwMDAwMDA=
+      FASAS_LOG_LEVEL: WARNING
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: python manage.py migrate --verbosity 0
+      - run: python manage.py fasas_demo --skip-if-exists --ambiente-di-prova
+      - run: python manage.py test fasas.tests
+
+  accessibilita:
+    # Pagine principali per ogni ruolo controllate con axe-core (WCAG 2.1 A e AA), in chiaro e in scuro
+    runs-on: ubuntu-latest
+    env:
+      DJANGO_DEBUG: "1"
+      FASAS_LOG_LEVEL: WARNING
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: pip install --require-hashes -r requirements.lock
+      - run: python manage.py migrate --verbosity 0
+      - run: python manage.py fasas_demo --skip-if-exists --ambiente-di-prova
+      - name: FASAS avviato
+        run: |
+          python manage.py runserver 127.0.0.1:8765 --noreload > /tmp/server.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://127.0.0.1:8765/accesso/entra/ && break; sleep 1; done
+      - name: Controllo di accessibilità
+        run: |
+          npm install --no-save --no-audit --no-fund axe-core@4.10.2 playwright@1.49.1
+          npx playwright install --with-deps chromium
+          node scripts/accessibilita.js
+      - name: Registro del server in caso di errore
+        if: failure()
+        run: tail -50 /tmp/server.log
+
+  container:
+    # Immagine di produzione e docker compose completo: database, sito, job, proxy HTTPS.
+    # PostgreSQL 16 con client 17: prova anche il ripristino verso un server più vecchio (es. Supabase).
+    runs-on: ubuntu-latest
+    env:
+      FASAS_POSTGRES_IMAGE: postgres:16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configurazione di prova (chiavi generate al momento, mai usate altrove)
+        run: |
+          python3 -c "import base64,os,secrets; print('DJANGO_DEBUG=0'); print('DJANGO_SECRET_KEY=' + secrets.token_hex(32)); print('FASAS_ENCRYPTION_KEYS=' + base64.urlsafe_b64encode(os.urandom(32)).decode()); print('FASAS_BACKUP_KEY=' + base64.urlsafe_b64encode(os.urandom(32)).decode()); print('POSTGRES_PASSWORD=' + secrets.token_hex(16)); print('FASAS_DOMAIN=localhost'); print('FASAS_HEALTH_TOKEN=ci')" > .env
+      - run: docker compose build
+      - run: docker compose up -d
+      - name: Attende il sito
+        run: |
+          for i in $(seq 1 60); do
+            curl -skf https://localhost/salute/ && break
+            sleep 3
+          done
+          curl -skf https://localhost/accesso/entra/ > /dev/null
+          curl -skf https://localhost/static/css/fasas.css > /dev/null
+      - name: Backup PostgreSQL (pg_dump), verifica audit e prova di ripristino in un database separato
+        run: |
+          docker compose exec -T web python manage.py fasas_jobs audit_verify backup
+          docker compose exec -T web python manage.py backup_prova_ripristino
+          docker compose exec -T web pg_dump --version
+      - name: Stato dettagliato
+        run: curl -sk "https://localhost/salute/?token=ci"
+      - name: Log in caso di errore
+        if: failure()
+        run: docker compose logs --tail 100
+      - run: docker compose down -v
+        if: always()
+
+  cloud:
+    # Versione cloud (docs/CLOUD.md): migrazioni SQL di supabase/migrations applicate al PostgreSQL ufficiale di
+    # Supabase come dall'editor SQL, immagine avviata con FASAS_CLOUD=1 (sito + pianificatore, porta $PORT), file su
+    # object storage S3 di prova, poi prova completa via HTTP come dietro il dominio e ripristino di un backup.
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_POSTGRES_IMAGE: supabase/postgres:17.11.0.017
+      DB_URL: postgresql://postgres:prova-ci-supabase@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: PostgreSQL di Supabase
+        run: |
+          docker run -d --name supabase-db -p 5432:5432 -e POSTGRES_PASSWORD=prova-ci-supabase "$SUPABASE_POSTGRES_IMAGE"
+          for i in $(seq 1 60); do
+            psql "$DB_URL" -Atc "SELECT 1" > /dev/null 2>&1 && break
+            sleep 3
+          done
+          psql "$DB_URL" -Atc "SELECT version(), current_user, (SELECT rolsuper FROM pg_roles WHERE rolname = current_user)"
+          psql "$DB_URL" -Atc "SELECT string_agg(rolname, ', ') FROM pg_roles WHERE rolname IN ('anon', 'authenticated', 'service_role')"
+      - name: Migrazioni SQL (come nell'editor SQL di Supabase, utente postgres)
+        run: |
+          for f in supabase/migrations/*.sql; do
+            echo "== $f"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 --single-transaction -q -f "$f"
+          done
+          # una seconda volta il file di protezione: si può rieseguire
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/migrations/*_fasas_protezione_api.sql
+      - name: Le API di Supabase non arrivano ai dati
+        run: |
+          test "$(psql "$DB_URL" -Atc "SELECT count(*) FROM pg_tables WHERE schemaname = 'public' AND NOT rowsecurity")" = 0
+          test "$(psql "$DB_URL" -Atc "SELECT count(*) FROM information_schema.role_table_grants WHERE table_schema = 'public' AND grantee IN ('anon', 'authenticated', 'service_role')")" = 0
+          for role in anon authenticated service_role; do
+            if psql "$DB_URL" -Atc "SET ROLE $role; SELECT count(*) FROM public.core_systemconfig" 2>/dev/null; then
+              echo "il ruolo $role legge le tabelle"; exit 1
+            fi
+          done
+      - name: Storage S3 di prova
+        run: |
+          pip install "moto[server]==5.2.4" "boto3==1.43.122" "requests==2.34.2"
+          moto_server -p 5055 > moto.log 2>&1 &
+          sleep 3
+          python -c "import boto3; s3 = boto3.client('s3', endpoint_url='http://127.0.0.1:5055', region_name='eu-central-1', aws_access_key_id='prova', aws_secret_access_key='prova'); [s3.create_bucket(Bucket=b, CreateBucketConfiguration={'LocationConstraint': 'eu-central-1'}) for b in ('fasas-documenti', 'fasas-backup')]"
+      - run: docker build -t fasas:cloud .
+      - name: Avvio in modalità cloud
+        run: |
+          python3 -c "import base64,os,secrets; print('DJANGO_SECRET_KEY=' + secrets.token_hex(32)); print('FASAS_ENCRYPTION_KEYS=' + base64.urlsafe_b64encode(os.urandom(32)).decode()); print('FASAS_BACKUP_KEY=' + base64.urlsafe_b64encode(os.urandom(32)).decode())" > cloud.env
+          cat >> cloud.env <<'EOF'
+          FASAS_CLOUD=1
+          PORT=8123
+          FASAS_DOMAIN=fasas.prova.it
+          DATABASE_URL=postgresql://postgres:prova-ci-supabase@127.0.0.1:5432/postgres
+          FASAS_BACKUP_PG_SCHEMAS=public
+          FASAS_S3_BUCKET=fasas-documenti
+          FASAS_S3_ENDPOINT_URL=http://127.0.0.1:5055
+          FASAS_S3_REGION=eu-central-1
+          FASAS_S3_ACCESS_KEY=prova
+          FASAS_S3_SECRET_KEY=prova
+          FASAS_S3_DEFAULT_ACL=
+          FASAS_S3_ADDRESSING_STYLE=path
+          FASAS_OFFSITE_ENDPOINT=http://127.0.0.1:5055
+          FASAS_OFFSITE_REGION=eu-central-1
+          FASAS_OFFSITE_BUCKET=fasas-backup
+          FASAS_OFFSITE_ACCESS_KEY=prova
+          FASAS_OFFSITE_SECRET_KEY=prova
+          FASAS_OFFSITE_LOCK_DAYS=0
+          FASAS_OFFSITE_CONTENT_MD5=0
+          FASAS_OFFSITE_ADDRESSING_STYLE=path
+          FASAS_ADMIN_USERNAME=amministratore
+          FASAS_ADMIN_PASSWORD=Prova-Cloud-2026!x
+          FASAS_2FA_REQUIRED_ROLES=
+          FASAS_HEALTH_TOKEN=token-di-prova-salute
+          GUNICORN_WORKERS=1
+          GUNICORN_THREADS=8
+          EOF
+          sed -i 's/^ *//' cloud.env
+          docker run -d --name fasas --network host --env-file cloud.env fasas:cloud
+          for i in $(seq 1 60); do
+            curl -sf -H "Host: 10.0.0.9" http://127.0.0.1:8123/salute/ && break
+            sleep 3
+          done
+          docker logs fasas 2>&1 | head -20
+      - name: Ospite di prova (dati inventati)
+        run: |
+          docker exec -i fasas python manage.py shell <<'PY' | tail -1 > ospite.txt
+          import datetime
+          from fasas.audit.context import audit_context
+          from fasas.core.models import Community
+          from fasas.guests.models import Guest
+          with audit_context(source="prova"):
+              guest = Guest.objects.create(first_name="Mario", last_name="Prova", fiscal_code="RSSMRA40A01F205X",
+                                           birth_date=datetime.date(1940, 1, 1), community=Community.default())
+          print(guest.pk)
+          PY
+          cat ospite.txt
+      - name: Prova completa via HTTP
+        run: python scripts/prova_cloud.py "$(cat ospite.txt)"
+      - name: Ripristino del backup sopra il database in uso (lo schema public di Supabase resta)
+        run: |
+          # backup nuovo, con l'ospite e il documento appena caricati (quello dell'avvio è precedente)
+          docker exec fasas python manage.py fasas_jobs backup
+          docker exec fasas sh -c 'python manage.py backup_restore --confirm "$(ls -t /data/backups/*.fbk | head -1)"'
+          docker exec fasas python manage.py audit_verify
+          usage=$(psql "$DB_URL" -Atc "SELECT has_schema_privilege('anon', 'public', 'USAGE')")
+          guests=$(psql "$DB_URL" -Atc "SELECT count(*) FROM public.guests_guest")
+          versions=$(psql "$DB_URL" -Atc "SELECT count(*) FROM public.documents_documentversion")
+          echo "schema public usabile da anon (come prima): $usage; ospiti: $guests; versioni di documenti: $versions"
+          test "$usage" = t && test "$guests" = 1 && test "$versions" = 1
+          test "$(psql "$DB_URL" -Atc "SELECT count(*) FROM pg_tables WHERE schemaname = 'public' AND NOT rowsecurity")" = 0
+          test "$(psql "$DB_URL" -Atc "SELECT count(*) FROM information_schema.role_table_grants WHERE table_schema = 'public' AND grantee IN ('anon', 'authenticated', 'service_role')")" = 0
+          # dopo il ripristino il documento si scarica ancora (file rimessi nel bucket)
+          python scripts/prova_cloud.py "$(cat ospite.txt)"
+      - name: Memoria usata dal container
+        run: docker stats --no-stream fasas
+      - name: Versione di presentazione (stessa immagine, solo FASAS_PRESENTAZIONE=1, come render.yaml)
+        run: |
+          docker run -d --name presentazione -p 8124:8124 -e FASAS_PRESENTAZIONE=1 -e PORT=8124 fasas:cloud
+          for i in $(seq 1 60); do curl -sf -H "Host: 10.0.0.9" http://127.0.0.1:8124/salute/ && break; sleep 3; done
+          python - <<'PY'
+          import re, requests
+          base, headers = "http://127.0.0.1:8124", {"Host": "localhost", "X-Forwarded-Proto": "https"}
+          page = requests.get(base + "/accesso/entra/", headers=headers)
+          assert "Versione di presentazione" in page.text and "Demo-Fasas-2026!" in page.text, page.status_code
+          token = page.cookies["csrftoken"]
+          # cookie passati a mano: sono «Secure» e il client non li rimanderebbe su HTTP locale
+          login = requests.post(base + "/accesso/entra/", cookies=page.cookies.get_dict(), allow_redirects=False,
+                                headers={**headers, "Origin": "https://localhost", "Referer": "https://localhost/accesso/entra/"},
+                                data={"username": "operatore", "password": "Demo-Fasas-2026!", "csrfmiddlewaretoken": token})
+          assert login.status_code == 302 and login.headers["Location"] == "/", login.status_code
+          home = requests.get(base + "/", headers=headers, cookies={**page.cookies.get_dict(), **login.cookies.get_dict()})
+          guests = len(set(re.findall(r"/ospiti/(\d+)/", home.text)))
+          print("cruscotto", home.status_code, "ospiti di esempio:", guests)
+          assert home.status_code == 200 and guests > 0
+          PY
+          docker stats --no-stream presentazione
+      - name: Log in caso di errore
+        if: failure()
+        run: |
+          docker logs fasas 2>&1 | tail -150
+          docker logs presentazione 2>&1 | tail -60 || true
+          docker logs supabase-db 2>&1 | tail -40
+          tail -20 moto.log
+
+  installazione:
+    # scripts/prepara_server.sh su un vero Ubuntu 24.04 con Docker, come nella guida d'installazione in struttura.
+    # Dominio .localhost (certificato locale di Caddy), senza DuckDNS, firewall né backup fuori sede.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prima installazione
+        run: >
+          sudo python3 .github/ci/prova_prepara_server.py . '[["Indirizzo del FASAS", "fasas.localhost"],
+          ["Rete della struttura \\[", "192.168.77.0/24"], ["Email", "direzione@esempio.it"],
+          ["bucket B2", "n"], ["Attivo il firewall", "n"], ["Riavvio automatico", "n"]]'
+      - name: Controlli dopo l'installazione
+        run: |
+          test "$(sudo stat -c %a .env)" = 600
+          sudo grep -Eq '^FASAS_VAPID_PRIVATE_KEY=.{40,}$' .env
+          sudo grep -q '^FASAS_2FA_TRUSTED_NETWORKS=192.168.77.0/24$' .env
+          curl -skf --resolve fasas.localhost:443:127.0.0.1 https://fasas.localhost/salute/
+          curl -skf --resolve fasas.localhost:443:127.0.0.1 https://fasas.localhost/accesso/entra/ > /dev/null
+          sudo docker compose exec -T web python manage.py fasas_chiavi verifica
+      - name: Rilancio dello script (le chiavi non devono cambiare)
+        run: |
+          sudo sha256sum .env > /tmp/env-prima
+          sudo python3 .github/ci/prova_prepara_server.py . '[["Attivo il firewall", "n"], ["Riavvio automatico", "n"]]'
+          sudo sha256sum .env | diff - /tmp/env-prima
+          sudo docker compose exec -T web python manage.py fasas_chiavi verifica
+      - name: Disco di continuità (disco virtuale al posto dell'SSD USB)
+        run: |
+          truncate -s 4G /tmp/disco-continuita.img
+          DEV=$(sudo losetup -f --show /tmp/disco-continuita.img)
+          sudo ./scripts/disco_continuita.sh --prepara "$DEV" --si
+          sudo grep -q '^FASAS_CONTINUITY_DIR=/continuita$' .env
+          sudo docker compose up -d
+          for i in $(seq 1 60); do sudo docker compose exec -T worker true 2>/dev/null && break; sleep 2; done
+          sudo docker compose exec -T worker python manage.py fasas_jobs continuity
+          sudo ./scripts/disco_continuita.sh --stato
+          sudo find /srv/fasas-continuita/database -name 'fasas-continua-*.fbk' | grep -q .
+          sudo docker compose exec -T web python manage.py fasas_ripristina_continuita --elenca | grep -q fasas-continua-
+      - name: Gruppo di continuità (NUT con un gruppo simulato al posto di quello USB)
+        run: |
+          sudo ./scripts/gruppo_continuita.sh --configura --simulato
+          sudo grep -q '^FASAS_UPS_STATUS_FILE=/ups/stato.json$' .env
+          for i in $(seq 1 30); do sudo ./scripts/gruppo_continuita.sh --stato | grep -q "rete elettrica" && break; sleep 2; done
+          sudo ./scripts/gruppo_continuita.sh --stato
+          # manca la corrente: evento scritto per il FASAS e avviso letto dal job
+          printf 'battery.charge: 90\nbattery.runtime: 1500\nups.status: OB\n' | sudo tee /etc/nut/fasas-prova.dev
+          for i in $(seq 1 30); do sudo grep -q ONBATT /srv/fasas-ups/stato.json && break; sleep 2; done
+          sudo grep -q ONBATT /srv/fasas-ups/stato.json
+          sudo docker compose up -d
+          for i in $(seq 1 60); do sudo docker compose exec -T worker true 2>/dev/null && break; sleep 2; done
+          sudo docker compose exec -T worker python manage.py fasas_jobs ups | grep -q ONBATT
+          # batteria sotto la soglia: spegnimento ordinato (qui simulato con un file)
+          printf 'battery.charge: 30\nbattery.runtime: 900\nups.status: OB\n' | sudo tee /etc/nut/fasas-prova.dev
+          for i in $(seq 1 30); do test -f /run/fasas-spegnimento-simulato && break; sleep 2; done
+          test -f /run/fasas-spegnimento-simulato
+      - name: Manutenzione del mese (backup, contenitori aggiornati, controllo)
+        run: |
+          sudo ./scripts/aggiorna_fasas.sh --controlla
+          sudo ./scripts/aggiorna_fasas.sh --solo-sicurezza
+          sudo grep -q "aggiornamento completato" /var/log/fasas-aggiornamenti.log
+          curl -skf --resolve fasas.localhost:443:127.0.0.1 https://fasas.localhost/salute/
+      - name: VPN di manutenzione (un «PC di casa» simulato in una rete separata)
+        run: |
+          sudo ./scripts/accesso_remoto.sh --configura --indirizzo 10.200.0.1
+          sudo ./scripts/accesso_remoto.sh --aggiungi pc-casa
+          # «casa»: rete separata, collegata al server solo da un cavo virtuale verso la porta UDP della VPN
+          sudo ip netns add casa
+          sudo ip link add veth-server type veth peer name veth-casa
+          sudo ip link set veth-casa netns casa
+          sudo ip addr add 10.200.0.1/24 dev veth-server
+          sudo ip link set veth-server up
+          sudo ip -n casa addr add 10.200.0.2/24 dev veth-casa
+          sudo ip -n casa link set veth-casa up
+          sudo ip -n casa link set lo up
+          if sudo ip netns exec casa ping -c1 -W2 10.77.0.1; then echo "server raggiungibile senza VPN"; exit 1; fi
+          sudo install -d -m 700 /etc/wg-casa
+          sudo cp "$HOME/fasas-pc-casa.conf" /etc/wg-casa/casa.conf
+          sudo ip netns exec casa wg-quick up /etc/wg-casa/casa.conf
+          sudo ip netns exec casa ping -c3 -W5 10.77.0.1
+          sudo ./scripts/accesso_remoto.sh --elenca | grep pc-casa | grep -q "ultimo collegamento"
+          sudo ./scripts/accesso_remoto.sh --stato
+          # accesso tolto: lo stesso PC non passa più
+          sudo ./scripts/accesso_remoto.sh --rimuovi pc-casa
+          if sudo ip netns exec casa ping -c2 -W3 10.77.0.1; then echo "accesso tolto ma ancora attivo"; exit 1; fi
+          sudo ./scripts/accesso_remoto.sh --elenca
+      - name: Log in caso di errore
+        if: failure()
+        run: sudo docker compose logs --tail 100
+      - run: sudo docker compose down -v
+        if: always()
+
+  installazione-vps:
+    # scripts/prepara_server.sh --vps (server su internet, es. fasas.online) su un vero Ubuntu 24.04 con Docker:
+    # nessuna rete della struttura, nome «www» che rimanda al dominio, pubblicazione di una versione precisa e
+    # ritorno automatico alla versione di prima quando la nuova non parte.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installazione in modalità VPS
+        run: >
+          sudo python3 .github/ci/prova_prepara_server.py . '[["Dominio del FASAS", "fasas.localhost"],
+          ["Altri nomi", "www.fasas.localhost"], ["Email", "direzione@esempio.it"], ["bucket B2", "n"],
+          ["Continuo lo stesso", "s"], ["Continuo lo stesso", "s"],
+          ["Attivo il firewall", "n"], ["Riavvio automatico", "n"]]' --vps
+      - name: Controlli dopo l'installazione
+        run: |
+          sudo grep -q '^FASAS_2FA_TRUSTED_NETWORKS=$' .env
+          sudo grep -q '^FASAS_DOMAIN_ALIASES=www.fasas.localhost$' .env
+          curl -skf --resolve fasas.localhost:443:127.0.0.1 https://fasas.localhost/salute/
+          redirect=$(curl -sk --resolve www.fasas.localhost:443:127.0.0.1 -o /dev/null -w '%{http_code} %{redirect_url}' https://www.fasas.localhost/accesso/entra/)
+          echo "$redirect"
+          test "$redirect" = "301 https://fasas.localhost/accesso/entra/"
+      - name: Pubblicazione di una versione precisa
+        run: |
+          sudo ./scripts/aggiorna_fasas.sh --versione "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          curl -skf --resolve fasas.localhost:443:127.0.0.1 https://fasas.localhost/salute/
+      - name: Versione rotta → ritorno automatico alla precedente
+        run: |
+          sed -i 's|^  web)$|  web)\n    echo "versione di prova che non parte"; exit 1|' docker/entrypoint.sh
+          git -c user.name=ci -c user.email=ci@example.invalid commit -qam "versione di prova che non parte"
+          ROTTA=$(git rev-parse HEAD)
+          git checkout -q --detach "$GITHUB_SHA"
+          if sudo ./scripts/aggiorna_fasas.sh --versione "$ROTTA"; then echo "la versione rotta è stata accettata"; exit 1; fi
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          curl -skf --resolve fasas.localhost:443:127.0.0.1 https://fasas.localhost/salute/
+          sudo grep -q "tornati alla versione precedente" /var/log/fasas-aggiornamenti.log
+      - name: Log in caso di errore
+        if: failure()
+        run: |
+          sudo docker compose logs --tail 100
+          sudo tail -30 /var/log/fasas-aggiornamenti.log || true
+      - run: sudo docker compose down -v
+        if: always()
+
+  sicurezza:
+    # Vulnerabilità note nelle dipendenze bloccate e analisi statica del codice
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pip-audit bandit
+      - run: pip-audit --require-hashes --disable-pip -r requirements.lock
+      - run: pip-audit --require-hashes --disable-pip -r signer/requirements.lock
+      - run: bandit -q -r fasas config signer/fasas_signer -x fasas/tests,*/migrations/* -ll

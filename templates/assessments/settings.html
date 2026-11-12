@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Scale di valutazione{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Scale di valutazione in uso</h1></div>
+<p class="muted">Attivare le scale che la struttura usa e indicare ogni quanti giorni vanno ripetute (0 = solo al bisogno).
+  Le frequenze proposte sono un punto di partenza: le decide l'équipe, anche secondo le indicazioni dell'ATS.</p>
+<form method="post" class="card table-wrap">{% csrf_token %}
+  <table><thead><tr><th>Scala</th><th>A cosa serve</th><th>In uso</th><th>Ripetere ogni (giorni)</th></tr></thead>
+  <tbody>{% for scale, setting in rows %}
+    <tr><td><strong>{{ scale.name }}</strong><br><small class="muted">{{ scale.note }}</small></td><td>{{ scale.purpose }}</td>
+      <td><input type="checkbox" name="enabled_{{ scale.code }}" {% if setting.enabled %}checked{% endif %} aria-label="{{ scale.name }} in uso"></td>
+      <td><input type="number" name="interval_{{ scale.code }}" value="{{ setting.interval_days }}" min="0" max="730" style="width:6rem" aria-label="{{ scale.name }}: ripetere ogni"></td></tr>
+  {% endfor %}</tbody></table>
+  <div class="form-actions"><button class="btn btn-primary">Salva</button></div>
+</form>
+{% endblock %}

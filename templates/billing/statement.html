@@ -1,0 +1,47 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Prospetto {{ statement.number }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Prospetto {{ statement.number|default:"in bozza" }}</h1>
+    <span class="subtitle">{{ statement.guest.last_name }} {{ statement.guest.first_name }} · presenze di {{ statement.month.month|date:"F Y" }} · {{ statement.payer_name }}</span></div>
+  <div class="actions">
+    <a class="btn" href="{% url 'billing:statements' %}?mese={{ statement.month.month|date:'Y-m' }}">{% icon "arrow-left" %}Prospetti</a>
+    <a class="btn" href="{% url 'billing:statement_pdf' statement.pk %}" target="_blank">{% icon "printer" %}PDF</a>
+    {% if statement.status == 'draft' and perms.billing.issue_statement %}<form method="post" action="{% url 'billing:statement_issue' statement.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-primary">{% icon "check" %}Emetti</button></form>{% endif %}
+  </div>
+</div>
+<div class="grid grid-2">
+  <div class="card table-wrap">
+    <div class="card-head"><h2>Dettaglio</h2><span class="pill {% if statement.status == 'paid' %}pill-ok{% elif statement.is_overdue %}pill-danger{% elif statement.status == 'draft' %}pill-warn{% endif %}">{% if statement.is_overdue %}scaduto{% else %}{{ statement.get_status_display }}{% endif %}</span></div>
+    <table>
+      <thead><tr><th>Voce</th><th>Presenza</th><th class="num">Giorni</th><th class="num">€/giorno</th><th class="num">%</th><th class="num">Importo €</th></tr></thead>
+      <tbody>{% for l in statement.lines %}<tr><td>{{ l.description }}</td><td>{{ l.status_label }}</td><td class="num">{{ l.days }}</td><td class="num">{{ l.rate }}</td><td class="num">{{ l.percent }}%</td><td class="num">{{ l.amount }}</td></tr>{% endfor %}
+        <tr><th colspan="5">Totale</th><th class="num">{{ statement.total|floatformat:2 }}</th></tr></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h2>Intestatario</h2>
+    <p><strong>{{ statement.payer_name }}</strong> · {{ statement.get_payer_display }}<br>{% if statement.payer_tax_code %}CF/P.IVA {{ statement.payer_tax_code }}<br>{% endif %}{{ statement.payer_address }}{% if statement.payer_email %}<br>{{ statement.payer_email }}{% endif %}</p>
+    {% if statement.issue_date %}<p>Emesso il {{ statement.issue_date|date:"d/m/Y" }} · scadenza {{ statement.due_date|date:"d/m/Y" }}</p>{% endif %}
+    {% if statement.status == 'cancelled' %}<div class="alert alert-danger"><div class="alert-body">Annullato: {{ statement.cancel_reason }}</div></div>{% endif %}
+    {% if perms.billing.issue_statement and statement.status != 'cancelled' and not payments %}
+      <details><summary class="muted">{% if statement.status == 'draft' %}Elimina la bozza{% else %}Annulla il prospetto{% endif %}</summary>
+        <form method="post" action="{% url 'billing:statement_cancel' statement.pk %}">{% csrf_token %}{% include "partials/form_fields.html" with form=cancel_form compact=True %}
+          <div class="form-actions"><button class="btn btn-danger">Conferma</button></div></form></details>
+    {% endif %}
+  </div>
+</div>
+{% if statement.status == 'issued' or statement.status == 'paid' %}
+<div class="grid grid-2">
+  <div class="card table-wrap">
+    <div class="card-head"><h2>Incassi</h2><span class="muted">residuo € {{ statement.balance|floatformat:2 }}</span></div>
+    <table><tbody>{% for p in payments %}<tr><td class="nowrap">{{ p.date|date:"d/m/Y" }}</td><td>{{ p.get_method_display }}</td><td>{{ p.reference }}</td><td class="num">€ {{ p.amount|floatformat:2 }}</td><td><small class="muted">{{ p.created_by }}</small></td></tr>{% empty %}<tr><td class="empty">Nessun incasso.</td></tr>{% endfor %}</tbody></table>
+  </div>
+  {% if perms.billing.add_feepayment and statement.balance > 0 %}
+  <div class="card"><h2>Registra incasso</h2>
+    <form method="post" novalidate>{% csrf_token %}{% include "partials/form_fields.html" with form=payment_form compact=True %}
+      <div class="form-actions"><button class="btn btn-primary">Registra</button></div></form></div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

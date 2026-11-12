@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Segnala un problema{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Segnala un problema</h1><span class="subtitle">Errori, cose scomode o lente, cose che mancano: ogni segnalazione arriva all'amministratore e serve a migliorare il FASAS durante il pilota.</span></div></div>
+<div class="grid grid-2">
+  <form method="post" class="card" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="page" value="{{ page }}">
+    {% if page %}<p class="muted">{% icon "info" %} Pagina: <span class="mono">{{ page }}</span> · ora: {{ now|date:"d/m/Y H:i" }}</p>{% endif %}
+    <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body"><strong>Niente nomi né dati sanitari degli ospiti.</strong> Descrivi il problema, non il caso clinico.</div></div>
+    {% include "partials/form_fields.html" with form=form %}
+    <div class="form-actions"><button class="btn btn-primary">{% icon "message" %}Invia la segnalazione</button>{% if page %}<a class="btn" href="{{ page }}">Annulla</a>{% endif %}</div>
+  </form>
+  <div class="card">
+    <h2>Le mie ultime segnalazioni</h2>
+    <ul class="list-plain">
+      {% for f in mine %}<li><span class="pill {% if f.status == 'done' %}pill-ok{% elif f.status == 'declined' %}{% else %}pill-info{% endif %}">{{ f.get_status_display }}</span> {{ f.get_kind_display }} <small class="muted">{{ f.created_at|date:"d/m H:i" }}</small>{% if f.reply %}<br><small>{{ f.reply }}</small>{% endif %}</li>
+      {% empty %}<li class="muted">Nessuna segnalazione inviata.</li>{% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

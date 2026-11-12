@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Dispositivi di firma{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Dispositivi di firma (FASAS Signer)</h1><span class="subtitle">Computer e telefoni abbinati per la firma con CIE. Revoca subito quelli smarriti o dismessi.</span></div></div>
+<div class="card table-wrap">
+  <table>
+    <thead><tr><th>Dispositivo</th><th>Utente</th><th>Abbinato</th><th>Ultimo contatto</th><th>Stato</th><th></th></tr></thead>
+    <tbody>
+    {% for d in devices %}
+      <tr><td><strong>{{ d.name }}</strong><br><small class="muted">{{ d.get_platform_display }}{% if d.app_version %} · v{{ d.app_version }}{% endif %}</small></td>
+        <td>{{ d.user }}</td><td>{{ d.created_at|date:"d/m/Y H:i" }}</td><td>{{ d.last_seen_at|date:"d/m/Y H:i"|default:"—" }}</td>
+        <td>{% if d.revoked_at %}<span class="pill pill-danger">revocato {{ d.revoked_at|date:"d/m/Y" }}</span>{% elif d.is_online %}<span class="pill pill-ok">in linea</span>{% else %}<span class="pill">non in linea</span>{% endif %}</td>
+        <td class="num">{% if not d.revoked_at %}<form method="post">{% csrf_token %}<input type="hidden" name="device" value="{{ d.pk }}"><button class="btn btn-sm btn-danger" data-confirm="Revocare il dispositivo «{{ d.name }}»? Non potrà più firmare.">Revoca</button></form>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">Nessun dispositivo abbinato.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

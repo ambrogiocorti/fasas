@@ -1,0 +1,29 @@
+# FASAS Digitale – VERSIONE DI PRESENTAZIONE online su Render, piano gratuito (guida: docs/PRESENTAZIONE.md).
+# Render › New › Blueprint › questo repository › Apply: non c'è nulla da compilare.
+# Dati inventati, ricreati a ogni avvio; chiavi di cifratura pubbliche: MAI dati di persone reali.
+# Per i dati veri: docs/FASAS_ONLINE.md (server dedicato) o deploy/render-cloud.yaml (versione cloud con Supabase).
+services:
+  - type: web
+    name: fasas-presentazione
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    region: frankfurt
+    plan: free
+    healthCheckPath: /salute/
+    domains:
+      - fasas.online
+      - www.fasas.online
+    # a ogni modifica del ramo su GitHub la presentazione si aggiorna da sola
+    autoDeploy: true
+    envVars:
+      - key: FASAS_PRESENTAZIONE
+        value: "1"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: FASAS_DOMAIN
+        value: fasas.online,www.fasas.online
+      - key: GUNICORN_WORKERS
+        value: "1"
+      - key: GUNICORN_THREADS
+        value: "4"

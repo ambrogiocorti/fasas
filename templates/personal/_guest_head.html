@@ -1,0 +1,19 @@
+{% load fasas_tags %}{% if perms.guests.view_guest %}{% include "guests/_header.html" with compact=compact %}{% else %}
+{# ufficio amministrativo: solo i dati che servono alla cassa, niente allergie né dati sanitari #}
+<div class="guest-header">
+  <div class="avatar" aria-hidden="true">{{ guest.initials }}</div>
+  <div class="guest-id">
+    <h1>{{ guest.last_name }} {{ guest.first_name }}</h1>
+    <div class="meta">
+      {% if guest.room %}<span>Camera {{ guest.room }}</span>{% endif %}
+      <span class="mono">{{ guest.fiscal_code }}</span>
+      <span class="pill {% if guest.status == 'active' %}pill-ok{% elif guest.status == 'archived' %}{% else %}pill-warn{% endif %}">{{ guest.get_status_display }}</span>
+    </div>
+  </div>
+</div>
+{% if guest.is_archived %}<div class="archived-banner">{% icon "lock" %}<span>Cartella archiviata: sola consultazione.</span></div>{% endif %}
+{% if not compact %}<nav class="tabs" aria-label="Sezioni dell'ospite">
+  {% if modules.personal and perms.personal.view_cashmovement %}<a href="{% url 'personal:guest' guest.pk %}" class="{% if active_tab == 'personal' %}active{% endif %}">Denaro e oggetti</a>{% endif %}
+  {% if modules.modulistica and perms.modulistica.view_formsubmission %}<a href="{% url 'modulistica:guest' guest.pk %}" class="{% if active_tab == 'forms' %}active{% endif %}">Moduli</a>{% endif %}
+</nav>{% endif %}
+{% endif %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Senza rete{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Lavorare senza rete</h1><span class="subtitle">Se internet o il server non rispondono, il tablet continua a funzionare per il giro farmaci e le registrazioni essenziali.</span></div>
+  <div class="actions">
+    <a class="btn" href="{% url 'offline:emergency' %}" target="_blank">{% icon "printer" %}Foglio di emergenza (PDF)</a>
+    <a class="btn btn-primary" href="{% url 'offline:page' %}">{% icon "wifi-off" %}Apri la modalità senza rete</a>
+  </div>
+</div>
+
+<div class="grid grid-3">
+  <div class="card"><h2>{% icon "check-circle" %} Prima</h2>
+    <p>Basta usare FASAS normalmente su questo dispositivo: ogni 30 minuti viene salvato, <strong>cifrato con la tua password</strong>, il pacchetto del turno in corso e del successivo (dosi, SOS, allergie, avvisi, contatti di emergenza).</p>
+    <p class="muted" data-offline-ready>Controllo del dispositivo…</p>
+  </div>
+  <div class="card"><h2>{% icon "wifi-off" %} Durante</h2>
+    <p>Se la rete cade, qualunque pagina apre la <strong>modalità senza rete</strong>: si sblocca con la password e permette di registrare somministrazioni, SOS, parametri, diario ed eventi. Tutto resta cifrato sul dispositivo.</p>
+  </div>
+  <div class="card"><h2>{% icon "refresh" %} Dopo</h2>
+    <p>Al ritorno della rete le registrazioni vengono inviate da sole, con l'ora reale in cui sono state fatte. Se nel frattempo un collega aveva già registrato la stessa dose, o il turno era stato chiuso, la registrazione viene segnalata qui e al coordinatore.</p>
+  </div>
+</div>
+
+<div class="alert alert-info">{% icon "printer" %}<div class="alert-body">Se mancano insieme rete e dispositivi (blackout), si lavora sul <strong>foglio di emergenza</strong>: va stampato a inizio giornata e tenuto in infermeria, poi ricopiato in FASAS al ripristino.</div></div>
+
+<div class="card table-wrap">
+  <div class="card-head"><h2>Registrazioni fatte senza rete{% if not see_all %} (le mie){% endif %}</h2>
+    <div class="actions">{% if request.GET.problems %}<a class="btn btn-sm" href="?">Tutte</a>{% elif problems %}<a class="btn btn-sm" href="?problems=1">Solo da verificare ({{ problems }})</a>{% endif %}</div></div>
+  <table>
+    <thead><tr><th>Avvenuta</th><th>Sincronizzata</th><th>Tipo</th><th>Ospite</th>{% if see_all %}<th>Operatore</th>{% endif %}<th>Esito</th></tr></thead>
+    <tbody>{% for r in records %}
+      <tr><td class="nowrap">{{ r.occurred_at|date:"d/m H:i" }}</td><td class="nowrap">{{ r.received_at|date:"d/m H:i" }}</td>
+        <td>{{ r.get_kind_display }}{% if r.object_label %}<br><small class="muted">{{ r.object_label|truncatechars:60 }}</small>{% endif %}</td>
+        <td>{% if r.guest %}<a href="{{ r.guest.get_absolute_url }}">{{ r.guest }}</a>{% else %}—{% endif %}</td>
+        {% if see_all %}<td>{{ r.user }}</td>{% endif %}
+        <td><span class="pill {% if r.status == 'ok' %}pill-ok{% elif r.status == 'late' %}pill-warn{% else %}pill-danger{% endif %}">{{ r.get_status_display }}</span>{% if r.message %}<div class="help">{{ r.message }}</div>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">Nessuna registrazione fatta senza rete.</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% endblock %}

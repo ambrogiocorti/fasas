@@ -1,0 +1,59 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Importa dati{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Importa il FASAS cartaceo</h1>
+    <span class="subtitle">Si ricopiano solo i dati in corso; lo storico si scansiona e si allega. Nulla viene salvato prima dell'anteprima.</span>
+  </div>
+  <div class="actions"><a class="btn btn-primary" href="{% url 'imports:template' %}">{% icon "download" %}Scarica il modello Excel</a></div>
+</div>
+
+<div class="card">
+  <h2>Come procedere</h2>
+  <ol class="steps">
+    <li><strong>Scegliete una data di passaggio</strong> (es. il primo del mese): da quel giorno si registra solo qui.</li>
+    <li><strong>Compilate il modello Excel</strong> con anagrafiche, contatti, diagnosi, allergie, terapie in corso e giacenze del magazzino. Per le terapie usate il foglio unico di terapia aggiornato.</li>
+    <li><strong>Caricatelo</strong>: l'anteprima segnala gli errori riga per riga. Correggete e ricaricate; le voci già importate vengono riconosciute e saltate.</li>
+    <li><strong>Scansionate lo storico</strong> (diari, parametri, eventi, consensi, referti) in PDF, un file per documento, e caricatelo qui sotto: ogni file finisce nella cartella del suo ospite.</li>
+    <li><strong>Fate verificare al medico le terapie importate</strong> confrontandole con il cartaceo prima del primo giro farmaci.</li>
+  </ol>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>{% icon "file-text" %} Dati dal modello Excel</h2></div>
+    <form method="post" action="{% url 'imports:workbook' %}" enctype="multipart/form-data">{% csrf_token %}
+      {% include "partials/form_fields.html" with form=workbook_form %}
+      <div class="form-actions"><button class="btn btn-primary">{% icon "upload" %}Carica e controlla</button></div>
+    </form>
+    <hr>
+    <h3>Fogli del modello</h3>
+    <ul class="list-plain">{% for s in sheets %}<li><strong>{{ s.name }}</strong> – {{ s.description }}</li>{% endfor %}</ul>
+  </div>
+
+  {% if perms.documents.add_document %}
+  <div class="card">
+    <div class="card-head"><h2>{% icon "upload" %} Documenti scansionati</h2></div>
+    <form method="post" action="{% url 'imports:documents' %}" enctype="multipart/form-data">{% csrf_token %}
+      {% include "partials/form_fields.html" with form=documents_form %}
+      <div class="form-actions"><button class="btn btn-primary">{% icon "upload" %}Carica e abbina</button></div>
+    </form>
+    <p class="muted"><small>Esempi di nomi riconosciuti: <span class="mono">RSSMRA80A01F205X consenso.pdf</span>, <span class="mono">Rossi Mario/diario 2024.pdf</span> (dentro uno ZIP), <span class="mono">Rossi Mario - referto.pdf</span>. Prima di salvare potete correggere ospite e titolo di ogni file. Per migliaia di file usate il comando <span class="mono">manage.py fasas_import_documenti</span>.</small></p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card table-wrap">
+  <div class="card-head"><h2>Importazioni</h2></div>
+  <table>
+    <thead><tr><th>Caricato</th><th>Tipo</th><th>File</th><th>Stato</th><th></th></tr></thead>
+    <tbody>{% for b in batches %}
+      <tr><td class="nowrap">{{ b.created_at|date:"d/m/Y H:i" }}<br><small>{{ b.created_by }}</small></td>
+        <td>{{ b.get_kind_display }}</td><td>{{ b.filename }}</td>
+        <td><span class="pill {% if b.status == 'completed' %}pill-ok{% elif b.status == 'preview' %}pill-warn{% endif %}">{{ b.get_status_display }}</span></td>
+        <td class="num"><a class="btn btn-sm" href="{% url 'imports:batch' b.pk %}">Apri</a></td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">Nessuna importazione.</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}App per il telefono{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>App FASAS Signer per Android</h1><span class="subtitle">Serve per verificarsi e firmare con la CIE appoggiata al telefono.</span></div>
+  <div class="actions"><a class="btn" href="{% url 'signatures:credential' %}">{% icon "id-card" %}Firma digitale</a></div></div>
+{% if release %}
+<div class="grid grid-2">
+  <div class="card app-qr">
+    <h2>Inquadra con il telefono</h2>
+    <div class="qr" aria-label="QR code per scaricare l'app">{{ qr|safe }}</div>
+    <p><a class="btn btn-primary" href="{% url 'signatures:app_apk' %}">{% icon "download" %}Scarica da questo dispositivo</a></p>
+    <p class="muted"><small>Versione {{ release.version_name }} del {{ release.uploaded_at|date:"d/m/Y" }} · {{ release.size|filesizeformat }}{% if release.debuggable %} · <span class="pill pill-warn">versione di prova</span>{% endif %}</small></p>
+    {% if release.notes %}<p><strong>Novità:</strong> {{ release.notes }}</p>{% endif %}
+  </div>
+  <div class="card">
+    <h2>Come si installa</h2>
+    <ol>
+      <li>Sul telefono Android inquadra il QR code con la fotocamera (o apri questa pagina dal telefono) e scarica il file.</li>
+      <li>Aprilo dalle notifiche o da «Download». Se il telefono lo chiede, consenti al browser di installare app (<em>origini sconosciute</em>): vale solo per questa app.</li>
+      <li>Apri FASAS Signer e abbinalo: nel FASAS, <a href="{% url 'signatures:credential' %}">Firma digitale</a> › «Abbina un nuovo FASAS Signer».</li>
+      <li>Gli aggiornamenti si installano sopra la versione precedente: l'app avvisa quando ce n'è una nuova.</li>
+    </ol>
+    <p class="muted"><small>Se una versione precedente era stata installata da un altro canale (es. una versione di prova), Android può rifiutare l'aggiornamento: disinstallarla e abbinare di nuovo il telefono. La CIE registrata resta valida.</small></p>
+    <p class="muted"><small>Impronta SHA-256 del file: <span class="mono" style="word-break:break-all">{{ release.sha256 }}</span></small></p>
+    <p class="muted"><small>Per iPhone l'app non è ancora disponibile: serve un account Apple Developer della struttura.</small></p>
+  </div>
+</div>
+{% else %}
+<div class="card empty-state"><p>L'app non è ancora stata pubblicata in questo FASAS.</p>{% if perms.signatures.manage_signer_devices %}<p><a class="btn btn-primary" href="{% url 'signatures:app_admin' %}">{% icon "upload" %}Pubblica l'app</a></p>{% else %}<p class="muted">Chiedere all'amministratore.</p>{% endif %}</div>
+{% endif %}
+{% endblock %}

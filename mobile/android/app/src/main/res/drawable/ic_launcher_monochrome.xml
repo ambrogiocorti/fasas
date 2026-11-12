@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generato da scripts/genera_icone.py: modificare lì. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <group android:translateX="54" android:translateY="54" android:scaleX="0.9" android:scaleY="0.9">
+        <path android:pathData="M-15.5 -25H8L20 -13V20.5A4.5 4.5 0 0 1 15.5 25H-15.5A4.5 4.5 0 0 1 -20 20.5V-20.5A4.5 4.5 0 0 1 -15.5 -25Z" android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="4" android:strokeLineCap="round" android:strokeLineJoin="round" />
+        <path android:pathData="M8 -24V-16.5A3.5 3.5 0 0 0 11.5 -13H19" android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="3.2" android:strokeLineCap="round" android:strokeLineJoin="round" />
+        <path android:pathData="M-13 10H-6.5L-2.5 1L3 19L7 10H13" android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="4.4" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    </group>
+</vector>

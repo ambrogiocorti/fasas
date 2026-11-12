@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ object }}{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="card" style="max-width: 900px">
+  <div class="card-head"><h2>{{ object.title }}</h2><span class="pill">{{ object.get_status_display }}</span>
+    <div class="actions">{% if perms.appointments.change_appointment and not guest.is_archived %}
+      <a class="btn btn-sm" href="{% url 'appointments:update' object.pk %}">Modifica</a>
+      <a class="btn btn-sm btn-primary" href="{% url 'appointments:outcome' object.pk %}">Registra esito</a>{% endif %}</div></div>
+  <table><tbody>
+    <tr><th>Tipo</th><td>{{ object.get_kind_display }}</td></tr>
+    <tr><th>Data e ora</th><td>{{ object.scheduled_at|date:"l d/m/Y H:i" }}</td></tr>
+    <tr><th>Luogo</th><td>{{ object.location|default:"—" }}</td></tr>
+    <tr><th>Medico / specialista</th><td>{{ object.doctor|default:"—" }}</td></tr>
+    <tr><th>Accompagnatore</th><td>{{ object.companion_display|default:"—" }}</td></tr>
+    <tr><th>Trasporto</th><td>{{ object.transport|default:"—" }}</td></tr>
+    <tr><th>Preparazione</th><td>{{ object.preparation|linebreaksbr|default:"—" }}</td></tr>
+    <tr><th>Esito</th><td>{{ object.outcome|linebreaksbr|default:"—" }}</td></tr>
+    <tr><th>Indicazioni successive</th><td>{{ object.follow_up|linebreaksbr|default:"—" }}</td></tr>
+    <tr><th>Referto</th><td>{% if object.document %}<a href="{{ object.document.get_absolute_url }}">{{ object.document }}</a>{% else %}—{% endif %}{% if perms.documents.add_document and not guest.is_archived %} · <a href="{% url 'documents:create' guest.pk %}?category=lab_report">carica referto</a>{% endif %}</td></tr>
+  </tbody></table>
+</div>
+{% endblock %}

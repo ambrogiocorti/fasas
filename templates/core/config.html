@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Configurazione{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Configurazione di sistema</h1><div class="actions"><a class="btn" href="{% url 'core:modules' %}">{% icon "grid" %}Moduli</a><a class="btn" href="{% url 'core:settings' %}">{% icon "arrow-left" %}Impostazioni</a></div></div>
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="card"><h2>Comunità</h2>{% include "partials/form_fields.html" with form=community_form %}</div>
+  <div class="card"><h2>Regole operative</h2>
+    <p class="muted">Modalità evacuazione, blocco modifiche dei dati sanitari, orari dei turni, chiusura automatica, limiti file, conservazione, sicurezza sessione.</p>
+    {% include "partials/form_fields.html" with form=form %}</div>
+  <div class="form-actions"><button class="btn btn-primary">Salva configurazione</button></div>
+</form>
+{% endblock %}

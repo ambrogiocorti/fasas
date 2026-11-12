@@ -1,0 +1,395 @@
+# Firma con CIE (FASAS Sign)
+
+Il medico o il coordinatore firma un documento PDF del FASAS appoggiando la propria **Carta d'Identità
+Elettronica** al lettore NFC del computer. Il risultato è un PDF firmato in formato **PAdES**, archiviato come
+nuova versione del documento, verificabile dentro e fuori dal FASAS.
+
+> **Stato al 29/10/2026.** Server, interfaccia web e FASAS Signer per computer sono completi e provati con un
+> modulo PKCS#11 reale (SoftHSM2) e con certificati di prova. **Nessuna piattaforma è stata ancora collaudata
+> con una CIE reale**: finché il collaudo non è fatto, la firma con CIE non va usata sui documenti degli ospiti.
+> Le app per telefono sono prototipi (vedi [più avanti](#telefoni-android-e-iphone)).
+
+## 1. Valore giuridico
+
+- È una **firma elettronica avanzata (FEA)**. Il manuale ufficiale del Software CIE (Ministero dell'Interno /
+  IPZS, versione Linux, cap. «Funzionalità di Firma Elettronica Avanzata con la CIE») dice: *«La firma
+  elettronica calcolata con la Carta D'Identità Elettronica è a tutti gli effetti una Firma Elettronica
+  Avanzata, disciplinata all'interno del DPCM 22/02/2013, articolo 61.»*
+- **Non è mai una firma qualificata (FEQ)**: il FASAS la registra sempre come «Firma elettronica avanzata»
+  (`legal_level = fea`) e così la mostra nel documento e nelle impostazioni.
+- **Attenzione all'art. 61.** Secondo le fonti consultate, l'art. 61 comma 2 del DPCM riconosce la CIE come
+  firma avanzata per i servizi delle pubbliche amministrazioni (artt. 64 e 65 del Codice dell'amministrazione
+  digitale). Per i documenti interni di una comunità privata la firma con CIE vale come FEA se la soluzione rispetta
+  i requisiti dell'art. 56 e chi la offre (di norma la comunità) rispetta gli obblighi dell'art. 57. Da confermare
+  con il consulente legale sul testo in Gazzetta Ufficiale (GU n. 117 del 21/05/2013).
+- **Da validare prima dell'uso reale.** Il consulente legale / DPO deve confermare per quali documenti della comunità
+  la FEA con CIE è sufficiente. Dove serve la FEQ (equivalente alla firma autografa) si usa la firma remota del
+  prestatore qualificato ([FIRMA_DIGITALE.md](FIRMA_DIGITALE.md)).
+
+### Obblighi di chi offre la FEA (art. 57) e cosa fa il FASAS
+
+| Obbligo | Nel FASAS | Resta da fare alla comunità |
+|---|---|---|
+| Identificare con certezza il firmatario | certificato della CIE verificato fino alle CA della CIE; codice fiscale uguale al profilo | — |
+| Informarlo su condizioni e limiti d'uso; attivazione solo dopo la sua accettazione | prima della prima firma il firmatario legge e **firma con la CIE** la dichiarazione di accettazione; senza accettazione valida la firma dei documenti è bloccata | far approvare il testo dal legale e indicarlo in `FASAS_FEA_TERMS_FILE` (finché manca, il testo è marcato «bozza») |
+| Conservare almeno 20 anni la dichiarazione e il documento di riconoscimento | dichiarazione firmata cifrata e certificato della CIE, con data di fine conservazione; non cancellabile, solo revocabile; inclusa nei backup | — |
+| Darne copia gratuita al firmatario | «Scarica la tua copia» in *Firma digitale*; registro per l'amministratore | — |
+| Rendere note le caratteristiche del sistema e delle tecnologie | pagina pubblica `/firma/caratteristiche-firma-cie/` (nessun accesso richiesto) | collegarla dal sito della comunità |
+| Assicurazione di responsabilità civile di almeno 500.000 € (comma 2) | — | stipularla (chi la richiede e per quale soggetto: da verificare con il legale) |
+
+| Modalità nel FASAS | Valore giuridico | Dove resta la chiave |
+|---|---|---|
+| Firma con CIE | Firma elettronica avanzata | nel chip della CIE |
+| Firma remota del prestatore (QTSP) | Qualificata solo se il certificato lo dichiara (QcCompliance + QcSSCD) e la catena è verificata | nel dispositivo sicuro del prestatore |
+| Certificato personale (.p12) | Non qualificata | in un file cifrato sul server |
+| Approvazioni interne (SOS, chiusura turno, PAI) | Non è una firma elettronica avanzata né qualificata | nessuna chiave: utente e ora nell'audit |
+
+## 2. Come funziona
+
+```
+ Browser del medico (FASAS)          Server FASAS                     Computer con lettore NFC
+ ───────────────────────────         ────────────────────────         ──────────────────────────────
+ Anteprima completa del PDF
+ «Avvia la firma con CIE»  ───────►  richiesta: versione bloccata,
+                                     codice di controllo, scadenza
+                                     (5 min), nonce               ◄── FASAS Signer chiede (in uscita,
+                                                                      HTTPS) le richieste in attesa
+ «In attesa della CIE»                                                mostra titolo, versione, impronta e
+                                                                      CODICE DI CONTROLLO → «Firma con CIE»
+ «Carta rilevata»                    riceve il certificato        ◄── legge il certificato (senza PIN)
+                                     · CF = CF dell'utente?
+                                     · CA della CIE? revoca?
+                                     · prepara il PDF (pyHanko)  ───► attributi firmati + DigestInfo
+ «Autorizzazione richiesta»                                           PIN digitato QUI (ultime 4 cifre)
+ «Firma in corso»                                                     la carta firma (PKCS#11, Software CIE)
+ «Verifica della firma»              verifica RSA del valore,     ◄── solo il valore di firma
+                                     inserisce la busta CMS, verifica
+                                     integrità/copertura/catena
+ «Documento firmato correttamente»   nuova versione firmata + audit
+```
+
+- **La chiave privata non esce mai dalla carta**: il FASAS Signer chiede alla carta di firmare tramite il modulo
+  PKCS#11 del Software CIE (`CKM_SHA256_RSA_PKCS`, oppure `CKM_RSA_PKCS` sul DigestInfo). Abbiamo verificato
+  nel sorgente ufficiale del middleware (repository `italia/cie-middleware-*`, licenza BSD-3) che in entrambi i
+  casi la carta riceve il DigestInfo SHA-256 e applica da sé il padding PKCS#1 v1.5.
+- **Il PIN non arriva mai al server**: si digita nel FASAS Signer e va solo al modulo PKCS#11 e alla carta. Sul
+  computer, dopo l'abbinamento della carta nell'app «CIE ID», servono le **ultime 4 cifre**; sul telefono il PIN
+  completo di 8 cifre. Le API del FASAS non hanno un campo per il PIN.
+- **Il firmatario è l'utente collegato**: il codice fiscale nel certificato della carta (nella CIE è nel CN,
+  come lo leggono gli SDK di PagoPA) deve coincidere con quello del profilo FASAS. Altrimenti la firma è
+  rifiutata e il tentativo registrato nell'audit come «Tentativo non autorizzato».
+- **Il documento firmato è quello mostrato**: la versione viene bloccata alla conferma (nessuna nuova versione,
+  nessuna seconda richiesta), il server conserva l'impronta SHA-256, controlla che il PDF firmato inizi con il
+  documento originale invariato e che la firma copra l'intero file. Il **codice di controllo** (es. `K7QM-3HXZ`)
+  compare sia nella pagina del FASAS sia nel Signer: si firma solo se coincidono.
+- **Firme multiple**: ogni firma è una revisione incrementale (campi `FirmaFASAS1`, `FirmaFASAS2`, …): le firme
+  precedenti restano valide.
+- **Marca temporale**: solo se è configurata una TSA reale (`FASAS_SIGNATURE_TSA_URL`): PAdES-B-T. Senza TSA:
+  PAdES-B-B. Nessuna marca temporale fittizia.
+
+### Stati della richiesta
+
+| Stato | Documento | Significato |
+|---|---|---|
+| In attesa della CIE | in attesa di firma (bloccato) | richiesta creata; il Signer deve prenderla in carico e la carta va appoggiata |
+| Carta rilevata | in attesa di firma | certificato letto e in controllo |
+| Autorizzazione richiesta | in attesa di firma | PDF preparato; il Signer chiede il PIN |
+| Firma in corso | firma in corso | PIN verificato, la carta sta firmando |
+| Verifica della firma | firma in corso | il server verifica e archivia |
+| Documento firmato correttamente | firmato | nuova versione firmata archiviata |
+| Firma non riuscita / Annullata / Scaduta | torna modificabile | motivo mostrato; «Riprova» crea una **nuova** richiesta (nuovo codice e nonce) |
+
+### Sicurezza
+
+| Rischio | Contromisura |
+|---|---|
+| Una pagina web pilota il Signer (CSRF, richieste cross-origin) | il Signer non apre porte sul computer: contatta lui il server in uscita |
+| Furto del token del dispositivo | sul server solo l'impronta SHA-256; il token da solo non basta: servono la carta e il PIN; revoca immediata da Impostazioni o dall'amministratore (Sistema › Dispositivi di firma) |
+| Ripetizione di una risposta (replay) | nonce diverso a ogni passo, accettato una volta sola; richieste che scadono; valore di firma accettato una sola volta |
+| Accesso alle richieste altrui (IDOR) | ogni richiesta è visibile e utilizzabile solo dal firmatario e dal dispositivo che l'ha presa in carico; i tentativi diversi finiscono nell'audit |
+| Carta di un'altra persona | confronto del codice fiscale del certificato con il profilo dell'utente |
+| Certificato falso, scaduto o revocato | catena verso le CA della CIE configurate, date di validità, revoca (OCSP/CRL) quando raggiungibile |
+| Documento cambiato durante la firma | versione bloccata, impronta controllata prima e dopo, PDF firmato = originale + revisione incrementale |
+| Dati sanitari nei log | il server registra solo codici di esito; il dispositivo può riportare solo codici d'errore noti, mai testo libero; il Signer non scrive titoli, PIN o certificati nei log; il PDF preparato è cifrato e cancellato a fine richiesta |
+| Connessione in chiaro | il Signer rifiuta HTTP verso server non locali; le API rispondono 403 senza HTTPS (salvo `FASAS_CIE_ALLOW_HTTP` in sviluppo) |
+| Abbinamento indovinato | codice monouso di 8 caratteri, valido 10 minuti; dopo 10 tentativi falliti per IP l'abbinamento si blocca per 10 minuti |
+| Database (Supabase) | le nuove tabelle ricevono automaticamente RLS e la revoca dei privilegi pubblici come tutte le altre |
+| Manomissione dell'audit | catena di impronte SHA-256 e trigger append-only su PostgreSQL: le manomissioni si **rilevano**. Non è un registro legalmente immodificabile |
+
+## 3. Cosa serve
+
+| Elemento | Dove | Costo |
+|---|---|---|
+| CIE del firmatario con PIN e PUK | – | – |
+| Lettore NFC contactless (ISO 14443) compatibile con la CIE | un lettore per ogni postazione di firma | indicativamente 20–50 € l'uno (stima, da verificare con i fornitori) |
+| Software CIE del Ministero dell'Interno | ogni computer di firma | gratuito |
+| FASAS Signer | ogni computer di firma | gratuito (questo progetto) |
+| Certificati delle CA della CIE | server FASAS | gratuiti |
+| Marca temporale (facoltativa) | server FASAS | servizio a pagamento di un prestatore (già previsto in [FIRMA_DIGITALE.md](FIRMA_DIGITALE.md)) |
+| Firma del codice del Signer (consigliata) | distribuzione | Windows: certificato Authenticode (centinaia di €/anno); macOS: Apple Developer Program |
+
+Nessun servizio a pagamento è stato attivato.
+
+## 4. Configurazione del server (amministratore)
+
+Variabili d'ambiente (vedi `config/settings.py`):
+
+| Variabile | Valore |
+|---|---|
+| `FASAS_CIE_ENABLED` | `1` (predefinito) |
+| `FASAS_CIE_TRUST_ROOTS` | percorso di un file PEM con i certificati radice della CIE. **Obbligatorio**: senza, la firma con CIE non parte |
+| `FASAS_CIE_INTERMEDIATES` | PEM con le CA intermedie, se non sono già nella firma |
+| `FASAS_CIE_REVOCATION` | `soft-fail` (predefinito: verifica la revoca se OCSP/CRL sono raggiungibili), `hard-fail` (rifiuta se non verificabile), `off` (solo prove) |
+| `FASAS_CIE_TIMESTAMP` | `1`: marca temporale se è configurata la TSA |
+| `FASAS_CIE_REQUEST_MINUTES` | durata massima di una richiesta (5) |
+| `FASAS_CIE_PAIRING_MINUTES` | validità del codice di abbinamento (10) |
+
+Le **CA della CIE** si scaricano dal sito ufficiale della CIE (Ministero dell'Interno). Prima di configurarle
+confrontate le impronte con quelle pubblicate dal Ministero: sono il punto su cui si regge la verifica.
+Il server deve poter raggiungere i servizi OCSP/CRL indicati nei certificati per il controllo di revoca.
+
+Permessi: «Firma con CIE» è concesso a **medico** e **coordinatore** (`signatures.sign_with_cie`); l'amministratore
+può solo revocare i dispositivi (`signatures.manage_signer_devices`). Nel profilo di ogni firmatario va inserito
+il **codice fiscale**.
+
+## 5. Installazione del FASAS Signer sul computer
+
+1. Installare il **Software CIE**: Windows (`CIEPKI.dll` in System32), macOS (pacchetto con
+   `/Library/ipzs/libcie-pkcs11.dylib`, oppure «Software CIE» dal Mac App Store), Linux (pacchetto .deb/.rpm con
+   `/usr/local/lib/libcie-pkcs11.so`, più `pcscd`). Percorsi presi dai manuali ufficiali.
+2. Collegare il lettore, aprire l'app **CIE ID**, appoggiare la carta e fare l'**abbinamento** (chiede le 8 cifre
+   del PIN una sola volta). Senza abbinamento il Software CIE non espone il certificato e il Signer lo segnala.
+3. Installare il FASAS Signer: istruzioni in [signer/README.md](../signer/README.md).
+4. Nel FASAS: **Impostazioni › Firma digitale › Abbina un nuovo FASAS Signer** → compare un codice; nel Signer
+   «Abbina al FASAS…», inserire indirizzo del FASAS e codice.
+5. Sempre in Impostazioni: **Prova la firma con CIE** firma un PDF di prova senza dati sanitari e mostra l'esito
+   della verifica (catena, integrità) prima di usare la firma sui documenti.
+
+## 6. Uso
+
+1. Nel documento (o in «Documenti da firmare») premere **Firma con CIE**: si apre l'anteprima completa del PDF.
+2. Spuntare «Ho letto il documento…» e **Avvia la firma con CIE**: la versione si blocca.
+3. Sul FASAS Signer controllare titolo, versione e **codice di controllo**, poi «Firma con CIE».
+4. Appoggiare la CIE sul lettore e digitare le ultime 4 cifre del PIN.
+5. La pagina del FASAS segue gli stati fino a «Documento firmato correttamente»; il documento ha una nuova
+   versione con l'indicazione «Firma elettronica avanzata con CIE». In caso di errore: **Riprova**.
+
+PIN errato: il Signer lo richiede e la pagina mostra i tentativi rimasti quando il modulo li comunica; dopo
+3 errori il PIN si blocca e va sbloccato con il PUK dall'app CIE ID.
+
+### Prova senza lettore (carta di prova)
+
+La CIE ha solo il chip contactless: senza lettore NFC non si può usare dal computer. Per provare tutto il resto
+(pagine, stati, FASAS Signer, PIN, firma PAdES, verifica, archiviazione) c'è una **carta di prova**: una chiave
+software emessa da una CA marcata «SOLO PROVA – NON È UNA CIE».
+
+- Si crea solo in un'installazione di prova (`DJANGO_DEBUG=1`):
+  `python manage.py fasas_carta_di_prova --utente medico` (PIN predefinito `1234`). Il comando aggiunge al file
+  `.env` le CA di prova; poi il FASAS va riavviato.
+- Il Signer la usa con `--carta-di-prova` seguito dal percorso del file `.p12` (cartella `.carta-di-prova`), solo
+  verso un FASAS sullo stesso computer; la finestra mostra in rosso «CARTA DI PROVA».
+- Le firme sono vere dal punto di vista crittografico ma **senza valore legale**: il documento le mostra come
+  «carta di prova – nessun valore legale» e il FASAS le **rifiuta** se `DJANGO_DEBUG` non è attivo.
+- Non prova la CIE, il lettore né il Software CIE: per quelli serve il collaudo con una carta reale.
+- Per tornare alla CIE: `python -m fasas_signer --usa-cie` e togliere da `.env` le righe della carta di prova.
+
+## 7. Verifica e conservazione
+
+- Nel FASAS: **Verifica firme** sulla versione firmata (integrità, validità, catena verso le CA configurate,
+  copertura del documento, valore giuridico).
+- Fuori dal FASAS: app **CIE ID** («Firma elettronica › Verifica»), validatore europeo DSS, Adobe Reader (che
+  mostra la firma come non attendibile finché la CA della CIE non è tra quelle di fiducia).
+- Il livello prodotto è PAdES-B-B o B-T. La validazione a lungo termine (B-LT/B-LTA con i dati di revoca nel
+  documento) **non è implementata** per la CIE: per la conservazione a lungo termine i documenti vanno affidati
+  alla conservazione a norma (vedi la roadmap).
+
+## 8. Telefoni (Android e iPhone)
+
+Il browser non basta: Web NFC (Chrome su Android) legge solo etichette NDEF e non invia comandi ISO 7816 al chip
+della CIE; Safari e le PWA su iPhone non accedono all'NFC. Per firmare con il telefono serve l'app **FASAS Signer**,
+che usa l'NFC del telefono al posto del lettore e le stesse API del Signer per computer (PIN completo di 8 cifre).
+
+| | Android | iPhone |
+|---|---|---|
+| Codice | Kotlin, NFC IsoDep, libreria IAS di PagoPA/IPZS (MIT) | SwiftUI, Core NFC, CieSDK di PagoPA (MIT) + patch per la firma |
+| Compilazione | ✅ APK di prova compilato da GitHub (artifact `fasas-signer-android-prova`); APK definitivo con la chiave della struttura (sotto) | ✅ compila su macOS nella CI, senza firma |
+| Installazione | dal FASAS: Impostazioni › App per il telefono (gratuito) | serve l'Apple Developer Program e TestFlight |
+| Collaudo con una CIE reale | ✅ CIE + PIN FASAS (registrazione e lettura, 4/11/2026); ⬜ firma con il PIN della carta | ⬜ |
+| Guida | [mobile/android](../mobile/android/README.md) | [mobile/ios](../mobile/ios/README.md) |
+
+Per la prova, `avvia-telefono.bat` avvia il FASAS raggiungibile dal telefono sulla stessa Wi-Fi e mostra
+l'indirizzo da inserire nell'app; solo le versioni di prova delle app accettano HTTP, e solo verso la rete locale.
+
+**App Android (dal 4/11/2026).** La lettura NFC resta accesa fino all'esito e ogni errore diventa un messaggio (prima
+la schermata poteva restare ferma su «Avvicina la CIE»); stessa sequenza dell'SDK ufficiale (riconoscimento della
+carta, controllo «extended APDU», canale sicuro e PIN); se la carta si sposta basta riappoggiarla, la richiesta
+riprende dal punto raggiunto. Nella schermata principale:
+
+- **Prova la lettura della CIE**: senza il FASAS e senza PIN controlla che telefono e carta si parlino; poi, a
+  scelta, prova il PIN e mostra il codice fiscale letto dal certificato (che deve coincidere con quello del profilo
+  nel FASAS). Un PIN errato consuma uno dei 3 tentativi.
+- **Dove trovo il PIN della CIE?**: è di 8 cifre e non si sceglie: le prime 4 sono sulla ricevuta della richiesta
+  della carta in Comune, le ultime 4 nella lettera arrivata con la CIE (oppure quello cambiato con l'app «CIE ID»).
+
+Per aggiornare l'APK di prova bisogna prima disinstallare quello vecchio (ogni compilazione ha una firma di prova
+diversa) e poi abbinare di nuovo il telefono.
+
+### Distribuire l'app (versione definitiva, dal FASAS)
+
+Il personale non usa GitHub: scarica l'app dal FASAS (**Impostazioni › App per il telefono**, con un QR code da
+inquadrare) e l'app avvisa da sola quando c'è una versione nuova. Gli aggiornamenti si installano sopra la versione
+precedente solo se sono firmati sempre con **la stessa chiave della struttura**.
+
+1. **Una volta sola, la chiave della struttura** (su un PC con Java; `keytool` è incluso):
+
+   ```bash
+   keytool -genkeypair -v -keystore fasas-signer.jks -alias fasas -keyalg RSA -keysize 3072 -validity 10000 -dname "CN=FASAS Signer, O=Nome della struttura, C=IT"
+   ```
+
+   Custodire il file e la password come le chiavi di cifratura (cassaforte e copia in un secondo luogo,
+   [SICUREZZA_FISICA_E_CONTINUITA.md](SICUREZZA_FISICA_E_CONTINUITA.md)): **se si perde, nessun telefono potrà più
+   aggiornare l'app** (andrà disinstallata e riabbinata).
+2. **Segreti di GitHub** (Settings › Secrets and variables › Actions): `FASAS_ANDROID_KEYSTORE_B64` (il file in
+   base64: `base64 -w0 fasas-signer.jks` su Linux, `[Convert]::ToBase64String([IO.File]::ReadAllBytes("fasas-signer.jks"))`
+   in PowerShell), `FASAS_KEYSTORE_PASSWORD`, `FASAS_KEY_ALIAS` (`fasas`), `FASAS_KEY_PASSWORD` (di solito la stessa).
+3. **Actions › App FASAS Signer › Run workflow**: oltre all'APK di prova compare l'archivio `fasas-signer-android`
+   con l'APK definitivo (solo HTTPS, numero di versione che cresce a ogni compilazione). Il registro della
+   compilazione riporta l'impronta SHA-256 del certificato di firma: annotarla.
+4. Nel FASAS, **Sistema › Pubblica l'app**: caricare l'APK. Il FASAS accetta solo l'app FASAS Signer con un numero
+   di versione più alto di quella pubblicata e segnala se è una versione di prova.
+
+Chi ha installato una versione di prova (firma diversa) la disinstalla una volta e installa quella definitiva; poi
+abbina di nuovo il telefono. La CIE registrata e il PIN FASAS restano validi.
+
+## 8b. Verifica con CIE per aprire i documenti
+
+In *Configurazione generale* la direzione può attivare **«verifica con CIE per aprire, scaricare o modificare i
+documenti»** (spenta per default). Con la verifica attiva, prima di mostrare o cambiare un documento dell'ospite
+(anche già firmato) il FASAS chiede di confermare l'identità con la CIE:
+
+| Dove | Cosa serve |
+|---|---|
+| Pagina del documento, «Apri», «Scarica», modifica, nuova versione, verifica e firma | verifica per quel documento |
+| Esportazione della cartella con i documenti allegati e suo download dall'archivio report | verifica per tutti i documenti dell'ospite |
+
+Come funziona: la pagina «Verifica con CIE» crea una richiesta con un codice di controllo; l'app FASAS Signer sul
+telefono (o il Signer sul computer) la mostra, l'utente digita il PIN e appoggia la carta, che **firma una sfida
+casuale del server** (non il documento). Il server controlla che il certificato sia emesso dalle CA della CIE, sia
+valido e sia intestato all'utente collegato (codice fiscale del profilo), verifica la firma della sfida e apre il
+documento per il tempo scelto in configurazione (10 minuti per default). È un'**autenticazione**, non una firma
+del documento: non crea versioni né firme e resta nell'audit («Accesso ai documenti verificato con CIE»).
+
+Prima di attivarla:
+
+1. CIE attiva sul server (`FASAS_CIE_ENABLED`) con le CA della CIE configurate: senza, la configurazione rifiuta
+   l'attivazione;
+2. collaudo con una CIE reale sul telefono che userà ciascun utente (punto 10.1): finché la lettura non è provata,
+   attivarla bloccherebbe i documenti a tutti;
+3. codice fiscale nel profilo di ogni utente che apre documenti e telefono abbinato (*Impostazioni › Firma
+   digitale*: con la verifica attiva l'abbinamento è possibile anche per chi non firma);
+4. decidere che cosa fare in emergenza o per chi non ha la CIE: la verifica si spegne dalla stessa pagina.
+
+Le richieste di verifica non permettono di firmare documenti: chi non ha il permesso di firma con CIE può solo
+verificarsi. Provato con carte di prova (`fasas.tests.test_cie_documenti`): accesso solo al documento verificato e
+per il tempo previsto, anche ai documenti firmati; carta di un'altra persona o di una CA estranea rifiutata;
+esportazione con i documenti bloccata; attivazione rifiutata senza CIE sul server.
+
+### CIE senza il suo PIN: la carta + il PIN FASAS (predefinito)
+
+In *Configurazione generale › come ci si verifica* la scelta predefinita è **«CIE appoggiata al telefono + PIN
+FASAS»**: la carta si appoggia sempre, ma al posto del PIN della carta (che molti non ricordano) si digita un **PIN
+FASAS** scelto dall'utente. Chi ricorda il PIN della carta può usare anche quello. Per **firmare** i documenti con
+la CIE serve ancora il PIN della carta: è la carta stessa a chiederlo prima di usare la chiave di firma.
+
+Si usa il protocollo ufficiale del Ministero dell'Interno per i servizi senza PIN, basato sul **NIS** (Numero
+Identificativo per i Servizi): [Manuale di integrazione per servizi basati sul NIS](https://docs.italia.it/italia/cie/cie-accessi-pinless-manuale-docs/it/stabile/index.html),
+SDK di riferimento [italia/cie-nis-java-sdk](https://github.com/italia/cie-nis-java-sdk) (BSD-3), di cui l'app
+Android ripete gli stessi comandi verso la carta:
+
+1. **Primo accesso (una volta)**: in *Impostazioni › Firma digitale* l'utente preme «Registra la tua CIE» e la
+   appoggia al telefono. L'app legge senza PIN il NIS (EF 1001), la chiave pubblica dell'autenticazione interna (EF
+   1005) e il SOD (EF 1006), e fa firmare alla carta una sfida casuale del server. Il FASAS verifica il SOD (firma del
+   Document Signer emesso dalla **CSCA italiana**, impronte di NIS e chiave) e l'autenticazione interna (la carta
+   possiede la chiave privata: non è un clone). Conserva solo l'impronta del NIS e la chiave pubblica.
+2. L'utente sceglie il **PIN FASAS** (6-8 cifre, non banale). Il FASAS ne conserva solo l'impronta (come le
+   password); dopo **5 errori di seguito** si blocca.
+3. **Conferma dell'amministratore**: il NIS non dice a chi appartiene la carta, quindi un amministratore (diverso
+   dall'utente) conferma in *Utenti e permessi* di aver visto di persona carta e persona. Senza conferma non si apre
+   nulla.
+4. **Ogni volta**: pagina «Verifica con CIE» → telefono: codice di controllo, PIN FASAS, carta appoggiata. Il FASAS
+   controlla che sia la carta registrata (NIS e chiave), che risponda alla nuova sfida con la sua chiave privata e
+   che il PIN FASAS sia giusto. PIN errato: si riprova senza riappoggiare la carta.
+5. PIN FASAS dimenticato o bloccato, carta persa o rinnovata: l'amministratore **azzera** la registrazione e si
+   ripete dal punto 1.
+
+Da configurare, una volta: i certificati della **CSCA italiana** da <https://csca-ita.interno.gov.it>, sezione
+«Certificates». Si scaricano i file **CSCA05.cer** (attuale) e i precedenti **CSCA04, CSCA03, CSCA02, CSCA01,
+CSCA00** (le CIE più vecchie sono firmate da quelli); non servono i «Link Certificates», la Master List né la CRL.
+Si mettono, così come sono, nella cartella **`certificati-csca`** dentro la cartella del FASAS (sul server:
+`/opt/fasas/certificati-csca`, poi `sudo ./scripts/aggiorna_fasas.sh --solo-sicurezza` per ricostruire il FASAS),
+oppure si indica un'altra cartella in `FASAS_CIE_CSCA`. Poi:
+
+```bash
+python manage.py fasas_csca
+```
+
+mostra i certificati caricati con l'impronta SHA-1 scritta come sul sito: devono coincidere tutte. Senza
+certificati la configurazione rifiuta la scelta «CIE + PIN FASAS».
+
+**Impronta o volto al posto del PIN FASAS: non realizzati.** I telefoni non permettono alle app di registrare
+impronte o volti propri (solo quelli del telefono, che non si vogliono usare); conservare impronte o volti del
+personale sarebbe un trattamento di dati biometrici (art. 9 GDPR) con forti limiti del Garante per i dipendenti.
+L'unica via hardware sono chiavi di sicurezza personali con lettore di impronte (FIDO2), circa 50-100 euro a persona.
+
+Provato con carte di prova (CSCA, Document Signer, SOD e chiave della carta generati nei test): registrazione,
+PIN FASAS (anche troppo facile, errato con nuovo tentativo, blocco dopo 5), conferma solo da un altro
+amministratore, accesso al documento; rifiutati carta diversa da quella registrata, clone senza chiave privata, SOD
+di una CSCA estranea, stessa carta per due utenti. **Provato con una CIE reale** su un telefono Android (4/11/2026):
+registrazione della carta (SOD verificato con i certificati CSCA del Ministero, autenticazione interna) e lettura
+con il PIN FASAS. Resta da provare su altri modelli di telefono e di carta: ognuno fa la prova con la propria CIE
+alla registrazione.
+
+## 9. Prove eseguite
+
+Automatiche (`python manage.py test fasas.tests.test_cie_signature fasas.tests.test_cie_signer_pkcs11`):
+
+1. firma riuscita: nuova versione, FEA, PAdES verificabile, originale intatto, PDF preparato cancellato;
+2. meccanismo alternativo (`CKM_RSA_PKCS` sul DigestInfo);
+3. firme multiple: la seconda non invalida la prima;
+4. carta di un'altra persona rifiutata e registrata come tentativo non autorizzato;
+5. certificato scaduto rifiutato;
+6. certificato non emesso dalla CA configurata rifiutato;
+7. valore di firma che non corrisponde al documento rifiutato;
+8. replay: nonce già usato rifiutato, anche a firma conclusa;
+9. accesso di altri utenti o di un altro dispositivo (IDOR) negato e registrato;
+10. versione bloccata durante la firma;
+11. nessuna richiesta duplicata;
+12. scadenza della richiesta;
+13. annullamento e nuovo tentativo senza riuso;
+14. errori del dispositivo: carta assente, PIN errato con tentativi, PIN bloccato, codici sconosciuti;
+15. abbinamento monouso, revoca del dispositivo, limite dei tentativi;
+16. prova di funzionamento con PDF senza dati sanitari;
+17. HTTPS obbligatorio e firma bloccata senza le CA della CIE;
+18. nessun PIN né contenuto del documento nei log e nell'audit;
+19. manomissione del PDF firmato rilevata; pagina delle impostazioni con le quattro modalità; revoca da
+    amministratore; stato dei componenti; zeri di riempimento del certificato letto dal chip;
+20. **FASAS Signer con PKCS#11 reale (SoftHSM2)** contro il server in ascolto: chiave generata nel token,
+    PIN errato poi corretto, firma verificata; rifiuto dell'utente, annullamento del PIN, middleware assente,
+    carta assente o allontanata, PIN bloccato.
+
+Manuali in questo ambiente (Linux, Xvfb): finestra del FASAS Signer con SoftHSM e pagina del FASAS in Chromium,
+dall'anteprima del PDF fino a «Documento firmato correttamente» passando per un PIN errato; flusso Android
+(Kotlin) contro il FASAS con chiave di prova: seconda firma valida sullo stesso PDF.
+
+**Non verificato**: qualunque firma con una CIE reale; Software CIE reale su Windows, macOS e Linux; lettori NFC
+reali; app Android su un telefono; app iOS; revoca OCSP/CRL con i servizi reali della CIE; marca temporale reale.
+
+## 10. Prima dell'uso in produzione
+
+1. Collaudo con una CIE reale e un lettore reale su ciascun sistema in uso (Windows, macOS, Linux): prova di
+   funzionamento, firma di un documento di prova, verifica con l'app CIE ID e con il validatore DSS.
+2. CA della CIE configurate con impronte verificate; servizi di revoca raggiungibili dal server.
+3. Parere del consulente legale / DPO sull'uso della FEA con CIE e sugli adempimenti del DPCM 22/02/2013.
+4. Codice fiscale in tutti i profili dei firmatari.
+5. Distribuzione del Signer come eseguibile firmato e procedura di aggiornamento.
+6. Revisione di sicurezza esterna (penetration test) di API e Signer.

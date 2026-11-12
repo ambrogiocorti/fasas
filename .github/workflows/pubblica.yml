@@ -1,0 +1,84 @@
+# Pubblicazione controllata del FASAS sul server di fasas.online (docs/FASAS_ONLINE.md, passo 7).
+# Si avvia a mano (Actions › Pubblica su fasas.online › Run workflow) e solo per un commit con la CI verde.
+# Sul server: backup, nuova versione, controllo; se il FASAS non risponde torna da solo alla versione di prima.
+# Segreti dell'ambiente «fasas-online» (Settings › Environments): SERVER_HOST, SERVER_USER, SERVER_SSH_KEY,
+# SERVER_KNOWN_HOSTS; variabili facoltative: SERVER_DIR (predefinito /opt/fasas), FASAS_URL (https://fasas.online).
+name: Pubblica su fasas.online
+
+on:
+  workflow_dispatch:
+    inputs:
+      versione:
+        description: "Commit, tag o ramo da pubblicare (vuoto = ultimo commit del ramo scelto sopra)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: pubblica-fasas-online
+  cancel-in-progress: false
+
+jobs:
+  pubblica:
+    runs-on: ubuntu-latest
+    environment: fasas-online
+    timeout-minutes: 40
+    env:
+      SERVER_DIR: ${{ vars.SERVER_DIR || '/opt/fasas' }}
+      FASAS_URL: ${{ vars.FASAS_URL || 'https://fasas.online' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Versione da pubblicare
+        id: versione
+        env:
+          RICHIESTA: ${{ inputs.versione }}
+        run: |
+          ref="${RICHIESTA:-$GITHUB_SHA}"
+          [[ "$ref" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo "versione non valida: $ref"; exit 1; }
+          sha=$(git rev-parse --verify "origin/$ref^{commit}" 2>/dev/null || git rev-parse --verify "$ref^{commit}")
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Da pubblicare: $(git log --oneline -n 1 "$sha")"
+      - name: Solo con la CI verde
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.versione.outputs.sha }}
+        run: |
+          conclusion=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$SHA&per_page=20" \
+            --jq '[.workflow_runs[] | select(.status == "completed")][0].conclusion // "assente"')
+          echo "CI del commit: $conclusion"
+          test "$conclusion" = success
+      - name: Accesso SSH al server (chiave e impronta del server dai segreti)
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.SERVER_KNOWN_HOSTS }}
+        run: |
+          test -n "$SSH_KEY" && test -n "$KNOWN_HOSTS" || { echo "segreti SSH mancanti nell'ambiente fasas-online"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/fasas && chmod 600 ~/.ssh/fasas
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Aggiornamento sul server (backup prima, ritorno automatico se qualcosa non va)
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER_NAME: ${{ secrets.SERVER_USER }}
+          SHA: ${{ steps.versione.outputs.sha }}
+        run: |
+          ssh -i ~/.ssh/fasas -o StrictHostKeyChecking=yes -o BatchMode=yes "$USER_NAME@$HOST" \
+            "cd '$SERVER_DIR' && sudo ./scripts/aggiorna_fasas.sh --versione '$SHA'"
+      - name: Controllo dall'esterno
+        run: |
+          for i in $(seq 1 20); do
+            body=$(curl -fsS -m 15 "$FASAS_URL/salute/" || true)
+            echo "$body" | grep -q '"status": "ok"\|"status": "degraded"' && break
+            sleep 6
+          done
+          echo "$body"
+          echo "$body" | grep -q '"status": "ok"\|"status": "degraded"'
+          curl -fsS -o /dev/null -w "pagina di accesso: %{http_code}\n" "$FASAS_URL/accesso/entra/"
+      - name: Pulizia della chiave
+        if: always()
+        run: rm -f ~/.ssh/fasas

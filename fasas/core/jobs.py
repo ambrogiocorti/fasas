@@ -1,0 +1,60 @@
+"""Registro dei job periodici: eseguibili da Celery beat o da cron con "manage.py fasas_jobs <nome>"."""
+import logging
+
+from django.db import transaction
+from django.utils.module_loading import import_string
+
+from fasas.audit.context import audit_context
+
+from .models import config_scope
+
+logger = logging.getLogger("fasas.jobs")
+
+JOBS = {
+    "close_shifts": ("fasas.daily.services.auto_close_shifts", "Chiusura automatica dei turni terminati"),
+    "protocols": ("fasas.protocols.engine.run_periodic_checks", "Controlli periodici dei protocolli"),
+    "appointments": ("fasas.appointments.services.send_reminders", "Promemoria visite (domani / oggi)"),
+    "stock": ("fasas.pharmacy.services.stock_alerts", "Farmaci in esaurimento e in scadenza"),
+    "documents": ("fasas.documents.services.expiry_alerts", "Documenti in scadenza"),
+    "pai_reviews": ("fasas.pai.services.review_reminders", "Scadenze revisioni e verifiche PAI"),
+    "assessments": ("fasas.assessments.services.due_reminders", "Valutazioni (scale) da ripetere"),
+    "wounds": ("fasas.wounds.services.due_reminders", "Medicazioni e rivalutazioni delle lesioni in ritardo"),
+    "reports": ("fasas.reports.services.run_due_schedules", "Generazione report programmati"),
+    "report_retention": ("fasas.reports.services.purge_expired_reports", "Eliminazione report oltre la conservazione"),
+    "backup": ("fasas.backups.services.scheduled_backup", "Backup cifrato giornaliero e verifica"),
+    "continuity": ("fasas.backups.continuity.continuous_copy", "Copia continua sul disco esterno (ogni 5 minuti)"),
+    "ups": ("fasas.core.power.check_events", "Avvisi del gruppo di continuità (corrente assente o tornata)"),
+    "audit_verify": ("fasas.audit.services.scheduled_chain_verification", "Verifica integrità audit log"),
+    "restore_test": ("fasas.backups.restore_test.scheduled_restore_test", "Prova di ripristino con verbale (trimestrale)"),
+    "imports_cleanup": ("fasas.imports.documents.cleanup_stale", "Cancellazione dei file di importazioni non confermate"),
+    "cie_cleanup": ("fasas.signatures.cie.cleanup_stale", "Chiusura delle richieste di firma con CIE scadute"),
+    "care_tasks": ("fasas.care.services.late_reminders", "Avvisi delle attività a orario in ritardo"),
+    "staff_credentials": ("fasas.staffing.credentials.reminders", "Scadenze del personale (corsi, idoneità, visite)"),
+}
+
+
+def run_job(name):
+    from . import modules
+    from .monitoring import job_finished, job_started
+
+    path, _ = JOBS[name]
+    module = modules.for_job(name)
+    if module is not None and not modules.is_on(module.key):
+        logger.info("Job %s saltato: modulo «%s» spento", name, module.label)
+        return f"modulo «{module.label}» spento"
+    func = import_string(path)
+    job_started(name)
+    try:
+        with config_scope(), audit_context(user=None, ip="", reason="", source=f"job:{name}"):
+            if name in ("backup", "restore_test", "continuity"):  # gestiscono da sé le transazioni: niente transazione lunga
+                result = func()
+            else:
+                with transaction.atomic():
+                    result = func()
+    except Exception as exc:
+        job_finished(name, exc)
+        logger.exception("Job %s fallito", name)
+        raise
+    job_finished(name)
+    logger.info("Job %s completato: %s", name, result)
+    return result

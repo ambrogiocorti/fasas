@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Verbale prova di ripristino{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Verbale della prova di ripristino n. {{ test.pk }}</h1><span class="subtitle">{{ request.community }}</span></div>
+  <div class="actions"><button class="btn" type="button" onclick="window.print()">{% icon "printer" %}Stampa</button> <a class="btn" href="{% url 'backups:list' %}">{% icon "arrow-left" %}Backup</a></div></div>
+<div class="card" style="max-width: 900px">
+  <table><tbody>
+    <tr><th>Eseguita il</th><td>{{ test.created_at|date:"d/m/Y H:i" }}{% if test.created_by %} da {{ test.created_by }}{% else %} (job automatico){% endif %}</td></tr>
+    <tr><th>Backup provato</th><td class="mono">{{ test.backup_name|default:"—" }}</td></tr>
+    <tr><th>Data del backup</th><td>{{ test.backup_created_at|default:"—" }}</td></tr>
+    <tr><th>Origine</th><td>{{ test.source|default:"—" }}</td></tr>
+    <tr><th>Esito</th><td><span class="pill {% if test.result == 'ok' %}pill-ok{% elif test.result == 'partial' %}pill-warn{% else %}pill-danger{% endif %}">{{ test.get_result_display }}</span></td></tr>
+    <tr><th>Durata</th><td>{{ test.duration_seconds }} secondi</td></tr>
+  </tbody></table>
+  <h2>Passaggi</h2>
+  <ol>{% for step in test.steps %}<li>{{ step }}</li>{% endfor %}</ol>
+  {% if test.counts %}<h2>Dati presenti nel database ripristinato</h2>
+  <table><thead><tr><th>Tabella</th><th class="num">Record</th></tr></thead><tbody>{% for table, n in test.counts.items %}<tr><td class="mono">{{ table }}</td><td class="num">{{ n }}</td></tr>{% endfor %}</tbody></table>{% endif %}
+  <p class="muted" style="margin-top:2rem">Firma del responsabile della prova: ______________________________ &nbsp; Data: ____________</p>
+</div>
+{% endblock %}

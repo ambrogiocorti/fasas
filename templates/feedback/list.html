@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Segnalazioni{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Segnalazioni</h1><span class="subtitle">Quello che gli utenti hanno segnalato durante il pilota.</span></div>
+  <div class="actions">{% if perms.feedback.view_pilot_metrics %}<a class="btn" href="{% url 'feedback:metrics' %}">{% icon "chart" %}Indicatori</a>{% endif %}<a class="btn" href="?stato={{ status }}&formato=csv">{% icon "download" %}CSV</a></div>
+</div>
+<div class="tabs">
+  <a href="?stato=aperte" class="{% if status == 'aperte' %}active{% endif %}">Aperte</a>
+  {% for value, label in statuses %}<a href="?stato={{ value }}" class="{% if status == value %}active{% endif %}">{{ label }}</a>{% endfor %}
+  <a href="?stato=tutte" class="{% if status == 'tutte' %}active{% endif %}">Tutte</a>
+</div>
+{% for f in items %}
+<div class="card" id="s{{ f.pk }}">
+  <div class="card-head"><h3>{{ f.get_kind_display }}</h3><div class="actions"><span class="pill {% if f.status == 'new' %}pill-warn{% elif f.status == 'done' %}pill-ok{% else %}pill-info{% endif %}">{{ f.get_status_display }}</span></div></div>
+  <p class="muted">{{ f.created_at|date:"d/m/Y H:i" }} · {{ f.created_by.get_full_name|default:f.created_by.username }} ({{ f.role }}){% if f.page %} · <a class="mono" href="{{ f.page }}">{{ f.page }}</a>{% endif %}</p>
+  <p style="white-space:pre-line">{{ f.text }}</p>
+  {% if can_handle %}
+  <form method="post" action="{% url 'feedback:handle' f.pk %}" class="feedback-reply">
+    {% csrf_token %}
+    <select name="status" aria-label="Stato">{% for value, label in statuses %}<option value="{{ value }}"{% if f.status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <input name="reply" value="{{ f.reply }}" placeholder="Risposta o decisione (la vede chi ha segnalato)" aria-label="Risposta">
+    <button class="btn btn-sm btn-primary">Salva</button>
+  </form>
+  {% elif f.reply %}<p><strong>Risposta:</strong> {{ f.reply }}</p>{% endif %}
+</div>
+{% empty %}
+<div class="card empty-state"><p class="muted">Nessuna segnalazione.</p></div>
+{% endfor %}
+{% endblock %}

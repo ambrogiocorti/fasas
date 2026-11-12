@@ -1,0 +1,35 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Terapie in corso{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Terapie in corso</h1><span class="subtitle">Tutte le terapie attive e sospese degli ospiti in carico.</span></div>
+</div>
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="Cerca ospite">
+  <button class="btn">Cerca</button>
+</form>
+{% for row in rows %}
+  <div class="card table-wrap">
+    <div class="card-head">
+      <h2><a href="{% url 'clinical:guest_therapies' row.guest.pk %}">{{ row.guest }}</a></h2>
+      {% for t in row.guest.tags.all %}{% tag_chip t %}{% endfor %}
+      {% if row.ending %}<span class="pill pill-warn">{% icon "clock" %}{{ row.ending|length }} in scadenza</span>{% endif %}
+      <div class="actions">{% if perms.clinical.add_therapy %}<a class="btn btn-sm btn-primary" href="{% url 'clinical:therapy_create' row.guest.pk %}">{% icon "plus" %}Prescrivi</a>{% endif %}</div>
+    </div>
+    {% with allergies=row.guest.allergies.all %}{% if allergies %}<div class="allergy-banner">{% icon "alert" %}<span>Allergie: {% for a in allergies %}{{ a.substance }}{% if not forloop.last %}, {% endif %}{% endfor %}</span></div>{% endif %}{% endwith %}
+    <table>
+      <thead><tr><th>Farmaco</th><th>Dose</th><th>Orari / indicazione</th><th>Periodo</th><th>Prescrittore</th><th>Stato</th></tr></thead>
+      <tbody>
+      {% for t in row.therapies %}
+        <tr><td><a href="{{ t.get_absolute_url }}"><strong>{{ t.drug }}</strong></a>{% if t.is_sos %} <span class="pill pill-info">SOS</span>{% endif %}{% if t.conflict_acknowledged %} <span class="pill pill-warn" title="{{ t.conflict_acknowledged }}">avvisi confermati</span>{% endif %}<br><small class="muted">{{ t.drug.active_ingredient }}</small></td>
+          <td class="nowrap">{{ t.dose_display }}</td>
+          <td>{% if t.is_sos %}{{ t.sos_indication }}{% else %}<span class="mono">{{ t.schedule_times|join:" · " }}</span>{% endif %}</td>
+          <td class="nowrap">dal {{ t.start_date|date:"d/m/Y" }}{% if t.end_date %}<br><span {% if t in row.ending %}style="color:var(--warn)"{% endif %}>al {{ t.end_date|date:"d/m/Y" }}</span>{% endif %}</td>
+          <td>{{ t.prescriber_display }}</td>
+          <td><span class="pill {% if t.status == 'active' %}pill-ok{% else %}pill-warn{% endif %}">{{ t.get_status_display }}</span></td></tr>
+      {% empty %}<tr><td colspan="6" class="empty">Nessuna terapia in corso.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% empty %}<div class="card empty">Nessun ospite in carico.</div>{% endfor %}
+{% endblock %}

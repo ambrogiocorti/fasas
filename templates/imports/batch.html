@@ -1,0 +1,82 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Importazione{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{% if batch.status == 'preview' %}Anteprima importazione{% else %}Importazione {{ batch.get_status_display|lower }}{% endif %}</h1>
+    <span class="subtitle">{{ batch.get_kind_display }} · {{ batch.filename }} · caricato da {{ batch.created_by }} il {{ batch.created_at|date:"d/m/Y H:i" }}</span>
+  </div>
+  <div class="actions"><a class="btn" href="{% url 'imports:home' %}">{% icon "arrow-left" %}Importa dati</a></div>
+</div>
+
+{% if batch.kind == 'workbook' %}
+  {% if batch.status == 'preview' %}
+    {% if errors %}
+      <div class="alert alert-danger">{% icon "alert-circle" %}<div class="alert-body"><strong>{{ errors|length }} error{{ errors|length|pluralize:"e,i" }}</strong>: correggete il file e ricaricatelo. Finché ci sono errori non viene importato nulla.</div></div>
+    {% else %}
+      <div class="alert alert-success">{% icon "check-circle" %}<div class="alert-body">Nessun errore. Controllate riepilogo e avvisi, poi confermate: i dati verranno inseriti con origine «importazione» nell'audit log.</div></div>
+    {% endif %}
+  {% endif %}
+
+  <div class="card table-wrap">
+    <div class="card-head"><h2>Riepilogo</h2></div>
+    <table>
+      <thead><tr><th>Foglio</th><th class="num">{% if batch.status == 'completed' %}Inserite{% else %}Da inserire{% endif %}</th><th class="num">Già presenti (saltate)</th></tr></thead>
+      <tbody>{% for name, title, c in counts %}<tr><td>{{ title }}</td><td class="num">{{ c.created|default:0 }}</td><td class="num">{{ c.skipped|default:0 }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+
+  {% if errors %}
+  <div class="card table-wrap">
+    <div class="card-head"><h2>Errori</h2></div>
+    <table><thead><tr><th>Foglio</th><th class="num">Riga</th><th>Colonna</th><th>Problema</th></tr></thead>
+      <tbody>{% for i in errors %}<tr><td>{{ i.sheet }}</td><td class="num">{{ i.row|default:"" }}</td><td>{{ i.column }}</td><td>{{ i.message }}</td></tr>{% endfor %}</tbody></table>
+  </div>
+  {% endif %}
+
+  {% if warnings %}
+  <div class="card table-wrap">
+    <div class="card-head"><h2>Avvisi da controllare</h2></div>
+    <table><thead><tr><th>Foglio</th><th class="num">Riga</th><th>Colonna</th><th>Avviso</th></tr></thead>
+      <tbody>{% for i in warnings %}<tr><td>{{ i.sheet }}</td><td class="num">{{ i.row|default:"" }}</td><td>{{ i.column }}</td><td>{{ i.message }}</td></tr>{% endfor %}</tbody></table>
+  </div>
+  {% endif %}
+
+  {% if batch.status == 'preview' %}
+  <div class="form-actions">
+    {% if not errors %}<form method="post" action="{% url 'imports:confirm' batch.pk %}" class="inline-form">{% csrf_token %}<button class="btn btn-primary" data-confirm="Importare i dati nel sistema?">{% icon "check" %}Conferma importazione</button></form>{% endif %}
+    <form method="post" action="{% url 'imports:cancel' batch.pk %}" class="inline-form">{% csrf_token %}<button class="btn">Annulla e cancella il file</button></form>
+  </div>
+  {% endif %}
+
+{% else %}
+  {% if batch.status == 'preview' %}
+    <div class="alert alert-info">{% icon "info" %}<div class="alert-body">{{ matched }} file su {{ entries|length }} abbinati a un ospite · categoria «{{ category_label }}». Controllate ospite e titolo, togliete la spunta ai file da non caricare, poi confermate.</div></div>
+    <form method="post" action="{% url 'imports:confirm' batch.pk %}">{% csrf_token %}
+  {% else %}
+    <div class="alert alert-success">{% icon "check-circle" %}<div class="alert-body">{{ batch.summary.created|default:0 }} documenti caricati, {{ batch.summary.skipped|default:0 }} scartati.</div></div>
+  {% endif %}
+  <div class="card table-wrap">
+    <table>
+      <thead><tr><th></th><th>File</th><th>Ospite</th><th>Titolo</th><th class="num">Dimensione</th></tr></thead>
+      <tbody>{% for i, e in entries %}
+        <tr>
+          <td>{% if batch.status == 'preview' and not e.problem %}<input type="checkbox" name="include_{{ i }}" {% if e.guest_id %}checked{% endif %} aria-label="Includi">{% endif %}</td>
+          <td class="mono"><small>{{ e.path }}</small>{% if e.problem %}<br><span class="pill pill-danger">{{ e.problem }}</span>{% endif %}{% if e.result %}<br><span class="pill {% if e.result == 'importato' %}pill-ok{% endif %}">{{ e.result }}</span>{% endif %}</td>
+          <td>{% if batch.status == 'preview' and not e.problem %}
+                <select name="guest_{{ i }}"><option value="">— da scegliere —</option>{% for g in guests %}<option value="{{ g.pk }}" {% if g.pk == e.guest_id %}selected{% endif %}>{{ g.last_name }} {{ g.first_name }} ({{ g.fiscal_code }})</option>{% endfor %}</select>
+              {% elif e.document_id %}<a href="{% url 'documents:detail' e.document_id %}">apri documento</a>{% endif %}</td>
+          <td>{% if batch.status == 'preview' and not e.problem %}<input type="text" name="title_{{ i }}" value="{{ e.title }}" maxlength="200">{% else %}{{ e.title }}{% endif %}</td>
+          <td class="num">{{ e.size|filesizeformat }}</td>
+        </tr>{% endfor %}</tbody>
+    </table>
+  </div>
+  {% if batch.status == 'preview' %}
+    <div class="form-actions">
+      <button class="btn btn-primary" data-confirm="Caricare i documenti selezionati nelle cartelle degli ospiti?">{% icon "check" %}Carica i documenti selezionati</button>
+    </div>
+    </form>
+    <form method="post" action="{% url 'imports:cancel' batch.pk %}" class="inline-form">{% csrf_token %}<button class="btn">Annulla e cancella i file</button></form>
+  {% endif %}
+{% endif %}
+{% endblock %}

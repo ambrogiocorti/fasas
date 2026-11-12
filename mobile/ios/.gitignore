@@ -1,0 +1,6 @@
+# Generati da XcodeGen o scaricati dallo script: non versionati
+FasasSigner.xcodeproj/
+FasasSigner/Info.plist
+FasasSigner/FasasSigner.entitlements
+vendor/
+build/

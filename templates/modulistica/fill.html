@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}{{ snap.title }}{% endblock %}
+{% block content %}
+{% if guest %}{% include "personal/_guest_head.html" with compact=True %}{% endif %}
+<div class="card form-sheet" style="max-width: 860px">
+  {% if preview %}<div class="alert alert-info">{% icon "info" %}<div class="alert-body">Anteprima: così il modulo appare a chi lo compila. Non si invia nulla.</div></div>{% endif %}
+  <div class="sheet-head"><strong>{{ snap.header.holder|default:snap.header.struttura }}</strong>
+    <small class="muted">{{ snap.header.address }}{% if snap.header.contacts %} · {{ snap.header.contacts }}{% endif %}</small>
+    <small class="muted mono">Mod. {{ snap.code }} · v{{ snap.version }}</small></div>
+  <h1>{{ snap.title }}</h1>
+  <div class="sheet-text">{{ text }}</div>
+  <form method="post" novalidate>{% csrf_token %}
+    {% include "partials/form_fields.html" %}
+    <p class="muted small">{% if snap.requires_signature %}Dopo la conferma il modulo va stampato e firmato (oppure firmato digitalmente): la conferma online registra chi ha risposto e quando, ma non è una firma.{% else %}La conferma registra chi ha risposto, quando e con quale utente; se ne conserva una copia in PDF.{% endif %}</p>
+    <div class="form-actions">
+      {% if preview %}<button class="btn btn-primary" type="button" disabled>{{ action_label }}</button>{% else %}<button class="btn btn-primary" type="submit">{{ action_label }}</button>{% endif %}
+      <a class="btn" href="{{ back_url }}">Annulla</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

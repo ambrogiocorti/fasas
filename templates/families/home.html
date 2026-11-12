@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}I miei cari{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>I miei cari</h1><span class="subtitle">Messaggi con la struttura, visite e documenti condivisi</span></div></div>
+<div class="grid grid-2">
+  {% for link in links %}
+  <a class="card" href="{% url 'families:guest' link.pk %}" style="text-decoration:none">
+    <div class="card-head"><h2>{{ link.guest.first_name }} {{ link.guest.last_name }}</h2>{% if link.unread %}<span class="pill pill-warn">{{ link.unread }} nuov{{ link.unread|pluralize:"o,i" }} messagg{{ link.unread|pluralize:"io,i" }}</span>{% endif %}</div>
+    <p class="muted">{{ link.get_relation_display }}{% if link.description %} · {{ link.description }}{% endif %}</p>
+    <p>{% if link.next_visit %}Prossima visita: <strong>{{ link.next_visit.day|date:"l d/m" }} alle {{ link.next_visit.time|time:"H:i" }}</strong>{% else %}<span class="muted">Nessuna visita in programma</span>{% endif %}</p>
+  </a>
+  {% empty %}
+  <div class="card"><p class="empty">Il tuo utente non è ancora collegato a nessun ospite: chiedi al coordinatore della struttura.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+# Progetto Xcode generato con XcodeGen («xcodegen generate»): vedi README.md. PROTOTIPO non collaudato con una CIE.
+name: FasasSigner
+options:
+  bundleIdPrefix: it.fasas
+  deploymentTarget:
+    iOS: "15.0"
+packages:
+  CieSDK:
+    path: vendor/cie-sdk-ios   # pagopa/cie-sdk-ios (MIT) al commit 63d2195 con la patch in patches/
+targets:
+  FasasSigner:
+    type: application
+    platform: iOS
+    sources: [FasasSigner]
+    dependencies:
+      - package: CieSDK
+    scheme: {}
+    info:
+      path: FasasSigner/Info.plist
+      properties:
+        CFBundleDisplayName: FASAS Signer
+        CFBundleShortVersionString: "0.1"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NFCReaderUsageDescription: Serve per firmare i documenti del FASAS con la tua Carta d'Identità Elettronica.
+        NSLocalNetworkUsageDescription: Serve solo per la prova con un FASAS sul computer della stessa rete Wi-Fi.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true   # solo indirizzi della rete locale; il FASAS vero va in HTTPS
+        # Identificativi ISO 7816 della CIE, nell'ordine indicato da PagoPA
+        com.apple.developer.nfc.readersession.iso7816.select-identifiers:
+          - A0000002471001
+          - A0000000308000000009816001
+          - A00000000039
+          - A0000002472001
+          - "00000000000000"
+    entitlements:
+      path: FasasSigner/FasasSigner.entitlements
+      properties:
+        com.apple.developer.nfc.readersession.formats: [TAG]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: it.fasas.signer
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: NO

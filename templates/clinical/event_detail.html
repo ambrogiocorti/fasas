@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ object }}{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="card" style="max-width: 900px">
+  <div class="card-head"><h2>{{ object.get_event_type_display }}</h2>
+    <span class="pill {% if object.severity == 'critical' or object.severity == 'high' %}pill-danger{% else %}pill-warn{% endif %}">{{ object.get_severity_display }}</span>
+    {% if object.is_emergency %}<span class="pill pill-danger">modalità emergenza</span>{% endif %}
+    {% if object.is_voided %}<span class="pill">ANNULLATO</span>{% endif %}
+    <div class="actions">
+      {% if decision.allowed and perms.clinical.change_clinicalevent %}<a class="btn btn-sm" href="{% url 'clinical:event_update' object.pk %}">Modifica</a>{% endif %}
+      {% if decision.allowed and perms.clinical.delete_clinicalevent %}<a class="btn btn-sm" href="{% url 'clinical:event_void' object.pk %}">Annulla</a>{% endif %}
+    </div></div>
+  {% if not decision.allowed and not object.is_voided %}<div class="alert alert-info">{{ decision.message }}</div>{% endif %}
+  {% if object.is_voided %}<div class="alert alert-warning">Annullato il {{ object.voided_at|date:"d/m/Y H:i" }} da {{ object.voided_by }}: {{ object.void_reason }}</div>{% endif %}
+  <table><tbody>
+    <tr><th>Data e ora</th><td>{{ object.occurred_at|date:"d/m/Y H:i" }} (turno {{ object.get_shift_display|lower }} del {{ object.shift_date|date:"d/m/Y" }})</td></tr>
+    {% if object.duration_minutes %}<tr><th>Durata</th><td>{{ object.duration_minutes }} minuti</td></tr>{% endif %}
+    {% if object.location %}<tr><th>Luogo</th><td>{{ object.location }}</td></tr>{% endif %}
+    <tr><th>Descrizione</th><td>{{ object.description|linebreaksbr }}</td></tr>
+    <tr><th>Interventi</th><td>{{ object.actions_taken|linebreaksbr|default:"—" }}</td></tr>
+    <tr><th>Conseguenze</th><td>{{ object.injuries|linebreaksbr|default:"—" }}</td></tr>
+    <tr><th>Avvisi</th><td>Medico: {{ object.doctor_notified|yesno:"sì,no" }} · Familiari/tutore: {{ object.family_notified|yesno:"sì,no" }} · 118/112: {{ object.emergency_services_called|yesno:"sì,no" }}</td></tr>
+    <tr><th>Registrato da</th><td>{{ object.created_by }} il {{ object.created_at|date:"d/m/Y H:i" }}</td></tr>
+  </tbody></table>
+</div>
+{% endblock %}

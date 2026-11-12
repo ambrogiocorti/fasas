@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Moduli – {{ guest }}{% endblock %}
+{% block content %}
+{% include "personal/_guest_head.html" %}
+<div class="page-head"><h2>Moduli</h2></div>
+{% if not guest.is_archived and perms.modulistica.add_formsubmission %}
+<div class="card"><h3>Nuovo modulo</h3>
+  <div class="table-wrap"><table><tbody>{% for t in templates %}
+    <tr><td><strong>{{ t.title }}</strong>{% if t.requires_signature %} <span class="pill">da firmare</span>{% endif %}</td>
+      <td class="num nowrap"><a class="btn btn-sm btn-primary" href="{% url 'modulistica:guest_fill' guest.pk t.pk %}">{% icon "pencil" %}Compila online</a>
+        <a class="btn btn-sm" href="{% url 'modulistica:blank_pdf' t.pk %}" target="_blank" rel="noopener">{% icon "printer" %}Stampa vuoto</a></td></tr>
+  {% empty %}<tr><td class="empty">Nessun modulo pubblicato per gli ospiti.</td></tr>{% endfor %}</tbody></table></div>
+  <p class="muted small">Online: si compila in struttura con l'ospite o il suo rappresentante e si salva nei documenti. Su carta: si stampa vuoto, si compila a mano e se ne carica la scansione dalla riga del modulo.</p>
+</div>
+{% endif %}
+<div class="card table-wrap"><h3>Compilati</h3><table>
+  <thead><tr><th>Modulo</th><th>Compilato</th><th>Da</th><th>Stato</th><th></th></tr></thead>
+  <tbody>{% for s in submissions %}
+    <tr{% if s.withdrawn_at %} style="opacity:.6"{% endif %}><td><strong>{{ s.snapshot.title }}</strong> <small class="muted">v{{ s.version }}</small></td>
+      <td>{{ s.created_at|date:"d/m/Y H:i" }}<br><small class="muted">{{ s.get_channel_display }}{% if s.family_link %} · area familiari{% endif %}</small></td>
+      <td>{{ s.respondent }}{% if s.respondent_role %}<br><small class="muted">{{ s.respondent_role }}</small>{% endif %}</td>
+      <td><span class="pill {% if s.status == 'da firmare' %}pill-warn{% elif s.status == 'revocato' %}{% else %}pill-ok{% endif %}">{{ s.status }}</span>{% if s.withdrawn_at %}<br><small>{{ s.withdraw_reason }}</small>{% endif %}</td>
+      <td class="num nowrap"><a class="btn btn-sm" href="{% url 'modulistica:submission_pdf' s.pk %}" target="_blank" rel="noopener">PDF</a>
+        {% if s.signed_at %}<a class="btn btn-sm" href="{% url 'modulistica:signed_pdf' s.pk %}" target="_blank" rel="noopener">Firmato</a>{% endif %}
+        {% if perms.modulistica.change_formsubmission %}{% if s.needs_signature %}<a class="btn btn-sm btn-primary" href="{% url 'modulistica:signed_upload' s.pk %}">Carica firmato</a>{% endif %}
+        {% if s.template.withdrawable and not s.withdrawn_at %}<a class="btn btn-sm btn-ghost" href="{% url 'modulistica:withdraw' s.pk %}">Revoca</a>{% endif %}{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="5" class="empty">Nessun modulo compilato.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

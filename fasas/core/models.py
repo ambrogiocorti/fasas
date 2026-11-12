@@ -1,0 +1,360 @@
+import contextlib
+import contextvars
+import datetime
+
+from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+from django.utils import timezone
+
+from .shifts import Shift, resolve_shift
+
+# Configurazione e comunità lette una volta per richiesta (o per job): il calcolo del turno le usa per ogni
+# somministrazione e senza questa memoria un cruscotto ne faceva migliaia di letture (prova di carico).
+_scope = contextvars.ContextVar("fasas_config_scope", default=None)
+
+
+@contextlib.contextmanager
+def config_scope():
+    token = _scope.set({})
+    try:
+        yield
+    finally:
+        _scope.reset(token)
+
+
+def _cached(key, loader):
+    scope = _scope.get()
+    if scope is None:
+        return loader()
+    if key not in scope:
+        scope[key] = loader()
+    return scope[key]
+
+
+def _forget(*keys):
+    scope = _scope.get()
+    if scope is not None:
+        for key in keys:
+            scope.pop(key, None)
+
+
+class Community(models.Model):
+    """La struttura che usa il sistema. Oggi è una sola: il modello esiste per la futura multi-comunità."""
+
+    name = models.CharField("nome", max_length=200)
+    code = models.SlugField("codice", max_length=50, unique=True)
+    address = models.CharField("indirizzo", max_length=255, blank=True)
+    phone = models.CharField("telefono", max_length=50, blank=True)
+    email = models.EmailField("email", blank=True)
+    asl_code = models.CharField("codice struttura ASL/ATS", max_length=50, blank=True)
+    active = models.BooleanField("attiva", default=True)
+
+    class Meta:
+        verbose_name = "comunità"
+        verbose_name_plural = "comunità"
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def default(cls):
+        def load():
+            community = cls.objects.filter(active=True).order_by("pk").first()
+            if community is None:
+                community = cls.objects.create(name="Comunità", code="comunita")
+            return community
+
+        return _cached("community", load)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        _forget("community", "config")
+
+
+# Moduli spenti alla prima installazione (devono essere accesi apposta, es. dopo il parere del DPO)
+MODULES_OFF_BY_DEFAULT = ("families",)
+
+
+def default_disabled_modules():
+    return list(MODULES_OFF_BY_DEFAULT)
+
+
+class SystemConfig(models.Model):
+    class EvacuationMode(models.TextChoices):
+        DAILY = "A", "Modalità A – registrazione giornaliera SI/NO"
+        ON_EVENT = "B", "Modalità B – registrazione solo quando avviene"
+
+    class SosLimitPolicy(models.TextChoices):
+        WARN = "warn", "Avviso: si procede solo con conferma e motivazione; il medico e il coordinatore sono avvisati"
+        BLOCK = "block", "Blocco: oltre il limite registra solo chi valida gli SOS (medico o coordinatore), con motivazione"
+
+    class EditLockPolicy(models.TextChoices):
+        WITHIN_WINDOW = "window", "Modificabile solo entro la finestra (poi bloccato)"
+        AFTER_WINDOW_REASON = "reason", "Dopo la finestra modificabile con motivazione"
+        AFTER_WINDOW_COORDINATOR = "coordinator", "Dopo la finestra modificabile solo dal coordinatore"
+
+    community = models.OneToOneField(Community, on_delete=models.CASCADE, related_name="config")
+
+    evacuation_mode = models.CharField(
+        "modalità evacuazione", max_length=1, choices=EvacuationMode.choices, default=EvacuationMode.DAILY
+    )
+    edit_lock_policy = models.CharField(
+        "blocco modifiche dati sanitari",
+        max_length=20,
+        choices=EditLockPolicy.choices,
+        default=EditLockPolicy.AFTER_WINDOW_REASON,
+    )
+    edit_window_hours = models.PositiveIntegerField(
+        "finestra di modifica libera (ore)", default=24, validators=[MinValueValidator(1), MaxValueValidator(168)]
+    )
+
+    morning_start = models.TimeField("inizio turno mattina", default=datetime.time(7, 0))
+    afternoon_start = models.TimeField("inizio turno pomeriggio", default=datetime.time(14, 0))
+    night_start = models.TimeField("inizio turno notte", default=datetime.time(21, 0))
+    auto_close_shifts = models.BooleanField("chiusura automatica dei turni", default=True)
+    auto_close_grace_minutes = models.PositiveIntegerField(
+        "minuti di tolleranza dopo fine turno prima della chiusura", default=120
+    )
+    allow_admin_reopen = models.BooleanField(
+        "consenti la riapertura straordinaria di un turno chiuso (con motivazione)", default=True,
+        help_text="Serve per trascrivere il foglio di emergenza dopo un'interruzione. La riapertura spetta al "
+                  "coordinatore, resta nell'audit e il turno si richiude da solo dopo 12 ore.")
+
+    class DocumentVerification(models.TextChoices):
+        NIS = "nis", "CIE appoggiata al telefono + PIN FASAS scelto al primo accesso (non serve il PIN della carta)"
+        CIE = "cie", "CIE con il suo PIN di 8 cifre"
+
+    documents_verification = models.CharField(
+        "come ci si verifica", max_length=10, choices=DocumentVerification.choices,
+        default=DocumentVerification.NIS,
+        help_text="In entrambi i casi si appoggia la CIE al telefono. Con il PIN FASAS ognuno registra la propria carta "
+                  "una volta e sceglie un PIN; un amministratore conferma la registrazione vedendo carta e persona. "
+                  "Chi ricorda il PIN della carta può usare anche quello.")
+    documents_cie_required = models.BooleanField(
+        "verifica con CIE per aprire, scaricare o modificare i documenti", default=False,
+        help_text="Anche i documenti già firmati. Ogni utente deve avere il codice fiscale nel profilo e un telefono "
+                  "(o un PC con lettore) abbinato in Impostazioni › Firma digitale: chi non ha la CIE non apre i "
+                  "documenti. Richiede la CIE attivata sul server (docs/FIRMA_CIE.md).")
+    documents_cie_minutes = models.PositiveIntegerField(
+        "dopo la verifica, lo stesso documento resta aperto per (minuti)", default=10,
+        validators=[MinValueValidator(1), MaxValueValidator(480)])
+
+    max_upload_mb = models.PositiveIntegerField(
+        "dimensione massima file (MB)", default=20, validators=[MinValueValidator(1), MaxValueValidator(500)]
+    )
+    allowed_upload_extensions = models.CharField(
+        "estensioni ammesse", max_length=255, default="pdf,jpg,jpeg,png,tif,tiff,doc,docx,odt,xls,xlsx,txt,p7m"
+    )
+
+    report_retention_years = models.PositiveIntegerField(
+        "conservazione report (anni)", default=5, validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    archive_retention_years = models.PositiveIntegerField(
+        "conservazione cartelle archiviate (anni)", default=10, validators=[MinValueValidator(1)]
+    )
+    backup_retention_days = models.PositiveIntegerField("conservazione backup (giorni)", default=30)
+    session_timeout_minutes = models.PositiveIntegerField(
+        "disconnessione per inattività (minuti)", default=30, validators=[MinValueValidator(5)]
+    )
+    stock_expiry_warning_days = models.PositiveIntegerField("avviso scadenza farmaci (giorni prima)", default=30)
+    pai_review_warning_days = models.PositiveIntegerField("avviso revisione PAI (giorni prima)", default=15)
+    night_theme_auto = models.BooleanField(
+        "tema scuro automatico durante il turno di notte", default=True
+    )
+
+    # Promemoria sulle nuove terapie (docs/DISPOSITIVO_MEDICO.md). Confrontano dati già registrati dalla struttura;
+    # le interazioni restano spente finché il parere regolatorio non conferma l'uso previsto.
+    therapy_check_duplicates = models.BooleanField(
+        "promemoria: stesso farmaco o principio attivo già in terapia", default=True)
+    therapy_check_allergies = models.BooleanField(
+        "promemoria: farmaco che contiene una sostanza registrata tra le allergie dell'ospite", default=True)
+    sos_limit_policy = models.CharField(
+        "limiti dei farmaci SOS (massimo nelle 24 ore, intervallo minimo)", max_length=10,
+        choices=SosLimitPolicy.choices, default=SosLimitPolicy.WARN,
+        help_text="Da decidere con il responsabile clinico della struttura: vale per web, telefono senza rete e API.")
+    therapy_check_interactions = models.BooleanField(
+        "promemoria: interazioni dalla tabella validata dal medico della struttura", default=False,
+        help_text="Attivare solo dopo il parere sul regolamento dei dispositivi medici (docs/DISPOSITIVO_MEDICO.md).")
+
+    # Moduli spenti (fasas.core.modules): nascosti, pagine «funzione spenta», promemoria fermi; i dati restano.
+    disabled_modules = models.JSONField("moduli spenti", default=default_disabled_modules, blank=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "configurazione di sistema"
+        verbose_name_plural = "configurazione di sistema"
+        permissions = [("edit_after_window", "Può modificare dati sanitari oltre la finestra di modifica")]
+
+    def __str__(self):
+        return f"Configurazione {self.community}"
+
+    @classmethod
+    def get(cls):
+        def load():
+            config, _ = cls.objects.select_related("community").get_or_create(community=Community.default())
+            return config
+
+        return _cached("config", load)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        _forget("config")
+
+    @property
+    def extensions(self):
+        return {ext.strip().lower().lstrip(".") for ext in self.allowed_upload_extensions.split(",") if ext.strip()}
+
+
+class TimeStampedModel(models.Model):
+    created_at = models.DateTimeField("creato il", default=timezone.now, editable=False)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="creato da",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        editable=False,
+    )
+    updated_at = models.DateTimeField("modificato il", auto_now=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="modificato da",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        editable=False,
+    )
+
+    class Meta:
+        abstract = True
+
+
+class ValidRecordQuerySet(models.QuerySet):
+    def voided(self):
+        return self.filter(voided_at__isnull=False)
+
+
+class ValidRecordManager(models.Manager.from_queryset(ValidRecordQuerySet)):
+    """Manager predefinito: esclude le registrazioni annullate (che restano nel database)."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(voided_at__isnull=True)
+
+
+class ShiftRecordModel(TimeStampedModel):
+    """
+    Base per ogni registrazione clinico-assistenziale: è legata a un ospite, a un momento
+    e al turno in cui è avvenuta. Le registrazioni non si cancellano mai: si annullano con
+    motivazione, così l'audit e il FASAS restano completi.
+    """
+
+    guest = models.ForeignKey(
+        "guests.Guest", verbose_name="ospite", on_delete=models.PROTECT, related_name="%(class)ss"
+    )
+    occurred_at = models.DateTimeField("data e ora", default=timezone.now)
+    shift_date = models.DateField("giornata di turno", editable=False, db_index=True)
+    shift = models.CharField("turno", max_length=1, choices=Shift.choices, editable=False)
+
+    voided_at = models.DateTimeField("annullato il", null=True, blank=True, editable=False)
+    voided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="annullato da",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        editable=False,
+    )
+    void_reason = models.TextField("motivo annullamento", blank=True, editable=False)
+
+    objects = ValidRecordManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        abstract = True
+        ordering = ["-occurred_at"]
+
+    def save(self, *args, **kwargs):
+        self.shift_date, self.shift = resolve_shift(self.occurred_at)
+        super().save(*args, **kwargs)
+
+    @property
+    def is_voided(self):
+        return self.voided_at is not None
+
+    def void(self, user, reason):
+        from fasas.audit.context import audit_context
+
+        self.voided_at = timezone.now()
+        self.voided_by = user
+        self.void_reason = reason
+        with audit_context(reason=reason):
+            self.save(update_fields=["voided_at", "voided_by", "void_reason", "updated_at"])
+
+
+class JobRun(models.Model):
+    """Ultima esecuzione di ogni job periodico: se cron o Celery si fermano, il controllo di salute lo vede."""
+
+    name = models.CharField("job", max_length=40, unique=True)
+    last_started = models.DateTimeField("ultimo avvio", null=True, blank=True)
+    last_finished = models.DateTimeField("ultima conclusione", null=True, blank=True)
+    last_ok = models.BooleanField("ultimo esito positivo", null=True)
+    last_error = models.CharField("ultimo errore (solo tipo e punto del codice)", max_length=255, blank=True)
+    runs = models.PositiveIntegerField("esecuzioni", default=0)
+
+    class Meta:
+        verbose_name = "esecuzione job"
+        verbose_name_plural = "esecuzioni job"
+        ordering = ["name"]
+        default_permissions = ("view",)
+
+    def __str__(self):
+        return self.name
+
+
+class ErrorEvent(models.Model):
+    """
+    Errore del sistema raggruppato per punto del codice. Per non finire a registrare dati sanitari non si
+    salvano messaggi, valori, parametri né indirizzi completi: solo tipo d'errore, rotta e righe del codice.
+    """
+
+    fingerprint = models.CharField(max_length=64, unique=True)
+    where = models.CharField("dove", max_length=255)
+    exception = models.CharField("tipo di errore", max_length=120, blank=True)
+    template = models.CharField("messaggio (modello, senza valori)", max_length=255, blank=True)
+    frames = models.TextField("righe del codice", blank=True)
+    first_seen = models.DateTimeField("prima volta", default=timezone.now)
+    last_seen = models.DateTimeField("ultima volta", default=timezone.now, db_index=True)
+    count = models.PositiveIntegerField("volte", default=1)
+    resolved_at = models.DateTimeField("risolto il", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "errore di sistema"
+        verbose_name_plural = "errori di sistema"
+        ordering = ["-last_seen"]
+        default_permissions = ("view", "change")
+
+    def __str__(self):
+        return f"{self.exception or 'errore'} in {self.where}"
+
+
+class KeyCanary(models.Model):
+    """
+    Piccolo testo cifrato alla prima esecuzione con le chiavi in uso: se poi il server parte con una chiave mancante
+    o sbagliata (es. .env perso o sostituito) il controllo di salute lo segnala subito, prima che nascano documenti
+    o backup cifrati con una chiave diversa e quindi illeggibili con la vecchia.
+    """
+
+    kind = models.CharField(max_length=20, unique=True)  # documenti | backup
+    token = models.BinaryField()
+    fingerprint = models.CharField("impronta della chiave", max_length=16)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = "verifica chiave"
+        verbose_name_plural = "verifiche chiavi"
+        default_permissions = ()

@@ -1,0 +1,33 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Stato del sistema{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Stato del sistema ed errori</h1><span class="subtitle">Gli stessi controlli di <span class="mono">/salute/</span>, i job periodici e gli errori raggruppati per punto del codice.</span></div>
+  <div class="actions"><a class="btn" href="{% url 'core:settings' %}">{% icon "arrow-left" %}Impostazioni</a></div></div>
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>Controlli</h2></div>
+    <ul class="checklist">{% for name, state, detail in checks %}
+      <li class="{% if state == 'ok' %}ok{% else %}ko{% endif %}">{% if state == 'ok' %}{% icon "check-circle" %}{% else %}{% icon "alert-circle" %}{% endif %}<div><strong>{{ name }}</strong>{% if state == 'error' %} <span class="pill pill-danger">errore</span>{% endif %}<br><small class="muted">{{ detail }}</small></div></li>
+    {% endfor %}</ul>
+  </div>
+  <div class="card table-wrap">
+    <div class="card-head"><h2>Job periodici</h2></div>
+    <table><thead><tr><th>Job</th><th>Ultima conclusione</th><th>Esito</th></tr></thead><tbody>
+    {% for job in jobs %}<tr><td class="mono">{{ job.name }}</td><td>{{ job.last_finished|date:"d/m H:i"|default:"—" }}</td>
+      <td>{% if job.last_ok %}<span class="pill pill-ok">ok</span>{% elif job.last_ok is False %}<span class="pill pill-danger">fallito</span><br><small class="mono">{{ job.last_error }}</small>{% else %}—{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="3" class="empty">Nessun job eseguito: configurare Celery beat o cron (docs/DEPLOY.md).</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+</div>
+<div class="card table-wrap">
+  <div class="card-head"><h2>Errori</h2></div>
+  <p class="muted">Per riservatezza non vengono salvati messaggi, valori né dati delle richieste: solo il tipo di errore, la pagina e le righe del codice coinvolte. Per i dettagli tecnici vedere il registro del server alla stessa ora.</p>
+  <table><thead><tr><th>Ultima volta</th><th>Dove</th><th>Errore</th><th class="num">Volte</th><th></th></tr></thead><tbody>
+  {% for e in errors %}<tr{% if e.resolved_at %} class="muted"{% endif %}><td class="nowrap">{{ e.last_seen|date:"d/m/Y H:i" }}<br><small>dal {{ e.first_seen|date:"d/m/Y" }}</small></td>
+    <td class="mono">{{ e.where }}</td><td><strong>{{ e.exception|default:"—" }}</strong>{% if e.template %}<br><small>{{ e.template }}</small>{% endif %}{% if e.frames %}<details><summary><small>codice</small></summary><pre class="mono" style="white-space:pre-wrap;font-size:.75rem">{{ e.frames }}</pre></details>{% endif %}</td>
+    <td class="num">{{ e.count }}</td>
+    <td class="num">{% if e.resolved_at %}<small>risolto {{ e.resolved_at|date:"d/m" }}</small>{% elif perms.core.change_errorevent %}<form method="post" class="inline-form">{% csrf_token %}<input type="hidden" name="pk" value="{{ e.pk }}"><button class="btn btn-sm">Risolto</button></form>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="5" class="empty">Nessun errore registrato.</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+{% endblock %}

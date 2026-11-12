@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Valutazioni – {{ guest }}{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="page-head"><h2>Scale di valutazione</h2>
+  <div class="actions">{% if perms.assessments.change_scalesetting %}<a class="btn btn-sm" href="{% url 'assessments:settings' %}">Scale in uso</a>{% endif %}</div></div>
+<p class="muted">Il FASAS somma i punteggi scelti e riporta la fascia come sulla scheda della scala: la valutazione clinica resta dell'équipe.</p>
+<div class="grid grid-3">
+{% for c in cards %}
+  <div class="card">
+    <div class="card-head"><h3>{{ c.scale.name }}</h3></div>
+    <p class="muted"><small>{{ c.scale.purpose }}</small></p>
+    {% if c.last %}
+      <p><strong style="font-size:1.4rem">{{ c.last.total }}</strong> <span class="pill {% if c.last.band_level == 'danger' %}pill-danger{% elif c.last.band_level == 'warn' %}pill-warn{% else %}pill-ok{% endif %}">{{ c.last.band }}</span><br>
+      <small class="muted">{{ c.last.occurred_at|date:"d/m/Y" }} – {{ c.last.created_by|default:"" }}</small></p>
+    {% else %}<p class="muted">Mai eseguita.</p>{% endif %}
+    {% if c.setting.interval_days %}
+      <p><small>Ripetere ogni {{ c.setting.interval_days }} giorni{% if c.due %} · <span class="pill {% if c.due.overdue %}pill-danger{% else %}pill-warn{% endif %}">{% if c.due.overdue %}scaduta{% else %}entro il {{ c.due.due|date:"d/m/Y" }}{% endif %}</span>{% endif %}</small></p>
+    {% else %}<p><small class="muted">Al bisogno</small></p>{% endif %}
+    {% if perms.assessments.add_assessment and not guest.is_archived %}<a class="btn btn-sm btn-primary" href="{% url 'assessments:create' guest.pk c.scale.code %}">{% icon "plus" %}Nuova valutazione</a>{% endif %}
+  </div>
+{% empty %}<div class="card"><p class="empty">Nessuna scala in uso: attivarle in Impostazioni › Scale di valutazione.</p></div>{% endfor %}
+</div>
+<div class="card table-wrap"><h3>Storico</h3>
+  <table><thead><tr><th>Data</th><th>Scala</th><th class="num">Punteggio</th><th>Fascia</th><th>Operatore</th><th></th></tr></thead>
+  <tbody>{% for a in history %}
+    <tr{% if a.is_voided %} class="voided"{% endif %}><td>{{ a.occurred_at|date:"d/m/Y H:i" }}</td><td>{{ a.get_scale_display }}</td><td class="num">{{ a.total }}</td>
+      <td>{% if a.is_voided %}<span class="pill">annullata</span>{% else %}<span class="pill {% if a.band_level == 'danger' %}pill-danger{% elif a.band_level == 'warn' %}pill-warn{% else %}pill-ok{% endif %}">{{ a.band }}</span>{% endif %}</td>
+      <td>{{ a.created_by|default:"" }}</td><td class="num"><a class="btn btn-sm" href="{{ a.get_absolute_url }}">Dettaglio</a></td></tr>
+  {% empty %}<tr><td colspan="6" class="empty">Nessuna valutazione registrata.</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endblock %}

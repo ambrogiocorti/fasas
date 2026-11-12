@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Moduli degli ospiti{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Moduli degli ospiti</h1><span class="subtitle">Moduli compilati che attendono la firma, e moduli vuoti da stampare</span></div></div>
+<div class="card table-wrap"><h2>Da firmare</h2><table>
+  <thead><tr><th>Ospite</th><th>Modulo</th><th>Compilato</th><th></th></tr></thead>
+  <tbody>{% for s in pending %}
+    <tr><td><a href="{% url 'modulistica:guest' s.guest.pk %}">{{ s.guest }}</a></td><td>{{ s.snapshot.title }}</td><td>{{ s.created_at|date:"d/m/Y" }}</td>
+      <td class="num nowrap"><a class="btn btn-sm" href="{% url 'modulistica:submission_pdf' s.pk %}" target="_blank" rel="noopener">{% icon "printer" %}Stampa</a>
+        {% if perms.modulistica.change_formsubmission %}<a class="btn btn-sm btn-primary" href="{% url 'modulistica:signed_upload' s.pk %}">Carica firmato</a>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">Nessun modulo in attesa di firma.</td></tr>{% endfor %}</tbody></table></div>
+<div class="card table-wrap"><h2>Moduli vuoti</h2><table><tbody>{% for t in templates %}
+  <tr><td>{{ t.title }}</td><td class="num"><a class="btn btn-sm" href="{% url 'modulistica:blank_pdf' t.pk %}" target="_blank" rel="noopener">{% icon "printer" %}PDF</a></td></tr>
+{% empty %}<tr><td class="empty">Nessun modulo pubblicato.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Rette{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Rette degli ospiti</h1><span class="subtitle">Voci di retta per ogni pagante: tariffa giornaliera e percentuale addebitata nei giorni di assenza</span></div>
+  <div class="actions">{% if perms.billing.change_billingsettings %}<a class="btn" href="{% url 'billing:settings' %}">{% icon "sliders" %}Regole e intestazione</a>{% endif %}</div>
+</div>
+{% for row in rows %}
+  <div class="card table-wrap">
+    <div class="card-head"><h2>{{ row.guest.last_name }} {{ row.guest.first_name }} <small class="muted mono">{{ row.guest.fiscal_code }}</small></h2>
+      <div class="actions">{% if row.daily %}<span class="pill">€ {{ row.daily|floatformat:2 }} al giorno in totale</span>{% endif %}
+        {% if perms.billing.add_guestfeeline %}<a class="btn btn-sm" href="{% url 'billing:fee_create' row.guest.pk %}">{% icon "plus" %}Voce</a>{% endif %}</div></div>
+    <table>
+      <thead><tr><th>Voce</th><th>Pagante</th><th class="num">€/giorno</th><th class="num">Ricovero</th><th class="num">Famiglia</th><th class="num">Altre assenze</th><th>Validità</th><th></th></tr></thead>
+      <tbody>{% for f in row.lines %}
+        <tr{% if f.valid_to and f.valid_to < today %} style="opacity:.55"{% endif %}><td><strong>{{ f.description }}</strong>{% if f.notes %}<br><small class="muted">{{ f.notes }}</small>{% endif %}</td>
+          <td>{{ f.payer_name }}<br><small class="muted">{{ f.get_payer_display }}</small></td>
+          <td class="num">{{ f.daily_rate|floatformat:2 }}</td><td class="num">{{ f.hospital_percent }}%</td><td class="num">{{ f.family_percent }}%</td>
+          <td class="num">{{ f.absent_percent }}%{% if f.max_absence_days is not None %}<br><small class="muted">max {{ f.max_absence_days }} gg/mese</small>{% endif %}</td>
+          <td class="nowrap">dal {{ f.valid_from|date:"d/m/Y" }}{% if f.valid_to %}<br>al {{ f.valid_to|date:"d/m/Y" }}{% endif %}</td>
+          <td class="num">{% if perms.billing.change_guestfeeline %}<a class="btn btn-sm" href="{% url 'billing:fee_update' f.pk %}">{% icon "pencil" %}</a>{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="8" class="empty"><span class="pill pill-warn">nessuna retta configurata</span></td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+{% empty %}<div class="card"><p class="empty">Nessun ospite.</p></div>{% endfor %}
+{% endblock %}

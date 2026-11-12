@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Solo nella versione di PROVA (build debug): permette HTTP per collegarsi al FASAS che gira sul PC della stessa
+  rete Wi-Fi (es. http://192.168.1.20:8000/). L'app accetta HTTP solo verso indirizzi IP della rete locale.
+  La versione definitiva (release) usa la configurazione in src/main: solo HTTPS.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

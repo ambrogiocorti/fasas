@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Valutazioni da fare{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Valutazioni da fare</h1>
+  <div class="actions">{% if perms.assessments.change_scalesetting %}<a class="btn" href="{% url 'assessments:settings' %}">Scale in uso</a>{% endif %}</div></div>
+<p class="muted">Scale in uso con una frequenza di rivalutazione: mai eseguite, scadute o in scadenza nei prossimi 7 giorni.</p>
+<div class="card table-wrap"><table>
+  <thead><tr><th>Ospite</th><th>Scala</th><th>Ultima</th><th>Da fare entro</th><th></th></tr></thead>
+  <tbody>{% for r in rows %}
+    <tr><td><a href="{% url 'assessments:guest' r.guest.pk %}"><strong>{{ r.guest }}</strong></a></td><td>{{ r.scale.name }}</td>
+      <td>{% if r.last %}{{ r.last.occurred_at|date:"d/m/Y" }} · {{ r.last.total }} ({{ r.last.band }}){% else %}<span class="muted">mai eseguita</span>{% endif %}</td>
+      <td><span class="pill {% if r.overdue %}pill-danger{% else %}pill-warn{% endif %}">{% if r.last %}{{ r.due|date:"d/m/Y" }}{% else %}subito{% endif %}</span></td>
+      <td class="num">{% if perms.assessments.add_assessment %}<a class="btn btn-sm btn-primary" href="{% url 'assessments:create' r.guest.pk r.scale.code %}">Valuta</a>{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="5" class="empty">Nessuna valutazione in scadenza.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

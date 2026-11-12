@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ object }}{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-head"><h2>{{ object.drug }}</h2>
+      <span class="pill {% if object.status == 'active' %}pill-ok{% endif %}">{{ object.get_status_display }}</span>
+      <div class="actions">{% if perms.clinical.change_therapy and object.status != 'ended' and not guest.is_archived %}<a class="btn btn-sm" href="{% url 'clinical:therapy_update' object.pk %}">Modifica</a>{% endif %}</div></div>
+    <table><tbody>
+      <tr><th>Principio attivo</th><td>{{ object.drug.active_ingredient }} {% if object.drug.atc_code %}<small class="mono">ATC {{ object.drug.atc_code }}</small>{% endif %}</td></tr>
+      <tr><th>Dose</th><td>{{ object.dose_display }} · {{ object.get_route_display }}</td></tr>
+      {% if object.is_sos %}
+        <tr><th>Indicazione SOS</th><td>{{ object.sos_indication }}</td></tr>
+        <tr><th>Limiti</th><td>{% if object.sos_max_daily %}max {{ object.sos_max_daily }} in 24h{% endif %} {% if object.sos_min_interval_hours %}· intervallo ≥ {{ object.sos_min_interval_hours }} h{% endif %}</td></tr>
+      {% else %}
+        <tr><th>Orari</th><td class="mono">{{ object.schedule_times|join:" · " }}{% if object.every_n_days > 1 %} · ogni {{ object.every_n_days }} giorni{% endif %}</td></tr>
+      {% endif %}
+      <tr><th>Periodo</th><td>dal {{ object.start_date|date:"d/m/Y" }}{% if object.end_date %} al {{ object.end_date|date:"d/m/Y" }}{% endif %}</td></tr>
+      <tr><th>Prescrizione</th><td>{{ object.prescriber_display }} del {{ object.prescription_date|date:"d/m/Y" }}{% if object.prescription_document %} · <a href="{{ object.prescription_document.get_absolute_url }}">documento</a>{% endif %}</td></tr>
+      <tr><th>Istruzioni</th><td>{{ object.instructions|default:"—" }}</td></tr>
+      <tr><th>Scarico magazzino</th><td>{{ object.stock_units_per_dose }} {{ object.drug.stock_unit }} per dose</td></tr>
+      {% if object.status_reason %}<tr><th>Motivo stato</th><td>{{ object.status_reason }}</td></tr>{% endif %}
+      {% if object.conflict_acknowledged %}<tr><th>Avvisi confermati</th><td class="muted">{{ object.conflict_acknowledged|linebreaksbr }}</td></tr>{% endif %}
+    </tbody></table>
+  </div>
+  <div class="card">
+    {% if perms.clinical.change_therapy and object.status != 'ended' and not guest.is_archived %}
+    <h2>Sospendi / termina / riattiva</h2>
+    <form method="post" action="{% url 'clinical:therapy_status' object.pk %}">
+      {% csrf_token %}
+      {% include "partials/form_fields.html" with form=status_form %}
+      <div class="form-actions"><button class="btn btn-primary" data-confirm="Confermi il cambio di stato della terapia?">Aggiorna stato</button></div>
+    </form>
+    {% else %}<p class="muted">Le modifiche alla terapia sono riservate al medico/coordinatore.</p>{% endif %}
+  </div>
+</div>
+<div class="card table-wrap">
+  <h2>Somministrazioni</h2>
+  <table>
+    <thead><tr><th>Data/ora</th><th>Programmata</th><th>Esito</th><th>Note / motivo</th><th>Operatore</th></tr></thead>
+    <tbody>
+    {% for a in administrations %}
+      <tr class="{% if a.is_voided %}voided{% endif %}"><td class="nowrap">{{ a.occurred_at|date:"d/m/Y H:i" }}</td>
+        <td>{% if a.scheduled_time %}{{ a.scheduled_date|date:"d/m" }} {{ a.scheduled_time|time:"H:i" }}{% else %}SOS{% endif %}</td>
+        <td>{{ a.get_status_display }}{% if a.is_sos %}<br><small>{{ a.get_validation_status_display }}{% if a.validated_by %} – {{ a.validated_by }}{% endif %}</small>{% endif %}</td>
+        <td>{{ a.sos_reason }} {{ a.notes }}{% if a.is_voided %}<br><small class="keep">Annullata: {{ a.void_reason }}</small>{% endif %}</td>
+        <td>{{ a.created_by }}</td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">Nessuna somministrazione.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

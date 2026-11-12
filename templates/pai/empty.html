@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ guest }} – PAI{% endblock %}
+{% block content %}
+{% include "guests/_header.html" %}
+<div class="card empty">
+  <p>Nessun Piano Assistenziale Individuale per questo ospite.</p>
+  {% if perms.pai.add_pai and not guest.is_archived %}<form method="post" action="{% url 'pai:create' guest.pk %}">{% csrf_token %}<button class="btn btn-primary">Crea il PAI</button></form>{% endif %}
+</div>
+{% endblock %}

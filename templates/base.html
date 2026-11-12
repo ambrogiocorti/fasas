@@ -1,0 +1,110 @@
+{% load static fasas_tags %}<!doctype html>
+<html lang="it" data-theme="{{ ui_theme|default:'light' }}"{% if request.user.is_authenticated and request.user.text_size != "normal" %} data-text="{{ request.user.text_size }}"{% endif %}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="{% if ui_theme == 'dark' %}#0c1117{% else %}#f3f5f8{% endif %}">
+  <title>{% block title %}FASAS{% endblock %} · {{ community.name|default:"FASAS Digitale" }}</title>
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <link rel="stylesheet" href="{% static 'css/fasas.css' %}">
+  <link rel="manifest" href="{% url 'manifest' %}">
+  <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="FASAS">
+  {% include "partials/favicon.html" %}
+</head>
+<body data-sw-url="{% url 'service_worker' %}"{% if perms.offline.use_offline or perms.offline.view_offline_pack %} data-offline-user="{{ request.user.username }}" data-offline-idle="{{ request.fasas_config.session_timeout_minutes }}" data-offline-pack-url="{% url 'offline:pack' %}" data-offline-sync-url="{% url 'offline:sync' %}"{% endif %}>
+{% include "partials/icons.html" %}
+<div class="layout">
+  <aside class="sidebar" aria-label="Menu principale">
+    <div class="brand">
+      <span class="brand-mark"><img src="{% static 'img/fasas-mark.svg' %}" alt=""></span>
+      <span class="brand-name">FASAS Digitale<small>{{ community.name }}</small></span>
+    </div>
+    <nav class="nav">
+      {% for section in menu %}
+        {% if section.title %}
+          <details class="nav-group" data-nav-group="{{ section.key }}"{% if section.open %} open data-nav-current{% endif %}>
+            <summary>{% icon section.icon %}<span class="nav-group-label">{{ section.title }}</span>{% if section.count %}<span class="count">{{ section.count }}</span>{% endif %}<span class="nav-chevron" aria-hidden="true">{% icon "chevron-right" %}</span></summary>
+            <div class="nav-sub">
+              {% for item in section.items %}
+                <a href="{{ item.url }}" class="{% if item.active %}active{% endif %}"{% if item.active %} aria-current="page"{% endif %}>{{ item.label }}{% if item.count %}<span class="count">{{ item.count }}</span>{% endif %}</a>
+              {% endfor %}
+            </div>
+          </details>
+        {% else %}
+          {% if section.gap %}<div class="nav-section nav-gap"></div>{% endif %}
+          {% for item in section.items %}
+            <a href="{{ item.url }}" class="{% if item.active %}active{% endif %}"{% if item.active %} aria-current="page"{% endif %}>{% icon item.icon %}{{ item.label }}{% if item.count %}<span class="count">{{ item.count }}</span>{% endif %}</a>
+          {% endfor %}
+        {% endif %}
+      {% endfor %}
+    </nav>
+    <div class="user-card">
+      <span class="avatar-sm" aria-hidden="true">{{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}</span>
+      <span class="who"><a href="{% url 'accounts:profile' %}" title="Il mio profilo">{{ request.user.get_full_name|default:request.user.username }}</a><small>{{ request.user.get_role_display }}</small></span>
+      <form method="post" action="{% url 'accounts:logout' %}" class="inline-form" data-offline-logout>
+        {% csrf_token %}
+        <button class="icon-btn ghost" title="Esci" aria-label="Esci">{% icon "log-out" %}</button>
+      </form>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-toggle" type="button" data-nav-toggle aria-label="Apri menu">{% icon "menu" %}</button>
+      {% if perms.daily.view_dailyrecord %}
+      <span class="shift-badge shift-{{ current_shift.code }}" title="Turno in corso">
+        <span class="dot"></span><span><span class="hide-xs">Turno </span>{{ current_shift.label|lower }}</span><span class="muted">{{ current_shift.day|date:"d/m" }}</span>
+      </span>
+      {% endif %}
+      {% if perms.guests.view_guest %}
+      <form class="search" action="{% url 'search:search' %}" method="get" role="search">
+        {% icon "search" %}
+        <input type="search" name="q" placeholder="Cerca ospite, farmaco, evento…" aria-label="Ricerca globale" value="{{ request.GET.q|default:'' }}" data-search-input>
+        <kbd title="Premi / per cercare">/</kbd>
+      </form>
+      {% endif %}
+      <span class="spacer"></span>
+      {% if perms.clinical.add_clinicalevent %}
+      <a class="btn btn-emergency" href="{% url 'clinical:emergency' %}{% if guest %}?guest={{ guest.pk }}{% endif %}" title="Registra un evento critico">{% icon "alert" %}<span class="hide-mobile">Evento critico</span></a>
+      {% endif %}
+      {% if modules.feedback and perms.feedback.add_feedback %}<a class="icon-btn" href="{% url 'feedback:create' %}?da={{ request.path|urlencode }}" title="Segnala un problema" aria-label="Segnala un problema">{% icon "message" %}</a>{% endif %}
+      <a class="icon-btn" href="{% url 'notifications:list' %}" data-notifications-url="{% url 'notifications:count' %}" aria-label="Notifiche" title="Notifiche">{% icon "bell" %}<span class="badge" {% if not unread_notifications %}hidden{% endif %}>{{ unread_notifications }}</span></a>
+      <form method="post" action="{% url 'accounts:set_theme' %}" class="inline-form">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        {% if ui_theme == "dark" %}
+          <button class="icon-btn" name="theme" value="light" title="Tema chiaro" aria-label="Passa al tema chiaro">{% icon "sun" %}</button>
+        {% else %}
+          <button class="icon-btn" name="theme" value="dark" title="Tema scuro" aria-label="Passa al tema scuro">{% icon "moon" %}</button>
+        {% endif %}
+      </form>
+    </header>
+
+    <main class="content">
+      {% include "partials/banner_prova.html" %}
+      <div class="alert alert-info" id="offline-sync-note" role="status" hidden>{% icon "refresh" %}<div class="alert-body" data-text></div></div>
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }}" role="status">
+          {% if message.level_tag == 'success' %}{% icon "check-circle" %}{% elif message.level_tag == 'error' %}{% icon "alert-circle" %}{% elif message.level_tag == 'warning' %}{% icon "alert" %}{% else %}{% icon "info" %}{% endif %}
+          <div class="alert-body">{{ message }}</div>
+        </div>
+      {% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+<div class="toast" id="critical-toast" role="alert">
+  <button type="button" aria-label="Chiudi">{% icon "x" %}</button>
+  <strong data-title></strong>
+  <div data-message></div>
+  <a href="{% url 'notifications:list' %}">Apri le notifiche →</a>
+</div>
+<div class="chart-tip" id="chart-tip"></div>
+<script src="{% static 'js/fasas.js' %}"></script>
+<script src="{% static 'js/offline.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}I miei moduli{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>I miei moduli</h1><span class="subtitle">Informative e autorizzazioni da leggere e confermare</span></div></div>
+<div class="card table-wrap"><h2>Da compilare</h2><table>
+  <thead><tr><th>Modulo</th><th>Ricevuto</th><th>Entro</th><th></th></tr></thead>
+  <tbody>{% for a in pending %}
+    <tr><td><strong>{{ a.template.title }}</strong></td><td>{{ a.assigned_at|date:"d/m/Y" }}</td><td>{{ a.due_date|date:"d/m/Y"|default:"—" }}</td>
+      <td class="num"><a class="btn btn-sm btn-primary" href="{% url 'modulistica:fill' a.pk %}">Apri e compila</a></td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">Nessun modulo da compilare.</td></tr>{% endfor %}</tbody></table></div>
+<div class="card table-wrap"><h2>Compilati</h2><table>
+  <thead><tr><th>Modulo</th><th>Data</th><th>Stato</th><th></th></tr></thead>
+  <tbody>{% for s in done %}
+    <tr><td>{{ s.snapshot.title }} <small class="muted">v{{ s.version }}</small></td><td>{{ s.created_at|date:"d/m/Y H:i" }}</td><td>{{ s.status }}</td>
+      <td class="num"><a class="btn btn-sm" href="{% url 'modulistica:submission_pdf' s.pk %}" target="_blank" rel="noopener">{% icon "download" %}PDF</a></td></tr>
+  {% empty %}<tr><td colspan="4" class="empty">Nessuno.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

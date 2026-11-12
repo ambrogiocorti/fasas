@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}{% if template.pk %}{{ template.title }}{% else %}Nuovo modulo{% endif %}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{% if template.pk %}{{ template.title }}{% else %}Nuovo modulo{% endif %}</h1>
+    {% if template.pk %}<span class="subtitle"><span class="mono">{{ template.code }}</span> · versione {{ template.version }} · {{ template.get_status_display }}</span>{% endif %}</div>
+  {% if template.pk %}<div class="actions">
+    <a class="btn" href="{% url 'modulistica:preview' template.pk %}">{% icon "monitor" %}Anteprima online</a>
+    <a class="btn" href="{% url 'modulistica:blank_pdf' template.pk %}" target="_blank" rel="noopener">{% icon "printer" %}PDF da stampare</a>
+    {% if template.status != 'published' %}<form method="post" action="{% url 'modulistica:set_status' template.pk 'published' %}" class="inline-form">{% csrf_token %}<button class="btn btn-primary">Pubblica</button></form>
+    {% else %}<form method="post" action="{% url 'modulistica:set_status' template.pk 'archived' %}" class="inline-form">{% csrf_token %}<button class="btn btn-ghost">Archivia</button></form>{% endif %}
+  </div>{% endif %}
+</div>
+<form method="post" novalidate>{% csrf_token %}
+  <div class="card"><h2>Testo e destinatari</h2>
+    {% include "partials/form_fields.html" %}
+    <p class="muted small">Le modifiche a un modulo già compilato creano una nuova versione: le compilazioni precedenti restano con il testo di allora.</p>
+  </div>
+  <div class="card table-wrap"><h2>Campi</h2>
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}<div class="alert alert-error">{{ formset.non_form_errors }}</div>{% endif %}
+    <table class="form-table">
+      <thead><tr><th>Ordine</th><th>Domanda o dichiarazione</th><th>Tipo</th><th>Opzioni (una per riga)</th><th>Obbl.</th><th>Suggerimento</th><th>Elimina</th></tr></thead>
+      <tbody>{% for f in formset %}
+        <tr>{% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+          <td>{{ f.order }}</td><td>{{ f.label }}{% for e in f.label.errors %}<div class="errors">{{ e }}</div>{% endfor %}</td>
+          <td>{{ f.kind }}</td><td>{{ f.options_text }}{% for e in f.options_text.errors %}<div class="errors">{{ e }}</div>{% endfor %}</td>
+          <td>{{ f.required }}</td><td>{{ f.help_text }}</td><td>{% if f.instance.pk %}{{ f.DELETE }}{% endif %}</td></tr>
+      {% endfor %}</tbody>
+    </table>
+    <p class="muted small">Tipi: testo breve o lungo, data, una o più scelte, dichiarazione da spuntare, sottotitolo. Per aggiungere altri campi salvare: compaiono due righe vuote nuove.</p>
+  </div>
+  <div class="form-actions"><button class="btn btn-primary" type="submit">Salva</button>
+    <a class="btn" href="{% url 'modulistica:index' %}">Torna all'elenco</a></div>
+</form>
+{% if has_default %}<form method="post" action="{% url 'modulistica:restore' template.pk %}" class="inline-form" style="margin-top:1rem" onsubmit="return confirm('Ripristinare testo e campi predefiniti? Le modifiche fatte andranno perse (le compilazioni restano).')">{% csrf_token %}<button class="btn btn-ghost">Ripristina il testo predefinito</button></form>{% endif %}
+{% endblock %}
