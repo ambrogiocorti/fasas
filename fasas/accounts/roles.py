@@ -7,7 +7,7 @@ from .models import Role
 MANAGED_APPS = [
     "core", "accounts", "audit", "guests", "documents", "signatures", "pharmacy", "clinical", "daily",
     "protocols", "appointments", "pai", "notifications", "reports", "backups", "assessments",
-    "wounds", "feedback", "care", "personal", "families",
+    "wounds", "feedback", "care", "personal", "families", "modulistica",
 ]
 
 # Consultazione della cartella: serve a chi assiste l'ospite (operatore, coordinatore, medico).
@@ -97,6 +97,8 @@ COORDINATOR = OPERATOR + [
     "care.add_caretask", "care.change_caretask", "care.delete_caretaskcheck",
     # Cassa degli ospiti: annulla un movimento sbagliato, con motivo
     "personal.void_cashmovement",
+    # Moduli degli ospiti (informative, consensi, accordi): compila online, stampa, carica il firmato, revoca
+    "modulistica.view_formsubmission", "modulistica.add_formsubmission", "modulistica.change_formsubmission",
     # Area familiari (se accesa): collegamenti, risposte ai messaggi, conferma delle visite, documenti condivisi
     "families.manage_family_area", "families.view_familylink", "families.add_familylink",
     "families.change_familylink",
@@ -168,6 +170,9 @@ ADMIN = [
     "pharmacy.view_drug", "pharmacy.import_official_list",
     # Pilota: riceve e gestisce le segnalazioni, vede gli indicatori
     "feedback.add_feedback", "feedback.view_feedback", "feedback.change_feedback", "feedback.view_pilot_metrics",
+    # Modulistica: testi dei moduli, intestazione, pubblicazione e distribuzione al personale (non vede i moduli
+    # compilati dagli ospiti, solo quanti sono)
+    "modulistica.manage_forms",
 ]
 
 # Amministrativo (ufficio amministrativo, oltre la spec. §2): presenze per la rendicontazione, rette, prospetti
@@ -186,6 +191,8 @@ ADMINISTRATIVE = [
     # Denaro e oggetti personali degli ospiti: tiene la cassa, prepara il rendiconto per il tutore
     "personal.view_cashmovement", "personal.add_cashmovement", "personal.void_cashmovement",
     "personal.view_personalitem", "personal.add_personalitem", "personal.change_personalitem",
+    # Moduli degli ospiti (accordo per la cassa, informative): compila, stampa, carica il firmato
+    "modulistica.view_formsubmission", "modulistica.add_formsubmission", "modulistica.change_formsubmission",
     # Scadenze del personale: l'ufficio tiene attestati e giudizi di idoneità
     "staffing.view_staffcredential", "staffing.add_staffcredential", "staffing.delete_staffcredential",
     "staffing.view_credentialtype", "staffing.add_credentialtype", "staffing.change_credentialtype",

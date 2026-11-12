@@ -51,14 +51,15 @@ const base = process.env.BASE || 'http://127.0.0.1:8765';
 const password = process.env.PASSWORD || 'Demo-Fasas-2026!';
 const plan = {
   operatore: ['/', '/sanitario/giro-farmaci/', '/giornaliero/checklist/', '/ospiti/', '/pilota/segnala/?da=/', '/impostazioni/', '/profilo/',
-    '/attivita/', '/cassa/ospite/1/', '/turni/scadenze/mie/'],
+    '/attivita/', '/cassa/ospite/1/', '/turni/scadenze/mie/', '/moduli/miei/'],
   coordinatore: ['/', '/ospiti/1/', '/sanitario/ospite/1/parametri/', '/magazzino/farmaci/nuovo/', '/magazzino/elenco-ufficiale/',
     '/pilota/indicatori/', '/pilota/segnalazioni/', '/report/', '/report/ispezione/', '/firma/app/', '/sanitario/sos/da-validare/',
     '/protocolli/', '/cerca/?q=a', '/turni/', '/report/indicatori-qualita/', '/turni/scadenze/', '/famiglie/gestione/',
-    '/famiglie/gestione/collegamento/1/', '/attivita/ospite/1/'],
+    '/famiglie/gestione/collegamento/1/', '/attivita/ospite/1/', '/moduli/ospite/1/', '/moduli/ospite/1/5/'],
   medico: ['/', '/firma/credenziale/', '/documenti/da-firmare/'],
-  admin: ['/', '/configurazione/', '/configurazione/moduli/', '/pilota/segnalazioni/', '/firma/app/pubblica/', '/audit/'],
-  amministrativo: ['/', '/amministrazione/prospetti/', '/amministrazione/presenze/', '/cassa/', '/cassa/ospite/1/'],
+  admin: ['/', '/configurazione/', '/configurazione/moduli/', '/pilota/segnalazioni/', '/firma/app/pubblica/', '/audit/', '/moduli/', '/moduli/3/',
+    '/moduli/3/distribuisci/', '/moduli/intestazione/'],
+  amministrativo: ['/', '/amministrazione/prospetti/', '/amministrazione/presenze/', '/cassa/', '/cassa/ospite/1/', '/moduli/ospiti/'],
   familiare: ['/famiglie/1/'],
 };
 (async () => {

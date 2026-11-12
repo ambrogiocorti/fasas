@@ -65,7 +65,7 @@ Titolare: [ente gestore] · DPO: [ ] · Data: [ ]. Ogni voce va inserita nel reg
 | Campo | Contenuto |
 |---|---|
 | Finalità | custodia e gestione della piccola cassa personale dell'ospite e degli oggetti consegnati alla struttura; rendiconto al tutore, all'amministratore di sostegno o al familiare che versa |
-| Base giuridica | art. 6.1.b (accordo di gestione della cassa con l'ospite o il suo rappresentante – modulo [MODULO_CASSA_E_OGGETTI.md](MODULO_CASSA_E_OGGETTI.md)); art. 6.1.c per gli obblighi di rendiconto del tutore o dell'amministratore di sostegno |
+| Base giuridica | art. 6.1.b (accordo di gestione della cassa con l'ospite o il suo rappresentante – modulo «Accordo per la piccola cassa» della Modulistica); art. 6.1.c per gli obblighi di rendiconto del tutore o dell'amministratore di sostegno |
 | Interessati | ospiti; familiari, tutori e amministratori di sostegno che versano o ricevono denaro |
 | Dati | movimenti (data, importo, descrizione, da/a chi), foto o PDF degli scontrini, inventario degli oggetti con valore indicativo; **nessun dato sanitario** |
 | Destinatari | personale autorizzato (operatori per le spese, coordinatore, ufficio amministrativo); tutore o amministratore di sostegno (rendiconto); giudice tutelare se richiesto |

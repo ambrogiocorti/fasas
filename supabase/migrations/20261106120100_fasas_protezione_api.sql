@@ -6,7 +6,7 @@
 --   1. Row Level Security attiva su ogni tabella del FASAS, senza alcuna policy: via API nessuna riga;
 --   2. nessun privilegio ai ruoli delle API (anon, authenticated, service_role) su tabelle, sequenze e funzioni del
 --      FASAS e, se il progetto contiene solo il FASAS, nemmeno sulle tabelle create in futuro.
--- Agisce solo sulle 110 tabelle del FASAS elencate qui sotto: tabelle di altre applicazioni non vengono toccate.
+-- Agisce solo sulle 115 tabelle del FASAS elencate qui sotto: tabelle di altre applicazioni non vengono toccate.
 -- Il FASAS ripete gli stessi passi dopo ogni aggiornamento (fasas/core/supabase.py). È sicuro rieseguire il file.
 
 DO $$
@@ -79,6 +79,11 @@ DECLARE
         'guests_guest_tags',
         'guests_guestcontact',
         'imports_importbatch',
+        'modulistica_formassignment',
+        'modulistica_formfield',
+        'modulistica_formsettings',
+        'modulistica_formsubmission',
+        'modulistica_formtemplate',
         'notifications_notification',
         'notifications_notificationsetting',
         'notifications_pushsubscription',

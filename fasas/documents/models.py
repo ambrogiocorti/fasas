@@ -19,6 +19,7 @@ class Document(TimeStampedModel):
         LEGAL = "legal", "Documento legale (nomina tutore, ADS)"
         RESTRAINT = "restraint", "Autorizzazione contenzione"
         WOUND_PHOTO = "wound_photo", "Foto di lesione"
+        FORM = "form", "Modulo (informativa, consenso, accordo)"
         OTHER = "other", "Altro"
 
     guest = models.ForeignKey("guests.Guest", on_delete=models.PROTECT, related_name="documents")

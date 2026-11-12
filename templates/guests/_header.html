@@ -41,6 +41,7 @@
   {% if perms.daily.view_diaryentry %}<a href="{% url 'daily:guest_diary' guest.pk %}" class="{% if active_tab == 'diary' %}active{% endif %}">Diario</a>{% endif %}
   {% if modules.pai and perms.pai.view_pai %}<a href="{% url 'pai:guest' guest.pk %}" class="{% if active_tab == 'pai' %}active{% endif %}">PAI</a>{% endif %}
   {% if modules.care and perms.care.view_caretask %}<a href="{% url 'care:guest' guest.pk %}" class="{% if active_tab == 'care' %}active{% endif %}">Attività</a>{% endif %}
+  {% if modules.modulistica and perms.modulistica.view_formsubmission %}<a href="{% url 'modulistica:guest' guest.pk %}" class="{% if active_tab == 'forms' %}active{% endif %}">Moduli</a>{% endif %}
   {% if modules.families and perms.families.manage_family_area %}<a href="{% url 'families:staff_guest' guest.pk %}" class="{% if active_tab == 'families' %}active{% endif %}">Familiari</a>{% endif %}
   {% if modules.personal and perms.personal.view_cashmovement %}<a href="{% url 'personal:guest' guest.pk %}" class="{% if active_tab == 'personal' %}active{% endif %}">Denaro e oggetti</a>{% endif %}
   {% if modules.wounds and perms.wounds.view_wound %}<a href="{% url 'wounds:guest' guest.pk %}" class="{% if active_tab == 'wounds' %}active{% endif %}">Lesioni</a>{% endif %}

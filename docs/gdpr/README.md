@@ -11,12 +11,32 @@ titolare non li approva e li firma.
 1. Nominare o confermare il **DPO** (vedi «Prima dei dati veri»).
 2. **Registro dei trattamenti** e **DPIA**, con il parere del DPO e la decisione firmata del titolare.
 3. **Nomine**: amministratore di sistema e vice; accordi con i fornitori (art. 28).
-4. **Autorizzazioni** scritte a ogni utente e **informativa al personale**.
-5. **Informativa a ospiti e tutori** e moduli all'ingresso (cassa e oggetti, foto delle lesioni se il DPO lo ritiene).
+4. **Autorizzazioni** e **informativa al personale**: l'amministratore le distribuisce dalla Modulistica.
+5. **Informativa a ospiti e tutori** e moduli all'ingresso (cassa e oggetti, foto delle lesioni se il DPO lo ritiene),
+   compilati online in struttura o su carta.
 6. Incontro con l'**ATS** con la checklist; poi avvio con i dati reali.
 7. Solo se si vuole accendere l'**area familiari**: parere del DPO, poi informativa e modulo per i familiari.
 
-## Documenti
+## Moduli (nel FASAS e in PDF)
+
+Informative, autorizzazioni, consensi, accordi e richieste sono nella **Modulistica del FASAS** (*Sistema ›
+Modulistica*): l'amministratore li adatta, li pubblica e li distribuisce; si compilano online o si stampano
+(vuoti o già compilati). Nel pacchetto zip sono nella cartella **4_Moduli**, in PDF da stampare con i testi
+predefiniti; la guida è «COME SI USANO I MODULI» (MODULISTICA).
+
+| Modulo | Chi lo compila o firma | Quando |
+|---|---|---|
+| Informativa al personale | ogni dipendente (conferma online) | prima dell'avvio e per ogni nuovo assunto |
+| Autorizzazione al trattamento dei dati e istruzioni | ogni utente (conferma online) | alla creazione dell'utente |
+| Designazione ad amministratore di sistema | titolare e designato (firma) | prima dell'avvio; verifica annuale |
+| Informativa – ospiti | ospite o rappresentante | all'ingresso (per chi c'è già: all'avvio) |
+| Accordo per la piccola cassa e gli oggetti personali | ospite o rappresentante e struttura (firma) | quando si affidano denaro o oggetti |
+| Fotografie delle lesioni | ospite o rappresentante (firma, revocabile) | se il DPO lo ritiene, all'ingresso o alla prima lesione |
+| Richiesta di esercizio dei diritti | chi fa la richiesta | quando qualcuno lo chiede |
+| Informativa per gli utenti dell'area familiari | familiare (conferma online) | solo con l'area familiari accesa |
+| Richiesta di accesso all'area familiari | familiare, ospite (se consenso), struttura (firma) | prima di collegare un familiare |
+
+## Documenti di governo
 
 | Documento | A cosa serve | Chi firma | Quando |
 |---|---|---|---|
@@ -27,15 +47,6 @@ titolare non li approva e li firma.
 | Area familiari – cosa valutare con il DPO (AREA_FAMILIARI_DPO) | punti da decidere prima di accendere l'area familiari | — | solo se si vuole accenderla |
 | Responsabili e nomine (RESPONSABILI_E_NOMINE) | fornitori da nominare (art. 28), autorizzati, amministratori di sistema | — | prima dell'avvio |
 | Accordo art. 28 con il fornitore (ACCORDO_ART28_FORNITORE) | contratto sul trattamento con chi gestisce o assiste il FASAS | titolare e fornitore | prima che il fornitore acceda ai dati |
-| Nomina dell'amministratore di sistema (MODELLO_NOMINA_AMMINISTRATORE_SISTEMA) | designazione dell'amministratore e del vice | titolare e designato | prima dell'avvio; verifica annuale |
-| Autorizzazione del personale (MODELLO_AUTORIZZAZIONE_PERSONALE) | autorizzazione e istruzioni per ogni utente | titolare e utente | alla creazione di ogni utente |
-| Informativa al personale (INFORMATIVA_PERSONALE) | cosa registra il FASAS (accessi, audit, turni, formazione) | ricevuta del dipendente | prima dell'avvio e per ogni nuovo assunto |
-| Informativa a ospiti e tutori (INFORMATIVA_OSPITI) | art. 13 per ospiti, tutori, amministratori di sostegno | ricevuta dell'ospite o del rappresentante | all'ingresso (per chi c'è già: all'avvio) |
-| Cassa personale e oggetti (MODULO_CASSA_E_OGGETTI) | accordo sulla piccola cassa e ricevuta degli oggetti consegnati | ospite o rappresentante, struttura | quando si affida denaro o oggetti |
-| Foto delle lesioni (MODULO_FOTO_LESIONI) | informazione (ed eventuale consenso) per le foto delle lesioni | ospite o rappresentante, struttura | se il DPO lo ritiene, all'ingresso o alla prima lesione |
-| Richiesta di esercizio dei diritti (MODULO_RICHIESTA_DIRITTI) | accesso, copia della cartella, rettifica e altri diritti | chi fa la richiesta | quando qualcuno lo chiede |
-| Informativa per i familiari (INFORMATIVA_FAMILIARI) | art. 13 per chi usa l'area familiari | ricevuta del familiare | solo con l'area familiari accesa |
-| Richiesta di accesso all'area familiari (MODULO_AREA_FAMILIARI) | identità, base del collegamento, cosa può vedere | familiare, ospite (se consenso), struttura | prima di collegare un familiare |
 | Procedura per le violazioni (PROCEDURA_VIOLAZIONI) | cosa fare entro 72 ore e registro interno | — | da conoscere prima dell'avvio |
 | Sicurezza fisica e continuità (SICUREZZA_FISICA_E_CONTINUITA) | locale del server, chiavi, cassaforte, vice, registri | direzione e amministratore di sistema | prima dell'avvio |
 | Piano di continuità (PIANO_DI_CONTINUITA) | cosa fare se il FASAS non è raggiungibile | — | prima dell'avvio; prove periodiche |
@@ -45,6 +56,7 @@ dispositivi medici (DISPOSITIVO_MEDICO), firma con CIE e obblighi della firma el
 modello di contratto di assistenza (MODELLO_CONTRATTO_ASSISTENZA), funzioni nuove e area familiari
 (NOVITA_ASSISTENZA_E_FAMILIARI).
 
-Dove si conservano i moduli firmati: la copia dei moduli che riguardano un ospite va nei *Documenti* del suo
-fascicolo (categoria «Documento legale»); quelli del personale nel fascicolo del dipendente; registro, DPIA e nomine
+Dove si conservano i moduli: quelli compilati con il FASAS finiscono da soli nei *Documenti* dell'ospite
+(categoria «Modulo»), con la scansione del foglio firmato quando serve; i moduli del personale restano nella
+Modulistica; quelli del personale nel fascicolo del dipendente; registro, DPIA e nomine
 nella documentazione privacy dell'ente.

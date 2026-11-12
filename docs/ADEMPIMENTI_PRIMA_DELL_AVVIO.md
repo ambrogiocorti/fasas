@@ -1,8 +1,8 @@
 # Prima dei dati veri: privacy, sicurezza fisica, continuità, firma e regole
 
 La guida tecnica ([INSTALLAZIONE_IN_STRUTTURA.md](INSTALLAZIONE_IN_STRUTTURA.md)) porta il FASAS a funzionare.
-Tutti i documenti e i moduli, in Word (da compilare) e PDF, si generano in uno zip con
-`python scripts/genera_pacchetto_privacy.py`.
+I moduli si gestiscono e si compilano nel FASAS (*Sistema › Modulistica*, [MODULISTICA.md](MODULISTICA.md));
+documenti di governo e moduli da stampare si raccolgono in uno zip con `python scripts/genera_pacchetto_privacy.py`.
 Questa pagina dice **cosa va fatto dalla struttura** prima di inserire i dati veri degli ospiti, **chi lo fa**, cosa
 è già pronto e cosa costa. I documenti indicati sono **bozze da completare e far approvare**: non sono un parere
 legale e non diventano validi finché il titolare (l'ente gestore) non li firma.
@@ -14,9 +14,9 @@ legale e non diventano validi finché il titolare (l'ente gestore) non li firma.
 | 1 | **Responsabile della protezione dei dati (DPO/RPD)** | direzione | — | se esterno a pagamento; può essere un dipendente competente |
 | 2 | Registro dei trattamenti | DPO con la direzione | [gdpr/REGISTRO_TRATTAMENTI.md](gdpr/REGISTRO_TRATTAMENTI.md) | 0 € |
 | 3 | Valutazione d'impatto (DPIA) | DPO, direzione, amministratore di sistema | [gdpr/DPIA.md](gdpr/DPIA.md) | 0 € |
-| 4 | Nomina dell'amministratore di sistema (e del vice) | direzione | [gdpr/MODELLO_NOMINA_AMMINISTRATORE_SISTEMA.md](gdpr/MODELLO_NOMINA_AMMINISTRATORE_SISTEMA.md) | 0 € |
-| 5 | Autorizzazione scritta di ogni utente | direzione | [gdpr/MODELLO_AUTORIZZAZIONE_PERSONALE.md](gdpr/MODELLO_AUTORIZZAZIONE_PERSONALE.md) | 0 € |
-| 6 | Informative a ospiti/tutori e al personale | direzione | [gdpr/INFORMATIVA_OSPITI.md](gdpr/INFORMATIVA_OSPITI.md), [gdpr/INFORMATIVA_PERSONALE.md](gdpr/INFORMATIVA_PERSONALE.md) | 0 € |
+| 4 | Nomina dell'amministratore di sistema (e del vice) | direzione | modulo «Designazione ad amministratore di sistema» ([MODULISTICA.md](MODULISTICA.md)) | 0 € |
+| 5 | Autorizzazione scritta di ogni utente | direzione | modulo «Autorizzazione al trattamento», distribuito dalla Modulistica ([MODULISTICA.md](MODULISTICA.md)) | 0 € |
+| 6 | Informative a ospiti/tutori e al personale | direzione | moduli «Informativa – ospiti» e «Informativa al personale» ([MODULISTICA.md](MODULISTICA.md)) | 0 € |
 | 7 | Fornitori: Backblaze, DuckDNS, servizio di controllo | direzione con il DPO | [gdpr/RESPONSABILI_E_NOMINE.md](gdpr/RESPONSABILI_E_NOMINE.md) | 0 € |
 | 8 | Procedura per le violazioni di dati (72 ore) | DPO e amministratore di sistema | [gdpr/PROCEDURA_VIOLAZIONI.md](gdpr/PROCEDURA_VIOLAZIONI.md) | 0 € |
 | 9 | Sicurezza fisica e continuità (chiavi, cassaforte, sostituto) | direzione e amministratore di sistema | [SICUREZZA_FISICA_E_CONTINUITA.md](SICUREZZA_FISICA_E_CONTINUITA.md) | 0 € (serratura o cassaforte se mancano) |
@@ -24,8 +24,8 @@ legale e non diventano validi finché il titolare (l'ente gestore) non li firma.
 | 11 | Dispositivo medico: promemoria clinici | direzione, medico, consulente regolatorio | [DISPOSITIVO_MEDICO.md](DISPOSITIVO_MEDICO.md) | 0 € per il pilota con i promemoria spenti |
 | 12 | Assicurazione | direzione con il broker | — | da verificare con la polizza attuale |
 | 13 | Requisiti regionali (ATS/ASL) | direzione | [gdpr/CHECKLIST_ATS.md](gdpr/CHECKLIST_ATS.md) | 0 € |
-| 14 | Moduli per ospiti e tutori: cassa e oggetti, foto delle lesioni, richiesta di accesso ai dati | direzione con il DPO | [gdpr/MODULO_CASSA_E_OGGETTI.md](gdpr/MODULO_CASSA_E_OGGETTI.md), [gdpr/MODULO_FOTO_LESIONI.md](gdpr/MODULO_FOTO_LESIONI.md), [gdpr/MODULO_RICHIESTA_DIRITTI.md](gdpr/MODULO_RICHIESTA_DIRITTI.md) | 0 € |
-| 15 | Area familiari (facoltativa, spenta finché non la si accende) | DPO, poi direzione | [AREA_FAMILIARI_DPO.md](AREA_FAMILIARI_DPO.md), [gdpr/INFORMATIVA_FAMILIARI.md](gdpr/INFORMATIVA_FAMILIARI.md), [gdpr/MODULO_AREA_FAMILIARI.md](gdpr/MODULO_AREA_FAMILIARI.md) | 0 € |
+| 14 | Moduli per ospiti e tutori: cassa e oggetti, foto delle lesioni, richiesta di accesso ai dati | amministratore con il DPO | Modulistica del FASAS ([MODULISTICA.md](MODULISTICA.md)) | 0 € |
+| 15 | Area familiari (facoltativa, spenta finché non la si accende) | DPO, poi direzione | [AREA_FAMILIARI_DPO.md](AREA_FAMILIARI_DPO.md), moduli dell'area familiari nella Modulistica | 0 € |
 
 ## 1. Il DPO prima di tutto
 

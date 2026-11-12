@@ -54,8 +54,14 @@ def guest_view(request, pk):
         from fasas.personal.services import balance
 
         cash = balance(link.guest)
+    forms, family_forms = [], []
+    if is_on("modulistica"):
+        from fasas.modulistica.models import FormTemplate
+
+        forms = FormTemplate.objects.filter(status=FormTemplate.Status.PUBLISHED, for_family=True)
+        family_forms = link.form_submissions.order_by("-created_at")
     return render(request, "families/guest.html", {
-        "link": link, "guest": link.guest, "thread": link.messages.select_related("author"),
+        "link": link, "guest": link.guest, "forms": forms, "family_forms": family_forms, "thread": link.messages.select_related("author"),
         "visits": link.visits.filter(day__gte=timezone.localdate() - datetime.timedelta(days=30)).order_by("-day"),
         "documents": services.shared_documents(link), "cash": cash, "today": timezone.localdate(),
         "message_form": message_form, "visit_form": visit_form,

@@ -347,6 +347,7 @@ class Command(BaseCommand):
             self._demo_quality(users, guests)
             self._demo_signing(users, guests)
             self._demo_families(users, guests)
+            self._demo_forms(users, guests)
 
     def _demo_care(self, users, guests):
         from fasas.care import services
@@ -479,6 +480,9 @@ class Command(BaseCommand):
         if not SigningCredential.objects.filter(user=users["doctor"]).exists():
             register_pkcs12(users["doctor"], _test_certificate(demo_password()), demo_password())
 
+    def _demo_forms(self, users, guests):
+        _demo_forms_impl(users, guests)
+
     def _demo_families(self, users, guests):
         from fasas.core.models import SystemConfig
         from fasas.documents.models import Document
@@ -510,6 +514,32 @@ class Command(BaseCommand):
         document = create_document(mario, Document.Category.OTHER, "Programma delle attività del mese",
                                    user=users["coordinator"], data=pdf.build(), filename="attivita.pdf")
         services.share_document(document, users["coordinator"], "Il programma di questo mese")
+
+
+def _demo_forms_impl(users, guests):
+    """Modulistica: intestazione di fantasia e due moduli compilati per Mario (uno in attesa di firma)."""
+    from fasas.modulistica.models import FormSettings, FormSubmission, FormTemplate
+    from fasas.modulistica.services import submit
+
+    if "Mario" not in guests or FormSubmission.objects.filter(guest=guests["Mario"]).exists():
+        return
+    settings_obj = FormSettings.get()
+    settings_obj.holder = "Cooperativa Sociale di esempio (dati di fantasia)"
+    settings_obj.address = "Via di Prova 1, Milano"
+    settings_obj.contacts = "privacy@esempio.invalid"
+    settings_obj.dpo, settings_obj.dpo_contacts = "DPO di esempio", "dpo@esempio.invalid"
+    settings_obj.save()
+    mario, coordinator = guests["Mario"], users["coordinator"]
+    info = FormTemplate.objects.filter(code="informativa-ospiti").first()
+    cash = FormTemplate.objects.filter(code="cassa-e-oggetti").first()
+    if info:
+        submit(info, {"nome": "Elena Rossi", "qualita": "Amministratore di sostegno", "presa_visione": True},
+               coordinator, guest=mario, respondent="Elena Rossi", respondent_role="Amministratore di sostegno")
+    if cash:
+        submit(cash, {"nome": "Elena Rossi", "qualita": "Amministratore di sostegno", "limite_spesa": "30",
+                      "spese_ricorrenti": "Parrucchiere una volta al mese", "rendiconto": "Mensile",
+                      "destinatario": "Elena Rossi", "oggetti": "Orologio da polso, cinturino blu, 20 €"},
+               coordinator, guest=mario, respondent="Elena Rossi", respondent_role="Amministratore di sostegno")
 
 
 def _test_certificate(passphrase):

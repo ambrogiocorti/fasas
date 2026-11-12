@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% load fasas_tags %}
+{% block title %}Distribuisci – {{ template.title }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ template.title }}</h1><span class="subtitle">Versione {{ template.version }} · distribuzione al personale</span></div>
+  <div class="actions"><a class="btn" href="{% url 'modulistica:index' %}">Modulistica</a></div></div>
+<div class="grid grid-2">
+  <div class="card"><h2>Invia a</h2>
+    <form method="post" novalidate>{% csrf_token %}{% include "partials/form_fields.html" %}
+      <div class="form-actions"><button class="btn btn-primary">{% icon "users" %}Invia</button></div></form>
+    <p class="muted small">Ognuno lo trova in «I miei moduli» e riceve una notifica.{% if template.auto_assign %} I nuovi utenti dei ruoli indicati nel modulo lo ricevono da soli.{% endif %}</p>
+  </div>
+  <div class="card table-wrap"><h2>Chi ha compilato</h2><table>
+    <thead><tr><th>Persona</th><th>Versione</th><th>Stato</th><th></th></tr></thead>
+    <tbody>{% for a in status %}
+      <tr><td>{{ a.user.get_full_name|default:a.user.username }}<br><small class="muted">{{ a.user.get_role_display }}</small></td><td>v{{ a.version }}</td>
+        <td>{% if a.submission %}<span class="pill pill-ok">{{ a.submission.status }}</span> {{ a.submission.created_at|date:"d/m/Y" }}{% else %}<span class="pill pill-warn">da compilare</span>{% if a.due_date %} entro {{ a.due_date|date:"d/m" }}{% endif %}{% endif %}</td>
+        <td class="num nowrap">{% if a.submission %}<a class="btn btn-sm" href="{% url 'modulistica:submission_pdf' a.submission.pk %}" target="_blank" rel="noopener">PDF</a>
+          {% if a.submission.needs_signature %}<a class="btn btn-sm" href="{% url 'modulistica:signed_upload' a.submission.pk %}">Carica firmato</a>{% endif %}{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="4" class="empty">Non ancora distribuito.</td></tr>{% endfor %}</tbody></table></div>
+</div>
+{% endblock %}

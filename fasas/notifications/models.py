@@ -36,6 +36,8 @@ class NotificationKind(models.TextChoices):
     FAMILY_MESSAGE = "family_message", "Messaggio da un familiare o tutore"
     FAMILY_VISIT = "family_visit", "Richiesta di visita da un familiare"
     FAMILY_UPDATE = "family_update", "Novità dalla struttura (area familiari)"
+    FORM_TO_FILL = "form_to_fill", "Modulo da compilare"
+    FORM_RECEIVED = "form_received", "Modulo compilato da un familiare"
 
 
 DEFAULT_ROLES = {
@@ -72,6 +74,8 @@ DEFAULT_ROLES = {
     NotificationKind.FAMILY_MESSAGE: ["coordinator"],
     NotificationKind.FAMILY_VISIT: ["coordinator"],
     NotificationKind.FAMILY_UPDATE: [],
+    NotificationKind.FORM_TO_FILL: [],
+    NotificationKind.FORM_RECEIVED: ["coordinator"],
 }
 
 # Tipi inviati di default anche come notifica push sui dispositivi iscritti (modificabile dall'amministratore).
@@ -114,6 +118,7 @@ REQUIRED_PERMISSION = {
     NotificationKind.FAMILY_MESSAGE: "families.manage_family_area",
     NotificationKind.FAMILY_VISIT: "families.manage_family_area",
     NotificationKind.FAMILY_UPDATE: "families.use_family_area",
+    NotificationKind.FORM_RECEIVED: "modulistica.view_formsubmission",
 }
 
 

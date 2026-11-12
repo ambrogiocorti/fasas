@@ -12,4 +12,8 @@
   </div>
 </div>
 {% if guest.is_archived %}<div class="archived-banner">{% icon "lock" %}<span>Cartella archiviata: sola consultazione.</span></div>{% endif %}
+{% if not compact %}<nav class="tabs" aria-label="Sezioni dell'ospite">
+  {% if modules.personal and perms.personal.view_cashmovement %}<a href="{% url 'personal:guest' guest.pk %}" class="{% if active_tab == 'personal' %}active{% endif %}">Denaro e oggetti</a>{% endif %}
+  {% if modules.modulistica and perms.modulistica.view_formsubmission %}<a href="{% url 'modulistica:guest' guest.pk %}" class="{% if active_tab == 'forms' %}active{% endif %}">Moduli</a>{% endif %}
+</nav>{% endif %}
 {% endif %}

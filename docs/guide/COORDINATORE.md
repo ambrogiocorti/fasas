@@ -15,6 +15,7 @@
 | Cassa degli ospiti, scontrini, rendiconto per il tutore | *Amministrazione › Denaro degli ospiti*; un movimento sbagliato si annulla con motivo |
 | Corsi, idoneità e visite del personale | *Personale › Scadenze del personale* (quadro, registrazione dell'attestato, CSV) |
 | Cadute, lesioni, contenzioni, SOS, ricoveri mese per mese | *Archivio e report › Indicatori di qualità* (per 1000 giornate di presenza) |
+| Moduli degli ospiti (informativa, accordo per la cassa, consenso alle foto) | scheda ospite → **Moduli**: compila online con l'ospite o il rappresentante, oppure stampa vuoto; poi **Carica firmato**. In attesa di firma: *Amministrazione › Moduli degli ospiti* |
 | Familiari e tutori (se l'area è accesa) | *Da controllare › Familiari*: messaggi, visite da confermare, collegamenti e documenti condivisi |
 | Turni chiusi, consegne | *Chiusura turni* |
 

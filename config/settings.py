@@ -133,6 +133,7 @@ INSTALLED_APPS = [
     "fasas.care",
     "fasas.personal",
     "fasas.families",
+    "fasas.modulistica",
     "fasas.api",
 ]
 

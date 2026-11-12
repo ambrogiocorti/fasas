@@ -51,6 +51,7 @@ urlpatterns = [
     path("attivita/", include("fasas.care.urls")),
     path("cassa/", include("fasas.personal.urls")),
     path("famiglie/", include("fasas.families.urls")),
+    path("moduli/", include("fasas.modulistica.urls")),
     path("sw.js", offline_views.service_worker, name="service_worker"),
     path("manifest.webmanifest", offline_views.manifest, name="manifest"),
     path("favicon.ico", _favicon, name="favicon"),

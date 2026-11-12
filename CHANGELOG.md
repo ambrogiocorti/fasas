@@ -32,6 +32,11 @@ familiari spenta di default ovunque).
 - **Area familiari e tutori** (spenta di default, da accendere dopo il parere del DPO – docs/AREA_FAMILIARI_DPO.md):
   ruolo «Familiare o tutore», collegamenti con base giuridica, messaggi, visite, documenti condivisi uno per uno,
   cassa per il tutore; il familiare non può aprire nessun'altra pagina del FASAS.
+- **Modulistica** (docs/MODULISTICA.md): informative, autorizzazioni, consensi, accordi e richieste modificabili
+  dall'amministratore (intestazione, testi, campi, versioni, pubblicazione), distribuiti al personale per ruolo e
+  ai nuovi utenti, compilabili online (personale, ospiti in struttura, familiari) o stampabili vuoti e compilati;
+  i moduli da firmare restano «da firmare» fino alla scansione del foglio firmato; revoca dei consensi; nove
+  moduli predefiniti sintetici, gli stessi stampati nel pacchetto `scripts/genera_pacchetto_privacy.py`.
 - Presentazione e prova locale: dati di esempio per tutte le novità, utente `familiare`, certificato di prova
   (firma non qualificata) per il medico della demo.
 

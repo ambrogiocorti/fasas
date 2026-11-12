@@ -93,6 +93,11 @@ class Command(BaseCommand):
         setup_role_groups(self.stdout)
         self.stdout.write("Ruoli e permessi aggiornati")
 
+        from fasas.modulistica.services import ensure_defaults
+
+        created = ensure_defaults()
+        self.stdout.write(f"Moduli predefiniti presenti ({created} nuovi)")
+
         for order, (code, name, unit, kind, lo, hi, lo2, hi2, dec) in enumerate(PARAMETER_TYPES):
             ParameterType.objects.get_or_create(code=code, defaults={
                 "name": name, "unit": unit, "kind": kind, "decimals": dec, "order": order,

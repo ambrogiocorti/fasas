@@ -13,6 +13,7 @@ Il ruolo **non vede la cartella clinica**: solo presenze, rette e prospetti.
 | Incassi | prospetto → registra incasso; gli scaduti sono elencati in alto |
 | Cassa personale degli ospiti | *Denaro degli ospiti*: versamenti, spese con scontrino, annullamento con motivo; **Rendiconto PDF** per il tutore |
 | Oggetti personali consegnati | stessa pagina dell'ospite → **Oggetto** |
+| Moduli degli ospiti (accordo per la cassa, informativa) | *Moduli degli ospiti* oppure, dalla pagina dell'ospite, **Moduli**: compila online o stampa, poi carica il firmato |
 | Corsi e idoneità del personale | *Scadenze del personale*: registra l'attestato, export CSV |
 | Annullare un prospetto emesso | prospetto → annulla con motivo (resta nello storico) |
 | Regole di conteggio | *Rette* → impostazioni: giorno di uscita e di rientro, dati dell'ente gestore |

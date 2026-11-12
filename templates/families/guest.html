@@ -40,6 +40,14 @@
   {% empty %}<tr><td colspan="4" class="empty">Nessun documento condiviso.</td></tr>{% endfor %}
   </tbody></table></div>
 {% endif %}
+{% if forms %}
+<div class="card table-wrap"><h2>{% icon "clipboard" %} Moduli</h2>
+  <table><tbody>{% for t in forms %}<tr><td>{{ t.title }}</td>
+    <td class="num"><a class="btn btn-sm" href="{% url 'modulistica:family_fill' link.pk t.pk %}">Compila online</a></td></tr>{% endfor %}
+  {% for s in family_forms %}<tr><td><small class="muted">Inviato il {{ s.created_at|date:"d/m/Y" }}:</small> {{ s.snapshot.title }}</td>
+    <td class="num"><a class="btn btn-sm btn-ghost" href="{% url 'modulistica:family_pdf' link.pk s.pk %}" target="_blank" rel="noopener">PDF</a></td></tr>{% endfor %}
+  </tbody></table></div>
+{% endif %}
 {% if cash is not None %}
 <div class="card"><h2>{% icon "wallet" %} Cassa personale</h2>
   <p>Saldo attuale: <strong class="mono">{{ cash|floatformat:2 }} €</strong></p>

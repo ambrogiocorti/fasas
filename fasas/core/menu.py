@@ -123,6 +123,8 @@ MENU = [
              active=("billing:statements", "billing:statement"), module="billing"),
         Item("Denaro degli ospiti", "receipt", "personal:overview", "personal.view_cashmovement", namespace="personal",
              module="personal"),
+        Item("Moduli degli ospiti", "clipboard", "modulistica:overview", "modulistica.view_formsubmission",
+             active=("modulistica:overview", "modulistica:guest", "modulistica:guest_fill"), module="modulistica"),
     ], icon="wallet", key="amministrazione"),
     Section("Sistema", [
         Item("Utenti e permessi", "users", "accounts:user_list", "accounts.view_user",
@@ -132,6 +134,9 @@ MENU = [
         Item("Moduli", "grid", "core:modules", "core.change_systemconfig", active=("core:modules",)),
         Item("Protocolli automatici", "flag", "protocols:list", "protocols.view_protocol",
              active=("protocols:list", "protocols:create", "protocols:update"), module="protocols"),
+        Item("Modulistica", "file-text", "modulistica:index", "modulistica.manage_forms",
+             active=("modulistica:index", "modulistica:settings", "modulistica:create", "modulistica:edit",
+                     "modulistica:preview", "modulistica:distribute"), module="modulistica"),
         Item("Impostazioni notifiche", "bell", "notifications:settings", "notifications.change_notificationsetting",
              active=("notifications:settings",)),
         Item("Report programmati", "calendar-check", "reports:schedule_list", "reports.change_reportschedule",
@@ -146,6 +151,8 @@ MENU = [
     ], icon="sliders", key="sistema"),
     Section(None, key="fine", items=[
         Item("Notifiche", "bell", "notifications:list", active=("notifications:list",), count="notifications"),
+        Item("I miei moduli", "clipboard-check", "modulistica:mine", active=("modulistica:mine", "modulistica:fill"),
+             count="forms_mine", module="modulistica", exclude_roles=("family",)),
         Item("Le mie scadenze", "calendar-check", "staffing:my_credentials", active=("staffing:my_credentials",),
              module="staffing", exclude_roles=("family",)),
         Item("Impostazioni", "sliders", "core:settings", active=("core:settings", "accounts:profile",
@@ -176,6 +183,10 @@ def counts_for(user, unread, on):
         from fasas.care.services import late_slots
 
         counts["care_late"] = len(late_slots()) or None
+    if on["modulistica"] and role_of(user) != "family":
+        from fasas.modulistica.services import pending_for
+
+        counts["forms_mine"] = pending_for(user).count() or None
     if on["families"] and user.has_perm("families.manage_family_area"):
         from fasas.families.services import pending_visits, unread_for_staff
 

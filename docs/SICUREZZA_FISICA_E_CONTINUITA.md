@@ -45,7 +45,7 @@ con le password di router, DuckDNS, Backblaze, servizio di controllo e utente de
 ## 3. Due persone, non una
 
 Il FASAS non deve dipendere da una sola persona. Servono un **amministratore di sistema** e un **vice**, entrambi
-nominati ([gdpr/MODELLO_NOMINA_AMMINISTRATORE_SISTEMA.md](gdpr/MODELLO_NOMINA_AMMINISTRATORE_SISTEMA.md)), ciascuno
+nominati (modulo «Designazione ad amministratore di sistema» della Modulistica), ciascuno
 con **le proprie credenziali** (mai condivise):
 
 - un proprio utente nel FASAS con ruolo amministratore e verifica in due passaggi;

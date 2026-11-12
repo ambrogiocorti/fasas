@@ -64,6 +64,7 @@ Stato al 08/11/2026, versione 0.10.0 «pilota» ([CHANGELOG](../CHANGELOG.md)). 
 | ✅ | Attività a orario per ospite | riposizionamenti, idratazione, controlli notturni, avviso dei ritardi |
 | ✅ | Denaro e oggetti personali degli ospiti | piccola cassa con scontrino cifrato, rendiconto per il tutore, inventario |
 | ✅ | Scadenze del personale | corsi, idoneità, visite con avvisi; periodicità da confermare con RSPP e medico competente |
+| ✅ | Modulistica online e cartacea | moduli modificabili e distribuiti dall'amministratore; conferma online, PDF vuoto e compilato, scansione del firmato – [MODULISTICA.md](MODULISTICA.md) |
 | ✅ | Indicatori di qualità nel tempo | cadute, lesioni, contenzioni, SOS, ricoveri per 1000 giornate di presenza |
 | 🟡 | FASAS Signer per Android | **congelato**: APK di prova compilabile a mano da GitHub, da collaudare con una CIE reale solo se la struttura attiva la firma con CIE |
 | 🟡 | FASAS Signer per iPhone | **congelato**: app SwiftUI compilabile a mano; per installarla servono l'Apple Developer Program (a pagamento) e TestFlight, poi il collaudo con una CIE reale |

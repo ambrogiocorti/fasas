@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """
-Pacchetto «privacy e moduli» per usare il FASAS in comunità: dai testi in docs/ (unica fonte) produce, per ogni
-documento, un file Word modificabile (campi da compilare tra [parentesi quadre] evidenziati in giallo) e un PDF da
-stampare, raccolti in uno zip con cartelle numerate nell'ordine in cui si usano.
+Pacchetto «privacy e moduli» per usare il FASAS in comunità, in uno zip con cartelle numerate nell'ordine d'uso:
+- i documenti di governo (registro, DPIA, nomine, procedure) dai testi in docs/: Word modificabile, con i campi da
+  compilare tra [parentesi quadre] evidenziati in giallo, e PDF;
+- i moduli (informative, autorizzazioni, consensi, accordi, richieste) in PDF da stampare, dagli stessi testi
+  predefiniti che il FASAS carica nella Modulistica (fasas/modulistica/defaults.py): nel FASAS l'amministratore li
+  adatta, li pubblica e li fa compilare anche online.
 
     python scripts/genera_pacchetto_privacy.py [cartella_di_uscita]
 
@@ -31,25 +34,26 @@ PACKAGE = [
     ("2_Registro_e_valutazione_impatto", "AREA_FAMILIARI_DPO.md", None),
     ("3_Nomine_e_fornitori", "gdpr/RESPONSABILI_E_NOMINE.md", None),
     ("3_Nomine_e_fornitori", "gdpr/ACCORDO_ART28_FORNITORE.md", None),
-    ("3_Nomine_e_fornitori", "gdpr/MODELLO_NOMINA_AMMINISTRATORE_SISTEMA.md", None),
-    ("4_Personale", "gdpr/MODELLO_AUTORIZZAZIONE_PERSONALE.md", None),
-    ("4_Personale", "gdpr/INFORMATIVA_PERSONALE.md", None),
-    ("5_Ospiti_e_tutori", "gdpr/INFORMATIVA_OSPITI.md", None),
-    ("5_Ospiti_e_tutori", "gdpr/MODULO_CASSA_E_OGGETTI.md", None),
-    ("5_Ospiti_e_tutori", "gdpr/MODULO_FOTO_LESIONI.md", None),
-    ("5_Ospiti_e_tutori", "gdpr/MODULO_RICHIESTA_DIRITTI.md", None),
-    ("6_Area_familiari_solo_se_attivata", "gdpr/INFORMATIVA_FAMILIARI.md", None),
-    ("6_Area_familiari_solo_se_attivata", "gdpr/MODULO_AREA_FAMILIARI.md", None),
-    ("7_Violazioni_e_continuita", "gdpr/PROCEDURA_VIOLAZIONI.md", None),
-    ("7_Violazioni_e_continuita", "SICUREZZA_FISICA_E_CONTINUITA.md", None),
-    ("7_Violazioni_e_continuita", "PIANO_DI_CONTINUITA.md", None),
-    ("8_Allegati_tecnici", "SICUREZZA.md", None),
-    ("8_Allegati_tecnici", "BACKUP.md", None),
-    ("8_Allegati_tecnici", "DISPOSITIVO_MEDICO.md", None),
-    ("8_Allegati_tecnici", "FIRMA_CIE.md", None),
-    ("8_Allegati_tecnici", "MODELLO_CONTRATTO_ASSISTENZA.md", None),
-    ("8_Allegati_tecnici", "NOVITA_ASSISTENZA_E_FAMILIARI.md", None),
+    ("4_Moduli", "MODULISTICA.md", "00_COME_SI_USANO_I_MODULI"),
+    ("5_Violazioni_e_continuita", "gdpr/PROCEDURA_VIOLAZIONI.md", None),
+    ("5_Violazioni_e_continuita", "SICUREZZA_FISICA_E_CONTINUITA.md", None),
+    ("5_Violazioni_e_continuita", "PIANO_DI_CONTINUITA.md", None),
+    ("6_Allegati_tecnici", "SICUREZZA.md", None),
+    ("6_Allegati_tecnici", "BACKUP.md", None),
+    ("6_Allegati_tecnici", "DISPOSITIVO_MEDICO.md", None),
+    ("6_Allegati_tecnici", "FIRMA_CIE.md", None),
+    ("6_Allegati_tecnici", "MODELLO_CONTRATTO_ASSISTENZA.md", None),
+    ("6_Allegati_tecnici", "NOVITA_ASSISTENZA_E_FAMILIARI.md", None),
 ]
+
+# moduli predefiniti in PDF (codice del modulo -> sottocartella di 4_Moduli)
+FORM_FOLDERS = {
+    "informativa-personale": "Personale", "autorizzazione-personale": "Personale",
+    "nomina-amministratore-sistema": "Personale",
+    "informativa-ospiti": "Ospiti_e_tutori", "cassa-e-oggetti": "Ospiti_e_tutori", "foto-lesioni": "Ospiti_e_tutori",
+    "richiesta-diritti": "Ospiti_e_tutori",
+    "informativa-familiari": "Area_familiari_solo_se_attivata", "accesso-area-familiari": "Area_familiari_solo_se_attivata",
+}
 
 LINK = re.compile(r"\[([^\]]+)\]\((?!https?://|mailto:)[^)]*\)")  # link a file del repository: resta il testo
 PLACEHOLDER = re.compile(r"\[[^\[\]]{1,400}\]")
@@ -236,6 +240,21 @@ def title_of(text, fallback):
     return fallback
 
 
+def render_forms(target):
+    """PDF da stampare dei moduli predefiniti, con le stesse funzioni che usa il FASAS (nessun database)."""
+    sys.path.insert(0, str(ROOT))
+    from fasas.modulistica import defaults, pdf
+    from fasas.modulistica.text import default_snapshot
+
+    count = 0
+    for number, data in enumerate(defaults.TEMPLATES, start=1):
+        folder = target / FORM_FOLDERS.get(data["code"], "Altri")
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / f"{number:02d}_{data['code']}.pdf").write_bytes(pdf.render(default_snapshot(data)))
+        count += 1
+    return count
+
+
 def build(out_dir):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -271,6 +290,7 @@ def build(out_dir):
                 shutil.move(str(normalized / Path(doc).name), doc)
             subprocess.run(["soffice", "--headless", "--convert-to", "pdf", "--outdir", str(target_dir), *docs],
                            check=True, capture_output=True, timeout=600)
+        forms = render_forms(staged / "4_Moduli")
         missing = [p for p in made if not p.with_suffix(".pdf").exists()]
         if missing:
             raise SystemExit(f"PDF non creati: {', '.join(p.name for p in missing)}")
@@ -281,7 +301,7 @@ def build(out_dir):
         preview = out_dir / "anteprima"
         shutil.rmtree(preview, ignore_errors=True)
         shutil.copytree(staged, preview)
-    print(f"Creato {zip_path} ({len(made)} documenti, Word e PDF)")
+    print(f"Creato {zip_path} ({len(made)} documenti in Word e PDF, {forms} moduli in PDF)")
     return zip_path
 
 

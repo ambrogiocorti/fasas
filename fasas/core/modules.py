@@ -57,6 +57,9 @@ MODULES = (
     Module("personal", "Denaro e oggetti degli ospiti", "Piccola cassa personale di ogni ospite (versamenti, spese "
            "con scontrino fotografato, rendiconto PDF per il tutore) e inventario degli oggetti personali.",
            namespaces=("personal",), pilot=False),
+    Module("modulistica", "Modulistica", "Informative, autorizzazioni, consensi e richieste configurati "
+           "dall'amministratore: compilazione online (personale, ospiti in struttura, familiari) o su carta, PDF "
+           "vuoti e compilati, distribuzione al personale.", namespaces=("modulistica",)),
     Module("families", "Area familiari e tutori", "Familiari, tutori e amministratori di sostegno entrano con un "
            "proprio utente e vedono solo gli ospiti collegati: messaggi con la struttura, richieste di visita, "
            "documenti condivisi uno per uno e, per il tutore, il rendiconto della cassa. Spenta di default: "

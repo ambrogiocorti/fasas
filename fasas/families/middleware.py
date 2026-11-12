@@ -11,7 +11,7 @@ ALLOWED = {
     "accounts:profile", "accounts:set_theme", "accounts:password_change",
     "notifications:list", "notifications:count", "notifications:mark_read", "notifications:mark_all_read",
     "notifications:open", "notifications:devices", "notifications:push_subscribe", "notifications:push_unsubscribe",
-    "notifications:push_test",
+    "notifications:push_test", "modulistica:family_fill", "modulistica:family_pdf",
 }
 ALLOWED_NAMES = {"service_worker", "manifest", "favicon"}
 
