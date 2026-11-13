@@ -130,6 +130,18 @@ class RestoreTestTests(FasasTestCase):
         self.assertContains(page, "Nessuna copia fuori sede")
         self.assertTrue(AuditLog.objects.filter(action="restore").exists())
 
+    def test_restore_test_inside_uwsgi(self):
+        """Su PythonAnywhere il FASAS gira in uWSGI: sys.executable non è Python (verbale n. 2 del 13/11/2026)."""
+        if connection.vendor == "postgresql":
+            self.skipTest("su PostgreSQL serve FASAS_RESTORE_TEST_DATABASE_URL")
+        from fasas.backups.restore_test import python_executable
+
+        create_backup(user=self.admin)
+        with mock.patch("fasas.backups.restore_test.sys.executable", "/usr/local/bin/uwsgi"):
+            self.assertNotIn("uwsgi", python_executable())
+            test = run_restore_test(user=self.admin)
+        self.assertEqual(test.result, RestoreTest.Result.OK, test.steps)
+
     def test_failure_is_reported(self):
         out = io.StringIO()
         with self.assertRaises(CommandError):

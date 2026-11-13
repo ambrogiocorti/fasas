@@ -32,13 +32,33 @@ COUNTED_TABLES = ["guests_guest", "clinical_therapy", "clinical_therapyadministr
                   "documents_documentversion", "audit_auditlog", "accounts_user"]
 
 
+def python_executable():
+    """
+    Interprete Python per i comandi della prova. Dentro un server web (uWSGI su PythonAnywhere, mod_wsgi)
+    sys.executable è il server, non Python: si usa il Python dello stesso ambiente (virtualenv).
+    """
+    exe = Path(sys.executable or "")
+    if exe.name.lower().startswith("python"):
+        return str(exe)
+    prefix = Path(sys.prefix)
+    version = f"python{sys.version_info[0]}.{sys.version_info[1]}"
+    for candidate in (prefix / "bin" / version, prefix / "bin" / "python3", prefix / "bin" / "python",
+                      prefix / "Scripts" / "python.exe", prefix / "python.exe"):
+        if candidate.exists():
+            return str(candidate)
+    found = shutil.which(version) or shutil.which("python3") or shutil.which("python")
+    if found:
+        return found
+    raise BackupError("Interprete Python non trovato: la prova di ripristino non può preparare il database di prova.")
+
+
 def _manage(args, database_url, workdir, timeout=1800):
     env = os.environ.copy()
     env.update({"DATABASE_URL": database_url, "FASAS_BACKUP_DIR": str(workdir), "FASAS_MEDIA_ROOT": str(workdir / "media"),
                 "FASAS_PUSH_ASYNC": "0",
                 # la prova non tocca lo storage dei file in uso: i file ripristinati restano nella cartella di prova
                 "FASAS_S3_BUCKET": "", "FASAS_CLOUD": "0"})
-    return subprocess.run([sys.executable, str(Path(settings.BASE_DIR) / "manage.py"), *args], env=env,
+    return subprocess.run([python_executable(), str(Path(settings.BASE_DIR) / "manage.py"), *args], env=env,
                           capture_output=True, text=True, timeout=timeout, cwd=settings.BASE_DIR)
 
 
