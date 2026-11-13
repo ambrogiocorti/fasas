@@ -22,7 +22,7 @@ all'ATS insieme alla presentazione del fascicolo digitale.
 |---|---|---|
 | Responsabile del piano (direzione) | [nome] | [numero] |
 | Amministratore di sistema | [nome] | [numero] |
-| Sostituto dell'amministratore | [nome] | [numero] |
+| Sostituto del gestore del sistema | [nome] | [numero] |
 | DPO (per sospette violazioni di dati) | [nome] | [numero] |
 | Coordinatore di turno | chi è in turno | — |
 

@@ -32,7 +32,7 @@ Durante il pilota non si aggiungono funzioni: solo correzioni di errori e di pun
 
 ## Cosa si misura
 
-Nel FASAS: **Archivio e report › Indicatori del pilota** (coordinatore e amministratore), con esportazione CSV.
+Nel FASAS: **Archivio e report › Indicatori del pilota** (coordinatore e gestore del sistema), con esportazione CSV.
 
 | Indicatore | Nel FASAS | Sul cartaceo (settimane 1-2) |
 |---|---|---|

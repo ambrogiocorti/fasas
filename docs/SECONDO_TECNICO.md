@@ -18,7 +18,7 @@ aggiornare e ripristinare; serve per correggere il codice.
 | Configurazione e chiavi | file `.env` sul server; copia nella **busta di custodia** in cassaforte (passo 11 della guida) |
 | Chiave di firma dell'app Android | file `fasas-signer.jks` e password: busta di custodia ([FIRMA_CIE.md](FIRMA_CIE.md), «Distribuire l'app») |
 | Backup | ogni notte cifrato sul server, copia fuori sede (Backblaze B2), copia mensile su USB, disco di continuità ogni 5 minuti ([BACKUP.md](BACKUP.md)) |
-| Accesso da casa | VPN dell'amministratore, facoltativa (passo 15c) |
+| Accesso da casa | VPN del gestore del sistema, facoltativa (passo 15c) |
 | Controllo dall'esterno | servizio gratuito sulla pagina `/salute/` (passo 16) |
 | Errori | nel FASAS: Sistema › Errori del sistema; sul server `docker compose logs` |
 

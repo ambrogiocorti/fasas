@@ -453,7 +453,7 @@ class EventVoidView(VoidRecordView):
 
 @permission_required("clinical.add_clinicalevent", raise_exception=True)
 def emergency(request):
-    """Pulsante «Evento critico»: registrazione immediata e notifica critica a coordinatori e amministratori."""
+    """Pulsante «Evento critico»: registrazione immediata e notifica critica a coordinatori e gestori del sistema."""
     form = EmergencyForm(request.POST or None, initial={"guest": request.GET.get("guest")})
     if request.method == "POST" and form.is_valid():
         event = form.save(commit=False)

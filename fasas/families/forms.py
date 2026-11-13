@@ -35,7 +35,7 @@ class LinkForm(forms.ModelForm):
         from fasas.guests.models import Guest
 
         self.fields["user"].queryset = User.objects.filter(role=Role.FAMILY, is_active=True).order_by("last_name")
-        self.fields["user"].help_text = ("L'utente lo crea l'amministratore in «Utenti e permessi» con il ruolo "
+        self.fields["user"].help_text = ("L'utente lo crea il gestore del sistema in «Utenti e permessi» con il ruolo "
                                          "«Familiare o tutore».")
         self.fields["guest"].queryset = Guest.objects.exclude(status=Guest.Status.ARCHIVED).order_by("last_name")
 

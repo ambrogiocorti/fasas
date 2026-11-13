@@ -1,4 +1,4 @@
-# Scheda amministrativo – una pagina
+# Scheda ufficio amministrativo – una pagina
 
 **Entrare**: password personale; da fuori struttura anche il codice dell'app sul telefono.
 Il ruolo **non vede la cartella clinica**: solo presenze, rette e prospetti.

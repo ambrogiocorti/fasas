@@ -147,9 +147,9 @@ def cie_readiness(user, devices):
     checks = [
         ("Firma con CIE attiva sul server", cie.is_enabled(), "Impostare FASAS_CIE_ENABLED=1."),
         ("CA della CIE configurate (verifica della catena)", bool(external.trust_roots()),
-         "L'amministratore deve indicare in FASAS_CIE_TRUST_ROOTS il file PEM con le CA della CIE."),
+         "Il gestore del sistema deve indicare in FASAS_CIE_TRUST_ROOTS il file PEM con le CA della CIE."),
         ("Codice fiscale nel tuo profilo", bool(user.fiscal_code),
-         "Serve per controllare che la carta sia la tua: chiedilo all'amministratore."),
+         "Serve per controllare che la carta sia la tua: chiedilo al gestore del sistema."),
         ("FASAS Signer abbinato", bool(devices), "Installa FASAS Signer sul computer con il lettore e abbinalo qui sotto."),
         ("FASAS Signer in linea", bool(online), "Avvia FASAS Signer sul computer con il lettore."),
         ("Software CIE (middleware) trovato", bool(status.get("middleware_found")),
@@ -164,7 +164,7 @@ def cie_readiness(user, devices):
 
 @permission_required("signatures.manage_signer_devices", raise_exception=True)
 def devices_admin(request):
-    """Amministratore: elenco e revoca dei dispositivi di firma di tutti gli utenti (es. computer smarrito)."""
+    """Gestore del sistema: elenco e revoca dei dispositivi di firma di tutti gli utenti (es. computer smarrito)."""
     if request.method == "POST":
         device = get_object_or_404(SignerDevice, pk=request.POST.get("device"), revoked_at__isnull=True)
         cie.revoke_device(device, request.user)
@@ -583,7 +583,7 @@ def cie_access(request):
 @require_POST
 @permission_required("accounts.change_user", raise_exception=True)
 def enrollment_action(request, pk):
-    """Amministratore: conferma la CIE registrata (dopo aver visto carta e persona) oppure la azzera."""
+    """Gestore del sistema: conferma la CIE registrata (dopo aver visto carta e persona) oppure la azzera."""
     from .models import CieEnrollment
 
     enrollment = get_object_or_404(CieEnrollment.objects.select_related("user"), pk=pk, revoked_at__isnull=True)
@@ -592,7 +592,7 @@ def enrollment_action(request, pk):
             cie.confirm_enrollment(enrollment, request.user)
             messages.success(request, f"CIE di {enrollment.user} confermata.")
         else:
-            cie.revoke_enrollment(enrollment, request.user, "Azzerata dall'amministratore (es. PIN FASAS dimenticato)")
+            cie.revoke_enrollment(enrollment, request.user, "Azzerata dal gestore del sistema (es. PIN FASAS dimenticato)")
             messages.info(request, f"Registrazione della CIE di {enrollment.user} azzerata: dovrà registrarla di nuovo.")
     except SignatureError as exc:
         messages.error(request, str(exc))

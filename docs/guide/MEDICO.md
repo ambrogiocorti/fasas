@@ -11,7 +11,7 @@
 | Andamento di cadute, contenzioni, lesioni, SOS, ricoveri | *Archivio e report › Indicatori di qualità* |
 | Validare protocolli automatici | *Impostazioni › Protocolli automatici* → **Valida**: soglie e azioni. Prima della validazione un protocollo non si attiva; ogni modifica richiede una nuova validazione |
 | Validare le interazioni tra farmaci | *Impostazioni › Interazioni farmacologiche* (spente per default finché non c'è il parere sul regolamento dei dispositivi medici) |
-| Regola sui limiti dei SOS | con il coordinatore e l'amministratore: *Configurazione generale* → conferma motivata oppure blocco |
+| Regola sui limiti dei SOS | con il coordinatore e il gestore del sistema: *Configurazione generale* → conferma motivata oppure blocco |
 | Contenzioni | autorizzazione con motivo, alternative provate, durata; il documento firmato va allegato |
 | Lesioni | categoria e piano di medicazione; chiusura alla guarigione |
 | Firmare documenti | *Documenti da firmare* (se è configurata la firma con il proprio prestatore qualificato) |
@@ -36,5 +36,5 @@ testo. Alcune voci del menu possono mancare: la struttura spegne i moduli che no
 
 **Telefono e CIE**: *Impostazioni › App per il telefono* → inquadrare il QR code con un telefono Android e
 installare FASAS Signer; *Firma digitale* → abbinare il telefono, registrare la CIE e scegliere il PIN FASAS (lo
-conferma l'amministratore). L'app per iPhone non c'è ancora.
+conferma il gestore del sistema). L'app per iPhone non c'è ancora.
 

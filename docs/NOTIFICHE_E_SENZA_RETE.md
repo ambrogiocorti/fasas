@@ -7,7 +7,7 @@ Così riceve le notifiche push e continua a funzionare quando la rete cade.
 
 ### Cosa arriva sul telefono
 
-Gli avvisi che l'amministratore ha impostato come «Push» in *Impostazioni → Notifiche* (di default: protocolli
+Gli avvisi che il gestore del sistema ha impostato come «Push» in *Impostazioni → Notifiche* (di default: protocolli
 attivati, eventi critici ed emergenze, SOS da validare, visite di oggi, esito dei backup, integrità dell'audit log).
 Ognuno arriva solo a chi ha il ruolo e il permesso per aprirlo.
 
@@ -101,7 +101,7 @@ Nell'audit log queste registrazioni hanno origine **offline** e la motivazione c
   sanitari.
 - I dati del pacchetto si cancellano dopo 72 ore; le registrazioni inviate dopo 24 ore.
 - Se la password viene cambiata dall'utente (*Cambia password*) i dati restano leggibili. Se viene reimpostata
-  dall'amministratore, le registrazioni non ancora inviate da quel dispositivo non sono più leggibili: prima di
+  dal gestore del sistema, le registrazioni non ancora inviate da quel dispositivo non sono più leggibili: prima di
   reimpostare una password, far sincronizzare il dispositivo.
 - Usare tablet con blocco schermo e un profilo del browser dedicato al reparto.
 

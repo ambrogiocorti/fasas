@@ -8,21 +8,20 @@ predefiniti sono sintetici e vanno adattati alla struttura con il DPO: non sono 
 
 | Ruolo | Cosa fa con i moduli |
 |---|---|
-| **Amministratore** (di sistema) | completa l'**intestazione** (titolare, sede, recapiti, DPO); modifica testi e campi; crea moduli nuovi; li **pubblica** o archivia; li **distribuisce** al personale e vede chi li ha compilati. Non vede i moduli compilati dagli ospiti, solo quanti sono |
+| **Gestore del sistema** | completa l'**intestazione** (titolare, sede, recapiti, DPO); modifica testi e campi; crea moduli nuovi; li **pubblica** o archivia; li **distribuisce** al personale e vede chi li ha compilati. Non vede i moduli compilati dagli ospiti, solo quanti sono |
 | **Coordinatore** e **ufficio amministrativo** | compilano con l'ospite o il suo rappresentante i moduli degli ospiti, stampano i vuoti, caricano la scansione dei moduli firmati, registrano le revoche dei consensi |
 | **Ogni utente del personale** | trova in *I miei moduli* ciò che deve leggere e confermare (informativa, autorizzazione) e ne scarica la copia |
 | **Familiare** (se l'area familiari è accesa) | compila online i moduli destinati ai familiari dall'area *I miei cari* |
 
-### Amministratore e amministrativo: la differenza
+### Gestore del sistema e ufficio amministrativo: la differenza
 
-- L'**amministratore** è il responsabile tecnico e organizzativo del sistema (l'«amministratore di sistema»):
-  utenti e permessi, configurazione, moduli accesi o spenti, notifiche, backup, audit, modulistica. Non consulta le
-  cartelle degli ospiti e non compie atti clinici. Riceve una designazione scritta e il suo operato si verifica
-  ogni anno.
-- L'**amministrativo** è l'ufficio amministrativo della comunità: presenze per la rendicontazione, rette,
-  prospetti e incassi, cassa e oggetti degli ospiti, scadenze del personale, moduli degli ospiti (per esempio
-  l'accordo per la cassa). Vede l'anagrafica essenziale degli ospiti, non la cartella clinica, e non configura il
-  sistema.
+- Il **gestore del sistema** (utente di prova `gestore`) è il ruolo tecnico: utenti e permessi, configurazione,
+  funzioni accese o spente, notifiche, backup, audit, modulistica. Non consulta le cartelle degli ospiti e non
+  compie atti clinici. Ai fini privacy è l'«amministratore di sistema»: riceve la designazione scritta e il suo
+  operato si verifica ogni anno.
+- L'**ufficio amministrativo** (utente di prova `ufficio`): presenze per la rendicontazione, rette, prospetti e
+  incassi, cassa e oggetti degli ospiti, scadenze del personale, moduli degli ospiti (per esempio l'accordo per la
+  cassa). Vede l'anagrafica essenziale degli ospiti, non la cartella clinica, e non configura il sistema.
 
 ## Come funziona
 

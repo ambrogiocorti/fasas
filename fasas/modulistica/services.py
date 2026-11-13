@@ -291,7 +291,7 @@ def pending_for(user):
 
 
 def staff_status(template):
-    """Per l'amministratore: chi del personale ha compilato la versione corrente e chi no."""
+    """Per il gestore del sistema: chi del personale ha compilato la versione corrente e chi no."""
     assignments = (FormAssignment.objects.filter(template=template, cancelled=False)
                    .select_related("user", "submission").order_by("user__last_name"))
     latest = {}

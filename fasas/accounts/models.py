@@ -6,11 +6,11 @@ from fasas.audit.models import AppendOnlyQuerySet, ImmutableRecordError
 
 
 class Role(models.TextChoices):
-    ADMIN = "admin", "Amministratore"
+    ADMIN = "admin", "Gestore del sistema"
     COORDINATOR = "coordinator", "Coordinatore sanitario"
     OPERATOR = "operator", "Operatore"
     DOCTOR = "doctor", "Medico"
-    ADMINISTRATIVE = "administrative", "Amministrativo"
+    ADMINISTRATIVE = "administrative", "Ufficio amministrativo"
     # Area familiari (modulo spento di default): vede solo gli ospiti a cui è collegato e solo ciò che è condiviso
     FAMILY = "family", "Familiare o tutore"
 

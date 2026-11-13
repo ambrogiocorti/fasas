@@ -25,7 +25,7 @@ cifrato dei backup (solo database) e i file nuovi o cambiati (già cifrati). Si 
 - Conservazione: tutte le copie delle ultime 24 ore, poi una per ora per 7 giorni (`FASAS_CONTINUITY_KEEP_HOURS`,
   `FASAS_CONTINUITY_KEEP_DAYS`).
 - Disco scollegato: la cartella resta senza marcatore, la copia si ferma senza scrivere sul disco interno,
-  l'amministratore riceve un avviso critico (al massimo uno all'ora) e `/salute/` segnala «copia_continua».
+  il gestore del sistema riceve un avviso critico (al massimo uno all'ora) e `/salute/` segnala «copia_continua».
 - Ripristino: `manage.py fasas_ripristina_continuita --elenca` mostra le copie; `--confirm` ripristina l'ultima
   (o quella indicata con `--file`) e i file.
 - Non sostituisce la copia fuori sede: l'SSD è nello stesso locale del server.
@@ -50,7 +50,7 @@ FASAS_OFFSITE_KEEP_MONTHLY=12
 ```
 
 4. Dalla pagina *Backup* premere «Esegui backup ora»: la colonna «Fuori sede» deve indicare «copiato» e la data
-   di fine blocco. Un errore di copia avvisa l'amministratore e non tocca il backup locale.
+   di fine blocco. Un errore di copia avvisa il gestore del sistema e non tocca il backup locale.
 
 Il blocco in modalità `COMPLIANCE` impedisce a chiunque, anche a chi ha le credenziali o a un ransomware, di cancellare
 o sovrascrivere la copia prima della scadenza. Le copie oltre la conservazione (30 giornaliere + 12 mensili) si
@@ -65,7 +65,7 @@ Dalla pagina *Backup* › «Prova di ripristino», oppure `python manage.py back
 3. lo ripristina **in un database separato**, mai in quello in uso: SQLite temporaneo per i backup JSON,
    `FASAS_RESTORE_TEST_DATABASE_URL` (database vuoto) per i backup PostgreSQL; senza, la prova è «parziale»;
 4. verifica l'audit log ripristinato e conta i dati principali;
-5. salva il verbale stampabile, da firmare e archiviare. Un esito negativo avvisa l'amministratore.
+5. salva il verbale stampabile, da firmare e archiviare. Un esito negativo avvisa il gestore del sistema.
 
 Il `docker compose` crea già il database `fasas_prova_ripristino` per la prova.
 

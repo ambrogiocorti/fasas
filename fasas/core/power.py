@@ -1,6 +1,6 @@
 """
 Gruppo di continuità del server (scripts/gruppo_continuita.sh): NUT scrive l'ultimo evento in un file
-(es. «ONBATT» quando manca la corrente) e questo job, ogni minuto, avvisa coordinatori e amministratori.
+(es. «ONBATT» quando manca la corrente) e questo job, ogni minuto, avvisa coordinatori e gestori del sistema.
 Così il turno sa che il server potrebbe spegnersi e prepara la modalità senza rete e il foglio di emergenza.
 """
 import datetime

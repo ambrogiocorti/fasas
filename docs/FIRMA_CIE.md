@@ -33,7 +33,7 @@ nuova versione del documento, verificabile dentro e fuori dal FASAS.
 | Identificare con certezza il firmatario | certificato della CIE verificato fino alle CA della CIE; codice fiscale uguale al profilo | — |
 | Informarlo su condizioni e limiti d'uso; attivazione solo dopo la sua accettazione | prima della prima firma il firmatario legge e **firma con la CIE** la dichiarazione di accettazione; senza accettazione valida la firma dei documenti è bloccata | far approvare il testo dal legale e indicarlo in `FASAS_FEA_TERMS_FILE` (finché manca, il testo è marcato «bozza») |
 | Conservare almeno 20 anni la dichiarazione e il documento di riconoscimento | dichiarazione firmata cifrata e certificato della CIE, con data di fine conservazione; non cancellabile, solo revocabile; inclusa nei backup | — |
-| Darne copia gratuita al firmatario | «Scarica la tua copia» in *Firma digitale*; registro per l'amministratore | — |
+| Darne copia gratuita al firmatario | «Scarica la tua copia» in *Firma digitale*; registro per il gestore del sistema | — |
 | Rendere note le caratteristiche del sistema e delle tecnologie | pagina pubblica `/firma/caratteristiche-firma-cie/` (nessun accesso richiesto) | collegarla dal sito della comunità |
 | Assicurazione di responsabilità civile di almeno 500.000 € (comma 2) | — | stipularla (chi la richiede e per quale soggetto: da verificare con il legale) |
 
@@ -104,7 +104,7 @@ nuova versione del documento, verificabile dentro e fuori dal FASAS.
 | Rischio | Contromisura |
 |---|---|
 | Una pagina web pilota il Signer (CSRF, richieste cross-origin) | il Signer non apre porte sul computer: contatta lui il server in uscita |
-| Furto del token del dispositivo | sul server solo l'impronta SHA-256; il token da solo non basta: servono la carta e il PIN; revoca immediata da Impostazioni o dall'amministratore (Sistema › Dispositivi di firma) |
+| Furto del token del dispositivo | sul server solo l'impronta SHA-256; il token da solo non basta: servono la carta e il PIN; revoca immediata da Impostazioni o dal gestore del sistema (Sistema › Dispositivi di firma) |
 | Ripetizione di una risposta (replay) | nonce diverso a ogni passo, accettato una volta sola; richieste che scadono; valore di firma accettato una sola volta |
 | Accesso alle richieste altrui (IDOR) | ogni richiesta è visibile e utilizzabile solo dal firmatario e dal dispositivo che l'ha presa in carico; i tentativi diversi finiscono nell'audit |
 | Carta di un'altra persona | confronto del codice fiscale del certificato con il profilo dell'utente |
@@ -148,7 +148,7 @@ Le **CA della CIE** si scaricano dal sito ufficiale della CIE (Ministero dell'In
 confrontate le impronte con quelle pubblicate dal Ministero: sono il punto su cui si regge la verifica.
 Il server deve poter raggiungere i servizi OCSP/CRL indicati nei certificati per il controllo di revoca.
 
-Permessi: «Firma con CIE» è concesso a **medico** e **coordinatore** (`signatures.sign_with_cie`); l'amministratore
+Permessi: «Firma con CIE» è concesso a **medico** e **coordinatore** (`signatures.sign_with_cie`); il gestore del sistema
 può solo revocare i dispositivi (`signatures.manage_signer_devices`). Nel profilo di ogni firmatario va inserito
 il **codice fiscale**.
 
@@ -313,13 +313,13 @@ Android ripete gli stessi comandi verso la carta:
    possiede la chiave privata: non è un clone). Conserva solo l'impronta del NIS e la chiave pubblica.
 2. L'utente sceglie il **PIN FASAS** (6-8 cifre, non banale). Il FASAS ne conserva solo l'impronta (come le
    password); dopo **5 errori di seguito** si blocca.
-3. **Conferma dell'amministratore**: il NIS non dice a chi appartiene la carta, quindi un amministratore (diverso
+3. **Conferma del gestore del sistema**: il NIS non dice a chi appartiene la carta, quindi un gestore del sistema (diverso
    dall'utente) conferma in *Utenti e permessi* di aver visto di persona carta e persona. Senza conferma non si apre
    nulla.
 4. **Ogni volta**: pagina «Verifica con CIE» → telefono: codice di controllo, PIN FASAS, carta appoggiata. Il FASAS
    controlla che sia la carta registrata (NIS e chiave), che risponda alla nuova sfida con la sua chiave privata e
    che il PIN FASAS sia giusto. PIN errato: si riprova senza riappoggiare la carta.
-5. PIN FASAS dimenticato o bloccato, carta persa o rinnovata: l'amministratore **azzera** la registrazione e si
+5. PIN FASAS dimenticato o bloccato, carta persa o rinnovata: il gestore del sistema **azzera** la registrazione e si
    ripete dal punto 1.
 
 Da configurare, una volta: i certificati della **CSCA italiana** da <https://csca-ita.interno.gov.it>, sezione

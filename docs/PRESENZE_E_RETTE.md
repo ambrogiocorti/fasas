@@ -1,6 +1,6 @@
 # Presenze per la rendicontazione e rette
 
-Menu **Amministrazione** (ruolo *Amministrativo*; il coordinatore vede e chiude le presenze).
+Menu **Rette, cassa e moduli** (ruolo *Ufficio amministrativo*; il coordinatore vede e chiude le presenze).
 
 ## Presenze
 
@@ -50,7 +50,7 @@ di fine e se ne crea una nuova: i prospetti usano per ogni giorno la voce valida
    e la scadenza secondo i giorni configurati.
 3. **PDF** per l'invio all'intestatario (con IBAN e note); **Excel** con l'elenco e le righe per la contabilità.
 4. **Registra incasso** (bonifico, SDD, PagoPA, carta, contanti): a saldo il prospetto diventa *Pagato*.
-   I prospetti scaduti compaiono nel cruscotto *Amministrazione*.
+   I prospetti scaduti compaiono nel cruscotto *Ufficio amministrativo*.
 5. Un prospetto emesso senza incassi si può **annullare** con motivazione e rigenerare.
 
 > I prospetti **non sono fatture elettroniche**. Se la retta va fatturata (fattura elettronica verso privati o

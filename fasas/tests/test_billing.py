@@ -144,7 +144,7 @@ class BillingTests(FasasTestCase):
     def test_role_access(self):
         self.login(self.clerk)
         response = self.client.get(reverse("core:dashboard"))
-        self.assertContains(response, "<h1>Amministrazione")
+        self.assertContains(response, "<h1>Ufficio amministrativo")
         for name in ("billing:attendance", "billing:fees", "billing:statements", "billing:settings"):
             self.assertEqual(self.client.get(reverse(name)).status_code, 200, name)
         for name, args in (("guests:list", []), ("guests:detail", [self.guest.pk]), ("clinical:board", []),

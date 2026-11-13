@@ -2,7 +2,7 @@
 Verifica in due passaggi: dopo la password serve un codice di 6 cifre generato dall'app sul telefono
 (Google Authenticator, Microsoft Authenticator, FreeOTP…), secondo lo standard TOTP (RFC 6238).
 
-- Obbligatoria per i ruoli in FASAS_2FA_REQUIRED_ROLES (di default amministratore, coordinatore, medico).
+- Obbligatoria per i ruoli in FASAS_2FA_REQUIRED_ROLES (di default gestore del sistema, coordinatore, medico).
 - Con FASAS_2FA_TRUSTED_NETWORKS impostata, obbligatoria per tutti quando l'accesso arriva da fuori rete;
   la prima attivazione si fa solo dalla rete della struttura, così una password rubata non basta ad attivarla.
 - Il segreto è cifrato nel database con le chiavi dei documenti; ogni codice vale una sola volta.
@@ -122,7 +122,7 @@ def remote_allowed(user, request):
 
 
 OUTSIDE_REFUSED = ("Il tuo utente può entrare solo dalla rete della struttura: usa un tablet o un computer "
-                   "di reparto, oppure chiedi all'amministratore di abilitare l'accesso da fuori.")
+                   "di reparto, oppure chiedi al gestore del sistema di abilitare l'accesso da fuori.")
 
 
 def role_requires(user):
@@ -208,7 +208,7 @@ def enroll(user, secret, code):
 
 
 def disable(user, by):
-    """Toglie la verifica (reimpostazione da parte dell'amministratore o disattivazione volontaria)."""
+    """Toglie la verifica (reimpostazione da parte del gestore del sistema o disattivazione volontaria)."""
     from fasas.api.authentication import revoke_tokens
     from fasas.audit.models import AuditLog
     from fasas.audit.services import log_event

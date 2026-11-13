@@ -252,7 +252,7 @@ def create_request(version, user, reason="", previous=None):
     if document.current_version.pk != version.pk:
         raise SignatureError("Si può firmare solo l'ultima versione del documento.", "version_changed")
     if not external.trust_roots():
-        raise SignatureError("Firma con CIE non ancora attivabile: l'amministratore deve configurare le CA della CIE "
+        raise SignatureError("Firma con CIE non ancora attivabile: il gestore del sistema deve configurare le CA della CIE "
                              "(FASAS_CIE_TRUST_ROOTS).", "trust_not_configured")
     if settings.FASAS_FEA_REQUIRE_ACCEPTANCE and valid_acceptance(user) is None:
         raise SignatureError("Prima della prima firma con CIE devi accettare le condizioni della firma elettronica "
@@ -300,10 +300,10 @@ def create_acceptance_request(user):
         raise SignatureError("Non hai il permesso di firmare con la CIE.", "forbidden")
     _require_card_pin_tested()
     if not external.trust_roots():
-        raise SignatureError("Firma con CIE non ancora attivabile: l'amministratore deve configurare le CA della CIE "
+        raise SignatureError("Firma con CIE non ancora attivabile: il gestore del sistema deve configurare le CA della CIE "
                              "(FASAS_CIE_TRUST_ROOTS).", "trust_not_configured")
     if not user.fiscal_code:
-        raise SignatureError("Nel tuo profilo manca il codice fiscale: chiedilo all'amministratore.", "missing_fiscal_code")
+        raise SignatureError("Nel tuo profilo manca il codice fiscale: chiedilo al gestore del sistema.", "missing_fiscal_code")
     pdf = acceptance_pdf(user)
     request = _base_request(user, reason="Accettazione delle condizioni della firma elettronica avanzata con CIE",
                             location=str(_community()), purpose=SignatureRequest.Purpose.ACCEPTANCE,
@@ -334,7 +334,7 @@ def create_access_request(user, guest, document=None, method="cie"):
     la firma di un documento e non ne crea una nuova versione.
     """
     if not can_use_device(user) or not user.has_perm("documents.view_document"):
-        raise SignatureError("Non puoi usare la CIE per aprire i documenti: chiedi all'amministratore.", "forbidden")
+        raise SignatureError("Non puoi usare la CIE per aprire i documenti: chiedi al gestore del sistema.", "forbidden")
     if method not in access_methods():
         raise SignatureError("Metodo di verifica non ammesso dalla configurazione.", "forbidden")
     if method == "nis":
@@ -343,20 +343,20 @@ def create_access_request(user, guest, document=None, method="cie"):
             raise SignatureError("Prima registra la tua CIE e scegli il PIN FASAS (Impostazioni › Firma digitale).",
                                  "not_enrolled")
         if not enrollment.is_confirmed:
-            raise SignatureError("La registrazione della tua CIE aspetta la conferma dell'amministratore.",
+            raise SignatureError("La registrazione della tua CIE aspetta la conferma del gestore del sistema.",
                                  "not_confirmed")
         if not enrollment.pin_hash:
             raise SignatureError("Scegli il PIN FASAS in Impostazioni › Firma digitale.", "pin_missing")
         if enrollment.pin_locked:
-            raise SignatureError("PIN FASAS bloccato dopo troppi errori: chiedi all'amministratore di azzerare la "
+            raise SignatureError("PIN FASAS bloccato dopo troppi errori: chiedi al gestore del sistema di azzerare la "
                                  "registrazione della CIE e registrala di nuovo.", "pin_blocked")
     else:
         _require_card_pin_tested()
         if not external.trust_roots():
-            raise SignatureError("Verifica con CIE non ancora attivabile: l'amministratore deve configurare le CA della "
+            raise SignatureError("Verifica con CIE non ancora attivabile: il gestore del sistema deve configurare le CA della "
                                  "CIE (FASAS_CIE_TRUST_ROOTS).", "trust_not_configured")
         if not user.fiscal_code:
-            raise SignatureError("Nel tuo profilo manca il codice fiscale: chiedilo all'amministratore.",
+            raise SignatureError("Nel tuo profilo manca il codice fiscale: chiedilo al gestore del sistema.",
                                  "missing_fiscal_code")
     existing = SignatureRequest.objects.filter(
         user=user, purpose=SignatureRequest.Purpose.ACCESS, access_guest=guest, access_document=document,
@@ -411,9 +411,9 @@ def _grant_access(request_id):
 def create_enroll_request(user):
     """Primo accesso: si registra la propria CIE appoggiandola al telefono (non serve il PIN della carta)."""
     if not can_use_device(user):
-        raise SignatureError("Non puoi usare la CIE nel FASAS: chiedi all'amministratore.", "forbidden")
+        raise SignatureError("Non puoi usare la CIE nel FASAS: chiedi al gestore del sistema.", "forbidden")
     if not nis_protocol.csca_certificates():
-        raise SignatureError("Registrazione non ancora attivabile: l'amministratore deve configurare i certificati "
+        raise SignatureError("Registrazione non ancora attivabile: il gestore del sistema deve configurare i certificati "
                              "della CSCA italiana (FASAS_CIE_CSCA).", "trust_not_configured")
     existing = SignatureRequest.objects.filter(user=user, purpose=SignatureRequest.Purpose.ENROLL,
                                                status__in=SignatureRequest.ACTIVE).first()
@@ -442,7 +442,7 @@ def _check_pin(enrollment, pin):
     from django.contrib.auth.hashers import check_password
 
     if enrollment.pin_locked:
-        raise SignatureError("PIN FASAS bloccato dopo troppi errori: chiedi all'amministratore.", "pin_blocked")
+        raise SignatureError("PIN FASAS bloccato dopo troppi errori: chiedi al gestore del sistema.", "pin_blocked")
     if pin and check_password(str(pin), enrollment.pin_hash):
         if enrollment.pin_failures:
             CieEnrollment.objects.filter(pk=enrollment.pk).update(pin_failures=0)
@@ -455,7 +455,7 @@ def _check_pin(enrollment, pin):
     if left == 0:
         log_event(AuditLog.Action.DENIED, locked, user=enrollment.user, repr_text="PIN FASAS bloccato",
                   changes={"pin_fasas": [None, "bloccato dopo 5 errori"]})
-        raise SignatureError("PIN FASAS bloccato dopo troppi errori: chiedi all'amministratore.", "pin_blocked")
+        raise SignatureError("PIN FASAS bloccato dopo troppi errori: chiedi al gestore del sistema.", "pin_blocked")
     raise SignatureError(f"PIN FASAS errato. Tentativi rimasti: {left}.", "pin_wrong")
 
 
@@ -518,12 +518,12 @@ def _save_enrollment(request_id, nis_raw, kpub, info):
         request = SignatureRequest.objects.select_for_update().get(pk=request_id)
         if CieEnrollment.objects.filter(nis_hash=nis_digest, revoked_at__isnull=True).exclude(user=request.user).exists():
             message = ("Questa CIE è già registrata per un altro utente del FASAS (una carta vale per una sola persona). "
-                       "Se è la tua, chiedi all'amministratore di azzerare quella registrazione in Utenti e permessi.")
+                       "Se è la tua, chiedi al gestore del sistema di azzerare quella registrazione in Utenti e permessi.")
             _close(request, Status.FAILED, "card_in_use", message[:255])
             raise SignatureError(message, "card_in_use")
         current = CieEnrollment.objects.filter(user=request.user, revoked_at__isnull=True).first()
         if current is not None and current.nis_hash == nis_digest and current.kpub_hash == nis_protocol.kpub_hash(kpub):
-            # stessa carta già registrata (es. app reinstallata): restano PIN FASAS e conferma dell'amministratore
+            # stessa carta già registrata (es. app reinstallata): restano PIN FASAS e conferma del gestore del sistema
             request.verification = {**request.verification, "enrolled": True, "level": "CIE già registrata"}
             log_event(AuditLog.Action.CONFIG, current, user=request.user, repr_text="Registrazione della CIE",
                       changes={"cie": ["registrata", "stessa carta verificata di nuovo"]})
@@ -554,7 +554,7 @@ def set_fasas_pin(enrollment, pin, by):
 
 def confirm_enrollment(enrollment, by):
     if by.pk == enrollment.user_id:
-        raise SignatureError("La registrazione della propria CIE la conferma un altro amministratore.", "forbidden")
+        raise SignatureError("La registrazione della propria CIE la conferma un altro gestore del sistema.", "forbidden")
     enrollment.confirmed_at, enrollment.confirmed_by = timezone.now(), by
     enrollment.save(update_fields=["confirmed_at", "confirmed_by"])
     log_event(AuditLog.Action.PERMISSION, enrollment, user=by, repr_text=f"CIE di {enrollment.user} confermata",

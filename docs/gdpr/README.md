@@ -11,7 +11,7 @@ titolare non li approva e li firma.
 1. Nominare o confermare il **DPO** (vedi «Prima dei dati veri»).
 2. **Registro dei trattamenti** e **DPIA**, con il parere del DPO e la decisione firmata del titolare.
 3. **Nomine**: amministratore di sistema e vice; accordi con i fornitori (art. 28).
-4. **Autorizzazioni** e **informativa al personale**: l'amministratore le distribuisce dalla Modulistica.
+4. **Autorizzazioni** e **informativa al personale**: il gestore del sistema le distribuisce dalla Modulistica.
 5. **Informativa a ospiti e tutori** e moduli all'ingresso (cassa e oggetti, foto delle lesioni se il DPO lo ritiene),
    compilati online in struttura o su carta.
 6. Incontro con l'**ATS** con la checklist; poi avvio con i dati reali.
@@ -20,7 +20,7 @@ titolare non li approva e li firma.
 ## Moduli (nel FASAS e in PDF)
 
 Informative, autorizzazioni, consensi, accordi e richieste sono nella **Modulistica del FASAS** (*Sistema ›
-Modulistica*): l'amministratore li adatta, li pubblica e li distribuisce; si compilano online o si stampano
+Modulistica*): il gestore del sistema li adatta, li pubblica e li distribuisce; si compilano online o si stampano
 (vuoti o già compilati). Nel pacchetto zip sono nella cartella **4_Moduli**, in PDF da stampare con i testi
 predefiniti; la guida è «COME SI USANO I MODULI» (MODULISTICA).
 

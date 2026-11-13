@@ -49,7 +49,7 @@ MODULES = (
            "vigilanza. L'esportazione della cartella di un ospite resta sempre attiva.",
            namespaces=("reports",), exempt=("reports:guest_export",), jobs=("reports",)),
     Module("feedback", "Segnalazioni e indicatori del pilota", "Pulsante «Segnala un problema» per tutti e, per "
-           "coordinatore e amministratore, le segnalazioni ricevute e gli indicatori (giro farmaci, registrazioni "
+           "coordinatore e gestore del sistema, le segnalazioni ricevute e gli indicatori (giro farmaci, registrazioni "
            "mancanti, checklist).", namespaces=("feedback",)),
     Module("care", "Attività a orario", "Riposizionamenti, idratazione, controlli notturni e altre attività a orario "
            "per ospite, con l'elenco del turno e l'avviso delle attività in ritardo.",
@@ -58,7 +58,7 @@ MODULES = (
            "con scontrino fotografato, rendiconto PDF per il tutore) e inventario degli oggetti personali.",
            namespaces=("personal",), pilot=False),
     Module("modulistica", "Modulistica", "Informative, autorizzazioni, consensi e richieste configurati "
-           "dall'amministratore: compilazione online (personale, ospiti in struttura, familiari) o su carta, PDF "
+           "dal gestore del sistema: compilazione online (personale, ospiti in struttura, familiari) o su carta, PDF "
            "vuoti e compilati, distribuzione al personale.", namespaces=("modulistica",)),
     Module("families", "Area familiari e tutori", "Familiari, tutori e amministratori di sostegno entrano con un "
            "proprio utente e vedono solo gli ospiti collegati: messaggi con la struttura, richieste di visita, "

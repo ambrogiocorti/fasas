@@ -1,5 +1,5 @@
 """
-Modulistica: moduli configurabili dall'amministratore (informative, autorizzazioni, consensi, accordi, richieste),
+Modulistica: moduli configurabili dal gestore del sistema (informative, autorizzazioni, consensi, accordi, richieste),
 compilabili online o stampabili su carta. Ogni compilazione conserva una fotografia del testo e delle risposte, così
 un modulo modificato in seguito non cambia ciò che è stato compilato.
 """
@@ -129,7 +129,7 @@ class FormField(models.Model):
 
 
 class FormAssignment(models.Model):
-    """Modulo da compilare da un utente del personale (distribuito dall'amministratore)."""
+    """Modulo da compilare da un utente del personale (distribuito dal gestore del sistema)."""
 
     template = models.ForeignKey(FormTemplate, on_delete=models.CASCADE, related_name="assignments")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="form_assignments")

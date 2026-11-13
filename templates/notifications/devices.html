@@ -7,7 +7,7 @@
 </div>
 
 {% if not push_enabled %}
-  <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Le notifiche push non sono ancora attive sul server: chiedere all'amministratore di configurarle.</div></div>
+  <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Le notifiche push non sono ancora attive sul server: chiedere al gestore del sistema di configurarle.</div></div>
 {% else %}
 <div class="card" data-push data-public-key="{{ public_key }}" data-subscribe-url="{% url 'notifications:push_subscribe' %}" data-unsubscribe-url="{% url 'notifications:push_unsubscribe' %}" data-icon="{% static 'img/icon-192.png' %}" data-badge="{% static 'img/badge-96.png' %}">
   <div class="card-head"><h2>{% icon "smartphone" %} Questo dispositivo</h2></div>

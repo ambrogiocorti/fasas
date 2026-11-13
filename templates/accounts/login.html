@@ -28,7 +28,7 @@
   <section class="auth-panel">
     <div class="card">
       <h2>Accedi</h2>
-      <p class="muted">Usa le credenziali personali che ti ha assegnato l'amministratore.</p>
+      <p class="muted">Usa le credenziali personali che ti ha assegnato il gestore del sistema.</p>
       {% include "partials/banner_prova.html" with show_users=True %}
       {% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}">{% icon "info" %}<div class="alert-body">{{ message }}</div></div>{% endfor %}
       <form method="post" novalidate data-offline-login>

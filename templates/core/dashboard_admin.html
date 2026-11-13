@@ -1,10 +1,10 @@
 {% extends "base.html" %}{% load fasas_tags %}
-{% block title %}Pannello di sistema{% endblock %}
+{% block title %}Gestione del sistema{% endblock %}
 {% block content %}
 <div class="page-head">
   <div>
-    <h1>Pannello di sistema</h1>
-    <span class="subtitle">Utenti, accessi, backup, audit e configurazione. Per tutela della riservatezza questo ruolo non consulta le cartelle cliniche.</span>
+    <h1>Gestione del sistema</h1>
+    <span class="subtitle">Ruolo tecnico: utenti e permessi, configurazione, modulistica, backup e audit. Per tutela della riservatezza non consulta le cartelle degli ospiti; presenze, rette e cassa sono dell'ufficio amministrativo.</span>
   </div>
   <div class="actions">
     {% if perms.accounts.add_user %}<a class="btn" href="{% url 'accounts:user_create' %}">{% icon "plus" %}Nuovo utente</a>{% endif %}

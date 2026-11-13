@@ -15,7 +15,7 @@
         {% if not required %}<button class="btn btn-danger" name="action" value="disable" data-confirm="Disattivare la verifica in due passaggi?">Disattiva</button>{% endif %}
       </div>
     </form>
-    {% if required %}<p><small class="muted">Per il tuo ruolo la verifica è obbligatoria. Se cambi telefono chiedi all'amministratore di reimpostarla e riattivala al prossimo accesso.</small></p>{% endif %}
+    {% if required %}<p><small class="muted">Per il tuo ruolo la verifica è obbligatoria. Se cambi telefono chiedi al gestore del sistema di reimpostarla e riattivala al prossimo accesso.</small></p>{% endif %}
   {% else %}
     <p><span class="pill">non attiva</span>{% if required %} <span class="pill pill-warn">obbligatoria per il tuo ruolo</span>{% endif %}</p>
     <p>Con la verifica attiva, chi conosce solo la tua password non può entrare. Serve un'app di autenticazione sul telefono.</p>

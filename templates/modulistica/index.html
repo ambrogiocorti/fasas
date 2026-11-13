@@ -20,5 +20,5 @@
         {% if t.for_staff and t.status == 'published' %}<a class="btn btn-sm" href="{% url 'modulistica:distribute' t.pk %}">{% icon "users" %}Distribuisci</a>{% endif %}</td></tr>
   {% endwith %}{% empty %}<tr><td colspan="7" class="empty">Nessun modulo.</td></tr>{% endfor %}</tbody>
 </table></div>
-<p class="muted small">La conferma online registra chi ha risposto, quando e con quale utente: non è una firma. I moduli che richiedono la firma si stampano già compilati, si firmano a mano e se ne carica la scansione (oppure si firmano digitalmente dai documenti dell'ospite). L'amministratore vede quali dipendenti hanno compilato i moduli del personale; per gli ospiti vede solo i conteggi.</p>
+<p class="muted small">La conferma online registra chi ha risposto, quando e con quale utente: non è una firma. I moduli che richiedono la firma si stampano già compilati, si firmano a mano e se ne carica la scansione (oppure si firmano digitalmente dai documenti dell'ospite). Il gestore del sistema vede quali dipendenti hanno compilato i moduli del personale; per gli ospiti vede solo i conteggi.</p>
 {% endblock %}

@@ -1,7 +1,7 @@
 # Scheda operatore – una pagina
 
 **Entrare**: nome utente e password personali, mai prestati. Da fuori struttura serve anche il codice dell'app sul
-telefono (verifica in due passaggi); se l'amministratore ha impostato il tuo utente «solo in struttura», il FASAS si
+telefono (verifica in due passaggi); se il gestore del sistema ha impostato il tuo utente «solo in struttura», il FASAS si
 apre solo dai tablet e dai PC di reparto. Dopo un periodo di inattività il FASAS esce da solo.
 
 **All'inizio del turno**: *Il mio turno* → «Prendo servizio». In alto si vede il turno in corso (mattina,
@@ -43,6 +43,6 @@ testo. Alcune voci del menu possono mancare: la struttura spegne i moduli che no
 
 **Telefono e CIE**: *Impostazioni › App per il telefono* → inquadrare il QR code con un telefono Android e
 installare FASAS Signer; *Firma digitale* → abbinare il telefono, registrare la CIE e scegliere il PIN FASAS (lo
-conferma l'amministratore). L'app per iPhone non c'è ancora.
+conferma il gestore del sistema). L'app per iPhone non c'è ancora.
 
 Dubbi o problemi: coordinatore. Password dimenticata: amministratore di sistema.

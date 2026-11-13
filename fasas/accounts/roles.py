@@ -1,5 +1,5 @@
 """
-Permessi predefiniti per ruolo (sezione 2). L'amministratore può poi concedere o negare
+Permessi predefiniti per ruolo (sezione 2). Il gestore del sistema può poi concedere o negare
 singoli permessi a singoli utenti (sezione 26) dalla pagina «Permessi» dell'utente.
 """
 from .models import Role
@@ -149,7 +149,7 @@ DOCTOR = VIEW_CARE + [
     "reports.view_quality_indicators",
 ]
 
-# Amministratore (spec. §2): utenti, configurazione, protocolli, notifiche, audit log, backup.
+# Gestore del sistema (l'«amministratore» della spec. §2; designato amministratore di sistema): utenti, configurazione, protocolli, notifiche, audit log, backup.
 # Non consulta le cartelle cliniche e non compie atti clinici.
 ADMIN = [
     "accounts.view_user", "accounts.add_user", "accounts.change_user", "accounts.view_accesslog",
@@ -175,7 +175,7 @@ ADMIN = [
     "modulistica.manage_forms",
 ]
 
-# Amministrativo (ufficio amministrativo, oltre la spec. §2): presenze per la rendicontazione, rette, prospetti
+# Ufficio amministrativo (oltre la spec. §2): presenze per la rendicontazione, rette, prospetti
 # e incassi. Vede anagrafica essenziale e giorni di presenza/assenza, non la cartella clinica.
 ADMINISTRATIVE = [
     "billing.view_attendancemonth", "billing.add_attendancecorrection", "billing.change_attendancecorrection",

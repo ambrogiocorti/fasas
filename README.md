@@ -54,7 +54,7 @@ Si entra con `admin`, `coordinatore`, `operatore`, `medico` o `amministrativo`, 
 Ubuntu Server e disco cifrato, Docker (database PostgreSQL, job, HTTPS), indirizzo DuckDNS, copia fuori sede su
 Backblaze B2 nel piano gratuito, gruppo di continuità; con lista della spesa e calendario di manutenzione. Lo script
 `scripts/prepara_server.sh` fa la parte tecnica ed è provato a ogni modifica nella CI; la manutenzione del mese è
-`scripts/aggiorna_fasas.sh`, anche da casa con la VPN dell'amministratore (`scripts/accesso_remoto.sh`).
+`scripts/aggiorna_fasas.sh`, anche da casa con la VPN del gestore del sistema (`scripts/accesso_remoto.sh`).
 
 ## Presentazione online (dati inventati)
 

@@ -240,7 +240,7 @@ class PrimoAmministratoreTest(TestCase):
         with mock.patch.dict(os.environ, {"FASAS_ADMIN_USERNAME": "", "FASAS_ADMIN_PASSWORD": ""}):
             out = io.StringIO()
             call_command("fasas_primo_amministratore", stdout=out)
-        self.assertIn("Nessun amministratore", out.getvalue())
+        self.assertIn("Nessun gestore del sistema", out.getvalue())
         self.assertFalse(User.objects.exists())
 
 
@@ -455,7 +455,7 @@ class PresentazioneTest(TestCase):
     def test_password_riservata_per_gli_utenti_di_prova(self):
         with mock.patch.dict(os.environ, {"FASAS_PRESENTAZIONE_PASSWORD": "Una-Password-Riservata-1"}):
             call_command("fasas_demo", "--ambiente-di-prova", stdout=io.StringIO())
-        admin = User.objects.get(username="admin")
+        admin = User.objects.get(username="gestore")
         self.assertTrue(admin.check_password("Una-Password-Riservata-1"))
 
     def test_niente_backup_ne_apparecchi_della_struttura(self):

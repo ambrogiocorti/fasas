@@ -21,7 +21,7 @@
   Obbligatoria per amministratore, coordinatore e medico (`FASAS_2FA_REQUIRED_ROLES`), facoltativa per gli altri; con
   `FASAS_2FA_TRUSTED_NETWORKS` diventa obbligatoria per tutti gli accessi da fuori rete e si attiva solo dalla rete
   della struttura. Segreto cifrato, ogni codice vale una volta, 10 codici di recupero (salvati come impronta),
-  reimpostazione da parte dell'amministratore con audit. I codici sbagliati contano per il blocco; il token API
+  reimpostazione da parte del gestore del sistema con audit. I codici sbagliati contano per il blocco; il token API
   richiede il codice. L'area tecnica (`/gestione-tecnica/`) non ha un accesso proprio.
 - **Accesso solo dalla struttura** per singolo utente (campo «Può entrare da fuori struttura»): da fuori rete
   (`FASAS_2FA_TRUSTED_NETWORKS`) login, sessione e token API vengono rifiutati; alternativa alla VPN per chi non
@@ -41,10 +41,10 @@ Anche le notifiche arrivano solo a chi ha il permesso di vedere ciò a cui riman
 | Operatore | *Il mio turno* | registrazioni giornaliere, farmaci somministrati, eventi, parametri, diario, checklist, chiusura del turno |
 | Coordinatore sanitario | *Coordinamento* | gestisce le cartelle ospiti, modifica i protocolli sanitari, valida le informazioni sanitarie (SOS, PAI), autorizza le modifiche oltre la finestra, magazzino, visite, report |
 | Medico | *Area medica* | consulta la cartella clinica, prescrive e modifica le terapie, valida gli SOS, registra diagnosi e allergie, firma digitalmente i documenti sanitari |
-| Amministratore | *Pannello di sistema* | gestisce utenti e permessi, configura il sistema, i protocolli e le notifiche, controlla audit log e log accessi, gestisce i backup – **non consulta le cartelle cliniche** |
-| Amministrativo | *Amministrazione* | ruolo aggiuntivo per l'ufficio amministrativo: presenze per la rendicontazione, rette, prospetti e incassi – vede nome, codice fiscale e giorni di presenza/assenza, **non la cartella clinica** |
+| Gestore del sistema | *Gestione del sistema* | gestisce utenti e permessi, configura il sistema, i protocolli e le notifiche, controlla audit log e log accessi, gestisce i backup – **non consulta le cartelle cliniche** |
+| Ufficio amministrativo | *Ufficio amministrativo* | ruolo aggiuntivo per l'ufficio amministrativo: presenze per la rendicontazione, rette, prospetti e incassi – vede nome, codice fiscale e giorni di presenza/assenza, **non la cartella clinica** |
 
-| Permesso (esempi) | Operatore | Coordinatore | Medico | Amministratore | Amministrativo |
+| Permesso (esempi) | Operatore | Coordinatore | Medico | Gestore del sistema | Ufficio amministrativo |
 |---|:-:|:-:|:-:|:-:|:-:|
 | Consultare le cartelle degli ospiti | ✔ | ✔ | ✔ | ✖ | ✖ |
 | Somministrazioni, parametri, diario, registro, checklist, chiusura turno | ✔ | ✔ | ✖ | ✖ | ✖ |
@@ -65,7 +65,7 @@ Anche le notifiche arrivano solo a chi ha il permesso di vedere ciò a cui riman
 | Protocolli automatici (regole) | ✖ | ✔ | ✖ | ✔ | ✖ |
 | Utenti, configurazione, impostazioni notifiche, audit, log accessi, backup | ✖ | ✖ | ✖ | ✔ | ✖ |
 
-L'amministratore può concedere o negare singoli permessi a singoli utenti (pagina *Utenti → Permessi*), per
+Il gestore del sistema può concedere o negare singoli permessi a singoli utenti (pagina *Utenti → Permessi*), per
 esempio dare a un medico l'approvazione del PAI; ogni variazione è nell'audit log. I permessi predefiniti dei ruoli
 vengono riallineati a ogni `migrate` (e da `manage.py fasas_setup`); le eccezioni per singolo utente restano.
 
@@ -99,7 +99,7 @@ vengono riallineati a ogni `migrate` (e da `manage.py fasas_setup`); le eccezion
   (bloccato / con motivazione obbligatoria / solo coordinatore con motivazione).
 - **Chiusura turno**: un turno chiuso non accetta inserimenti né modifiche. Chiusura manuale con consegne, o automatica
   dopo la tolleranza configurata. La riapertura straordinaria è disattivata di default; se abilitata è riservata
-  all'amministratore, con motivazione tracciata.
+  al gestore del sistema, con motivazione tracciata.
 - **Cartelle archiviate**: in sola lettura, con data di conservazione.
 
 ## Monitoraggio

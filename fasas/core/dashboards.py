@@ -4,7 +4,7 @@ Cruscotti per ruolo (spec. §2). Ogni ruolo vede ciò che deve fare, non tutto i
 - operatore: il turno in corso (farmaci, checklist, evacuazioni, protocolli da eseguire, consegne);
 - coordinatore: la supervisione della struttura (validazioni, eventi gravi, turni, PAI, scorte);
 - medico: terapie, SOS da validare, parametri fuori norma, contenzioni, documenti da firmare;
-- amministratore: lo stato del sistema (utenti, accessi, backup, audit, configurazione), senza dati clinici.
+- gestore del sistema: lo stato del sistema (utenti, accessi, backup, audit, configurazione), senza dati clinici.
 """
 import datetime
 

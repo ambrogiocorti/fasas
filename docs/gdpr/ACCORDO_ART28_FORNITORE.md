@@ -40,7 +40,7 @@ Le misure si aggiornano con lo stato dell'arte; il responsabile informa il titol
 
 Il personale del responsabile accede ai dati solo quando serve (assistenza, ripristino), con credenziali personali,
 impegno di riservatezza e nomina ad amministratore di sistema; gli accessi sono tracciati. Di norma l'assistenza non
-richiede l'accesso alle cartelle cliniche: l'amministratore del FASAS non le vede.
+richiede l'accesso alle cartelle cliniche: il gestore del sistema del FASAS non le vede.
 
 ## 5. Sub-responsabili
 

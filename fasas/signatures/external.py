@@ -150,7 +150,7 @@ def check_certificate_for_user(cert, user, now=None) -> dict:
         raise SignatureError("Il certificato della carta non è abilitato alla firma (key usage).", "cert_invalid")
     expected = (user.fiscal_code or "").strip().upper()
     if not expected:
-        raise SignatureError("Nel tuo profilo FASAS manca il codice fiscale: chiedi all'amministratore di inserirlo.",
+        raise SignatureError("Nel tuo profilo FASAS manca il codice fiscale: chiedi al gestore del sistema di inserirlo.",
                              "missing_fiscal_code")
     if not info["fiscal_codes"]:
         raise SignatureError("Il codice fiscale del titolare non è leggibile dal certificato della carta.",

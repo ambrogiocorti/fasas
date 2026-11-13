@@ -26,6 +26,6 @@
   </div>
 </div>
 {% else %}
-<div class="card empty-state"><p>L'app non è ancora stata pubblicata in questo FASAS.</p>{% if perms.signatures.manage_signer_devices %}<p><a class="btn btn-primary" href="{% url 'signatures:app_admin' %}">{% icon "upload" %}Pubblica l'app</a></p>{% else %}<p class="muted">Chiedere all'amministratore.</p>{% endif %}</div>
+<div class="card empty-state"><p>L'app non è ancora stata pubblicata in questo FASAS.</p>{% if perms.signatures.manage_signer_devices %}<p><a class="btn btn-primary" href="{% url 'signatures:app_admin' %}">{% icon "upload" %}Pubblica l'app</a></p>{% else %}<p class="muted">Chiedere al gestore del sistema.</p>{% endif %}</div>
 {% endif %}
 {% endblock %}

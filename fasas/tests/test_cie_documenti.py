@@ -255,7 +255,7 @@ class CieWithoutPinTests(FasasTestCase):
         self.assertNotIn("482913", enrollment.pin_hash)
         # senza la conferma dell'amministratore non si apre nulla
         page = self.client.post(reverse("signatures:cie_access"), {"documento": self.document.pk, "metodo": "nis"})
-        self.assertContains(page, "conferma dell")
+        self.assertContains(page, "conferma del gestore del sistema")
         with self.assertRaises(SignatureError):
             cie.confirm_enrollment(enrollment, self.operator)  # non si conferma da sé
         self.login(self.admin)

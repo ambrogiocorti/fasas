@@ -1,6 +1,6 @@
 """
 Moduli predefiniti della struttura (testi sintetici, da adattare). Si caricano una sola volta alla prima
-installazione (fasas_setup); poi li modifica l'amministratore da Sistema › Modulistica, senza toccare il codice.
+installazione (fasas_setup); poi li modifica il gestore del sistema da Sistema › Modulistica, senza toccare il codice.
 
 Testo: paragrafi separati da una riga vuota, «- » a inizio riga per gli elenchi, **grassetto**.
 Variabili: {titolare} {sede} {contatti} {dpo} {contatti_dpo} {struttura}; nei moduli del personale anche

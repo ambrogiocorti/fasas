@@ -20,7 +20,7 @@
     {% elif not is_current %}
       <div class="alert alert-warning">{% icon "alert" %}<div class="alert-body">Questa non è l'ultima versione del documento: si può firmare solo la versione corrente.</div></div>
     {% else %}
-      {% if not trust_configured %}<div class="alert alert-danger">{% icon "alert-circle" %}<div class="alert-body">L'amministratore non ha ancora configurato le CA della CIE: senza, la firma non può essere verificata e non viene avviata.</div></div>{% endif %}
+      {% if not trust_configured %}<div class="alert alert-danger">{% icon "alert-circle" %}<div class="alert-body">Il gestore del sistema non ha ancora configurato le CA della CIE: senza, la firma non può essere verificata e non viene avviata.</div></div>{% endif %}
       {% if not fiscal_code %}<div class="alert alert-danger">{% icon "alert-circle" %}<div class="alert-body">Nel tuo profilo manca il codice fiscale: serve per controllare che la carta appoggiata sia la tua.</div></div>{% endif %}
       {% if not devices %}<div class="alert alert-warning">{% icon "monitor" %}<div class="alert-body">Nessun FASAS Signer abbinato: <a href="{% url 'signatures:credential' %}#cie">abbinalo nelle impostazioni</a>.</div></div>{% endif %}
       <ol class="steps">

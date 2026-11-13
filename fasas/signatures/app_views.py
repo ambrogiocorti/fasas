@@ -1,5 +1,5 @@
 """
-App FASAS Signer per Android distribuita dal FASAS stesso: l'amministratore carica l'APK firmato con la chiave della
+App FASAS Signer per Android distribuita dal FASAS stesso: il gestore del sistema carica l'APK firmato con la chiave della
 struttura, il personale lo scarica dalla pagina «App per il telefono» (QR code dal computer) e l'app avvisa quando
 c'è una versione più recente. Niente GitHub per gli operatori.
 """

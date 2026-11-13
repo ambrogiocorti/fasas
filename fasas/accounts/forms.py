@@ -10,7 +10,7 @@ from .services import is_locked_out, record_access
 class LoginForm(AuthenticationForm):
     error_messages = {
         **AuthenticationForm.error_messages,
-        "locked": "Troppi tentativi falliti. Riprova tra qualche minuto o contatta l'amministratore.",
+        "locked": "Troppi tentativi falliti. Riprova tra qualche minuto o contatta il gestore del sistema.",
     }
 
     def clean(self):

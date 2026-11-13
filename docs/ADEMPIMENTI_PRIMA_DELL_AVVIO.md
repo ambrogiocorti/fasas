@@ -83,7 +83,7 @@ annotata nel registro interno. La procedura con la sequenza delle prime azioni e
 Il server è nella struttura: la porta del locale, chi ne ha la chiave, cosa c'è in cassaforte e dove va il disco
 mensile sono **misure di sicurezza** quanto la password. E serve **una seconda persona** che sappia usare la
 guida, con le proprie credenziali (mai quelle del titolare), per ferie, malattia o cambio di lavoro. Modulo del
-registro chiavi, inventario della cassaforte, scheda del sostituto e cosa fare quando un amministratore lascia:
+registro chiavi, inventario della cassaforte, scheda del sostituto e cosa fare quando un gestore del sistema lascia:
 [SICUREZZA_FISICA_E_CONTINUITA.md](SICUREZZA_FISICA_E_CONTINUITA.md).
 
 ## 10. Firma con CIE: la via gratuita è rimandarla

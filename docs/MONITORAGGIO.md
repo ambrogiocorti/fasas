@@ -1,6 +1,6 @@
 # Monitoraggio
 
-Il FASAS si controlla da solo e avvisa l'amministratore; un servizio esterno, anche gratuito, può controllare che il
+Il FASAS si controlla da solo e avvisa il gestore del sistema; un servizio esterno, anche gratuito, può controllare che il
 sito risponda.
 
 ## Controllo di salute: `/salute/`
@@ -23,7 +23,7 @@ il doppio dell'intervallo previsto più mezz'ora). Elenco e intervalli in *Impos
 
 Gli errori delle pagine e dei job finiscono in *Impostazioni › Stato del sistema ed errori*, raggruppati per punto del
 codice. Per riservatezza non si salvano messaggi, valori, parametri né indirizzi completi: solo tipo d'errore, rotta
-(es. `GET ospiti/<int:pk>/`) e righe del codice. L'amministratore riceve una notifica alla 1ª, 10ª, 100ª e 1000ª
+(es. `GET ospiti/<int:pk>/`) e righe del codice. Il gestore del sistema riceve una notifica alla 1ª, 10ª, 100ª e 1000ª
 occorrenza; il dettaglio tecnico completo è nel registro del server alla stessa ora.
 
 ## Chiavi

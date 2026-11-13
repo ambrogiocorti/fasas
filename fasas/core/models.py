@@ -129,7 +129,7 @@ class SystemConfig(models.Model):
         "come ci si verifica", max_length=10, choices=DocumentVerification.choices,
         default=DocumentVerification.NIS,
         help_text="In entrambi i casi si appoggia la CIE al telefono. Con il PIN FASAS ognuno registra la propria carta "
-                  "una volta e sceglie un PIN; un amministratore conferma la registrazione vedendo carta e persona. "
+                  "una volta e sceglie un PIN; un gestore del sistema conferma la registrazione vedendo carta e persona. "
                   "Chi ricorda il PIN della carta può usare anche quello.")
     documents_cie_required = models.BooleanField(
         "verifica con CIE per aprire, scaricare o modificare i documenti", default=False,

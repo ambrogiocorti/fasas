@@ -49,7 +49,7 @@ nominati (modulo «Designazione ad amministratore di sistema» della Modulistica
 con **le proprie credenziali** (mai condivise):
 
 - un proprio utente nel FASAS con ruolo amministratore e verifica in due passaggi;
-- un proprio utente sul server. L'amministratore lo crea per il vice (dalla rete della struttura):
+- un proprio utente sul server. Il gestore del sistema lo crea per il vice (dalla rete della struttura):
 
 ```bash
 sudo adduser nome.cognome && sudo usermod -aG sudo nome.cognome
@@ -60,7 +60,7 @@ sudo adduser nome.cognome && sudo usermod -aG sudo nome.cognome
 ### Come si prepara il vice
 
 1. Legge la guida d'installazione e questa pagina.
-2. Esegue lui **una copia mensile su disco USB ogni tre mesi** (passo 14), con l'amministratore accanto la prima
+2. Esegue lui **una copia mensile su disco USB ogni tre mesi** (passo 14), con il gestore del sistema accanto la prima
    volta.
 3. Una volta l'anno fa da solo la **prova annuale della busta** (guida, passo 18) e una **prova di ripristino**
    dalla pagina *Backup*.
@@ -84,7 +84,7 @@ sudo adduser nome.cognome && sudo usermod -aG sudo nome.cognome
 Problemi più comuni e cosa fare: guida d'installazione, sezione «Problemi frequenti». In caso di possibile
 violazione di dati: [gdpr/PROCEDURA_VIOLAZIONI.md](gdpr/PROCEDURA_VIOLAZIONI.md).
 
-## 4. Quando un amministratore lascia
+## 4. Quando un gestore del sistema lascia
 
 Lo stesso giorno in cui finisce l'incarico:
 

@@ -68,7 +68,7 @@ def _fill_page(request, snap, form, *, action_label, back_url, context=None, pre
     })
 
 
-# --- Amministratore: modelli, intestazione, distribuzione --------------------------------------------------------
+# --- Gestore del sistema: modelli, intestazione, distribuzione --------------------------------------------------------
 
 
 @permission_required(MANAGE, raise_exception=True)

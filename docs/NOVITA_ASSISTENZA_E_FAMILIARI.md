@@ -7,7 +7,7 @@ riaccende da *Sistema › Moduli*; i dati restano anche a modulo spento.
 | Funzione | Chi la usa | Dove | Modulo |
 |---|---|---|---|
 | Attività a orario per ospite | operatore (spunta), coordinatore (piano) | *Assistenza › Attività del turno*, scheda ospite › **Attività** | Attività a orario |
-| Denaro e oggetti personali | operatore, coordinatore, ufficio amministrativo | *Amministrazione › Denaro degli ospiti*, scheda ospite › **Denaro e oggetti** | Denaro e oggetti degli ospiti |
+| Denaro e oggetti personali | operatore, coordinatore, ufficio amministrativo | *Rette, cassa e moduli › Denaro degli ospiti*, scheda ospite › **Denaro e oggetti** | Denaro e oggetti degli ospiti |
 | Scadenze del personale | coordinatore, ufficio amministrativo; ognuno le proprie | *Personale › Scadenze del personale*, *Le mie scadenze* | Turni e scadenze del personale |
 | Indicatori di qualità | coordinatore, medico | *Archivio e report › Indicatori di qualità* | Report |
 | Firma di più documenti | medico (e chi firma) | *Da controllare › Documenti da firmare* | nucleo |
@@ -83,7 +83,7 @@ il livello legale di ciascuna firma è quello dello strumento usato, come per la
 
 Vedi [AREA_FAMILIARI_DPO.md](AREA_FAMILIARI_DPO.md) per ciò che il DPO deve valutare **prima** di accenderla.
 
-- L'amministratore crea l'utente con ruolo **Familiare o tutore**; il coordinatore lo **collega** a un ospite
+- Il gestore del sistema crea l'utente con ruolo **Familiare o tutore**; il coordinatore lo **collega** a un ospite
   indicando ruolo (familiare, tutore, amministratore di sostegno, persona indicata dall'ospite) e **base del
   collegamento** (consenso dell'ospite o decreto di nomina), e decide se vede i documenti condivisi e la cassa.
 - Il familiare entra e vede **solo** *I miei cari*: la conversazione con la struttura (riservata, una per

@@ -15,7 +15,7 @@ l'originale resta archiviato, e la firma è registrata nell'audit log.
 | Approvazioni interne (SOS, chiusura turno, PAI) | Non sono firme elettroniche avanzate né qualificate: tracciabilità nell'audit | Sempre attive |
 
 Il FASAS registra per ogni firma il **valore giuridico** (`legal_level`): «qualificata» solo per la firma remota
-con certificato che dichiara QcCompliance e QcSSCD e catena verificata con le CA configurate dall'amministratore;
+con certificato che dichiara QcCompliance e QcSSCD e catena verificata con le CA configurate dal gestore del sistema;
 altrimenti «non qualificata». Per i documenti sanitari che richiedono la firma del medico serve in pratica la
 **firma remota qualificata**; dove basta una firma elettronica avanzata si può usare la **CIE**.
 

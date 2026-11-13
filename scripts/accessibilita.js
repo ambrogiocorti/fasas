@@ -57,9 +57,9 @@ const plan = {
     '/protocolli/', '/cerca/?q=a', '/turni/', '/report/indicatori-qualita/', '/turni/scadenze/', '/famiglie/gestione/',
     '/famiglie/gestione/collegamento/1/', '/attivita/ospite/1/', '/moduli/ospite/1/', '/moduli/ospite/1/5/'],
   medico: ['/', '/firma/credenziale/', '/documenti/da-firmare/'],
-  admin: ['/', '/configurazione/', '/configurazione/moduli/', '/pilota/segnalazioni/', '/firma/app/pubblica/', '/audit/', '/moduli/', '/moduli/3/',
+  gestore: ['/', '/configurazione/', '/configurazione/moduli/', '/pilota/segnalazioni/', '/firma/app/pubblica/', '/audit/', '/moduli/', '/moduli/3/',
     '/moduli/3/distribuisci/', '/moduli/intestazione/'],
-  amministrativo: ['/', '/amministrazione/prospetti/', '/amministrazione/presenze/', '/cassa/', '/cassa/ospite/1/', '/moduli/ospiti/'],
+  ufficio: ['/', '/amministrazione/prospetti/', '/amministrazione/presenze/', '/cassa/', '/cassa/ospite/1/', '/moduli/ospiti/'],
   familiare: ['/famiglie/1/'],
 };
 (async () => {

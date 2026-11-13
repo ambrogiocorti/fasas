@@ -15,6 +15,13 @@ Le versioni 0.x precedono il collaudo in una comunità reale; la 1.0.0 arriverà
 Nuova modalità d'installazione e sei funzioni nuove (spente nella «configurazione per il pilota», l'area
 familiari spenta di default ovunque).
 
+### Nomi dei ruoli
+- «Amministratore» diventa **Gestore del sistema** (cruscotto «Gestione del sistema»; ai fini privacy resta
+  l'«amministratore di sistema» designato per iscritto) e «Amministrativo» diventa **Ufficio amministrativo**;
+  il menu dell'ufficio si chiama «Rette, cassa e moduli». Permessi e dati invariati. Utenti di prova: `gestore` e
+  `ufficio` al posto di `admin` e `amministrativo`.
+- Prova di ripristino: funziona anche quando il FASAS gira dentro uWSGI (PythonAnywhere).
+
 ### Assistenza, amministrazione, personale, familiari (docs/NOVITA_ASSISTENZA_E_FAMILIARI.md)
 - **Attività a orario per ospite**: piano (orari fissi o «ogni N ore», per turno), elenco del turno con spunta,
   regole delle registrazioni (niente doppioni, turni chiusi, annullamento con motivo), avviso al coordinatore
@@ -33,7 +40,7 @@ familiari spenta di default ovunque).
   ruolo «Familiare o tutore», collegamenti con base giuridica, messaggi, visite, documenti condivisi uno per uno,
   cassa per il tutore; il familiare non può aprire nessun'altra pagina del FASAS.
 - **Modulistica** (docs/MODULISTICA.md): informative, autorizzazioni, consensi, accordi e richieste modificabili
-  dall'amministratore (intestazione, testi, campi, versioni, pubblicazione), distribuiti al personale per ruolo e
+  dal gestore del sistema (intestazione, testi, campi, versioni, pubblicazione), distribuiti al personale per ruolo e
   ai nuovi utenti, compilabili online (personale, ospiti in struttura, familiari) o stampabili vuoti e compilati;
   i moduli da firmare restano «da firmare» fino alla scansione del foglio firmato; revoca dei consensi; nove
   moduli predefiniti sintetici, gli stessi stampati nel pacchetto `scripts/genera_pacchetto_privacy.py`.
@@ -93,7 +100,7 @@ Da questa versione si fanno solo correzioni fino alla fine del pilota (docs/PIAN
   magazzino, importazione, turni, presenze e rette, report, segnalazioni e firma remota si spengono uno per uno
   (menu, cruscotti, pagine, promemoria e job) senza perdere dati; «Applica la configurazione per il pilota».
 - **Segnala un problema** in ogni pagina (solo percorso e ora, niente parametri né dati degli ospiti); elenco con
-  stato e risposta per l'amministratore, notifica, CSV.
+  stato e risposta per il gestore del sistema, notifica, CSV.
 - **Indicatori del pilota**: dosi registrate, mancanti e in ritardo salvate a ogni chiusura turno, durata del giro
   farmaci, checklist, segnalazioni; CSV per il confronto con il cartaceo. Piano del pilota in docs/PIANO_PILOTA.md.
 - **Pacchetto per l'ispezione**: un PDF per la vigilanza ATS/ASL con ospiti e PAI, somministrazioni, eventi,
@@ -193,7 +200,7 @@ Da questa versione si fanno solo correzioni fino alla fine del pilota (docs/PIAN
 ### Continuità
 - Disco di continuità: un SSD esterno sempre collegato riceve ogni 5 minuti una copia cifrata del database e i file
   nuovi; con un guasto del server si perdono al massimo pochi minuti di registrazioni. Se il disco manca la copia
-  si ferma senza scrivere sul disco interno, l'amministratore riceve un avviso e `/salute/` lo segnala.
+  si ferma senza scrivere sul disco interno, il gestore del sistema riceve un avviso e `/salute/` lo segnala.
   Preparazione con `scripts/disco_continuita.sh` (provato nella CI con un disco virtuale), ripristino con
   `manage.py fasas_ripristina_continuita`.
 - Guida: FASAS raggiungibile in struttura anche senza linea internet (DNS locale del router, passo 7b) e prova
@@ -209,7 +216,7 @@ Da questa versione si fanno solo correzioni fino alla fine del pilota (docs/PIAN
 
 ### Corrente e foglio di emergenza
 - Gruppo di continuità con NUT (`scripts/gruppo_continuita.sh`): quando manca la corrente il FASAS avvisa
-  operatori, coordinatori e amministratori (anche sul telefono); sotto il 40% di batteria (o 3 minuti di
+  operatori, coordinatori e gestori del sistema (anche sul telefono); sotto il 40% di batteria (o 3 minuti di
   autonomia) ferma il FASAS in modo ordinato e spegne il server, che riparte da solo al ritorno della corrente.
   Stato nel controllo di salute. Provato nella CI con un gruppo simulato; con il gruppo vero va fatta la prova
   del passo 15b.
@@ -228,7 +235,7 @@ Da questa versione si fanno solo correzioni fino alla fine del pilota (docs/PIAN
 - **CIE senza il suo PIN**: per aprire i documenti si appoggia la CIE al telefono e si digita il **PIN FASAS**
   scelto al primo accesso (predefinito in Configurazione generale; chi ricorda il PIN della carta può usare anche
   quello). Protocollo NIS del Ministero: SOD verificato con la CSCA italiana e autenticazione interna della carta su
-  una sfida del server; registrazione confermata di persona da un amministratore; PIN FASAS solo come impronta,
+  una sfida del server; registrazione confermata di persona da un gestore del sistema; PIN FASAS solo come impronta,
   bloccato dopo 5 errori. Firmare con la CIE richiede ancora il PIN della carta.
 - App Android FASAS Signer 0.2: aspetto della piattaforma (colori, icone, schede, tema chiaro e scuro, icona
   dell'app), riquadro di stato con i passi della lettura, dialoghi con il codice di controllo in evidenza, PIN e
@@ -250,7 +257,7 @@ Da questa versione si fanno solo correzioni fino alla fine del pilota (docs/PIAN
   contenitori; senza opzioni fa un backup verificato, aggiorna versione e contenitori, riavvia il FASAS e controlla
   che risponda. Riavvio del server solo con `--riavvia` e mai se il disco chiederebbe la frase alla tastiera.
   Registro in `/var/log/fasas-aggiornamenti.log`.
-- `scripts/accesso_remoto.sh`: VPN WireGuard di manutenzione per l'amministratore (gratuita, senza servizi
+- `scripts/accesso_remoto.sh`: VPN WireGuard di manutenzione per il gestore del sistema (gratuita, senza servizi
   esterni): SSH da casa senza aprire la porta 22, un accesso per PC con ultimo collegamento, revoca immediata.
   Provata nella CI con un «PC di casa» simulato in una rete separata (passo 15c della guida).
 
@@ -276,7 +283,7 @@ Da questa versione si fanno solo correzioni fino alla fine del pilota (docs/PIAN
   il 95% delle pagine risponde in meno di 0,6 s (docs/PRESTAZIONI.md).
 - Ripristino dei backup PostgreSQL anche su un server di versione precedente al pg_dump (es. Supabase su 15).
 - Controllo di salute `/salute/` con dettaglio protetto da token; job periodici sorvegliati; registro errori
-  senza dati sanitari con avviso all'amministratore.
+  senza dati sanitari con avviso al gestore del sistema.
 - Dipendenze bloccate con impronte (`requirements.lock`), immagine container e `docker compose` con proxy HTTPS,
   controlli automatici di vulnerabilità (pip-audit) e di sicurezza del codice (bandit) nella CI.
 - Backup JSON con orari esatti: l'audit ripristinato resta verificabile (difetto trovato dalla prova di ripristino).

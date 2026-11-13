@@ -78,7 +78,7 @@ DEFAULT_ROLES = {
     NotificationKind.FORM_RECEIVED: ["coordinator"],
 }
 
-# Tipi inviati di default anche come notifica push sui dispositivi iscritti (modificabile dall'amministratore).
+# Tipi inviati di default anche come notifica push sui dispositivi iscritti (modificabile dal gestore del sistema).
 DEFAULT_PUSH = {
     NotificationKind.PROTOCOL, NotificationKind.EMERGENCY, NotificationKind.CRITICAL_EVENT,
     NotificationKind.SOS_VALIDATION, NotificationKind.APPOINTMENT_TODAY, NotificationKind.BACKUP,
@@ -123,7 +123,7 @@ REQUIRED_PERMISSION = {
 
 
 class NotificationSetting(models.Model):
-    """Configurazione (amministratore): quali ruoli ricevono ogni tipo di notifica e se anche via email."""
+    """Configurazione (gestore del sistema): quali ruoli ricevono ogni tipo di notifica e se anche via email."""
 
     kind = models.CharField("tipo", max_length=40, choices=NotificationKind.choices, unique=True)
     enabled = models.BooleanField("attiva", default=True)

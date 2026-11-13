@@ -27,12 +27,12 @@ Piano completo degli adempimenti: [../ADEMPIMENTI_PRIMA_DELL_AVVIO.md](../ADEMPI
 
 Ogni utente di FASAS va **autorizzato per iscritto** con l'ambito corrispondente al suo ruolo (operatore,
 coordinatore, medico, amministrativo, amministratore di sistema). L'elenco degli utenti attivi è in
-*Utenti e permessi*; i permessi personalizzati vanno motivati. Modulo: «Autorizzazione al trattamento dei dati e istruzioni» nella Modulistica del FASAS, che l'amministratore
+*Utenti e permessi*; i permessi personalizzati vanno motivati. Modulo: «Autorizzazione al trattamento dei dati e istruzioni» nella Modulistica del FASAS, che il gestore del sistema
 distribuisce ai ruoli e chiede in automatico ai nuovi utenti ([../MODULISTICA.md](../MODULISTICA.md)).
 
 ## Amministratori di sistema (provvedimento del Garante 27 novembre 2008 e s.m.)
 
-- Designazione individuale scritta di chi ha il ruolo *Amministratore* in FASAS e di chi gestisce server e database
+- Designazione individuale scritta di chi ha il ruolo *Gestore del sistema* in FASAS e di chi gestisce server e database
   (modulo «Designazione ad amministratore di sistema» della Modulistica).
 - Elenco aggiornato degli amministratori di sistema, comunicato al personale se tratta dati dei lavoratori.
 - Registrazione degli accessi degli amministratori (log accessi di FASAS per l'applicazione; [log del server e del

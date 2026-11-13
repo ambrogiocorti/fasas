@@ -4,6 +4,6 @@
 <div class="card empty-state">
   <h1>{{ module.label }}: funzione spenta</h1>
   <p class="muted">Questa parte del FASAS è spenta in questa struttura. I dati già registrati non sono stati cancellati.</p>
-  {% if perms.core.change_systemconfig %}<p><a class="btn btn-primary" href="{% url 'core:modules' %}">{% icon "grid" %}Gestisci i moduli</a></p>{% else %}<p>Per riaccenderla rivolgersi all'amministratore.</p>{% endif %}
+  {% if perms.core.change_systemconfig %}<p><a class="btn btn-primary" href="{% url 'core:modules' %}">{% icon "grid" %}Gestisci i moduli</a></p>{% else %}<p>Per riaccenderla rivolgersi al gestore del sistema.</p>{% endif %}
 </div>
 {% endblock %}

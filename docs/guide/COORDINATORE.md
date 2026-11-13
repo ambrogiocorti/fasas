@@ -12,10 +12,10 @@
 | Medicazioni e rivalutazioni | *Medicazioni da fare*; piano di medicazione e chiusura (guarita) dalla pagina della lesione |
 | Scale scadute o mai fatte | *Valutazioni da fare* |
 | Piano delle attività a orario (riposizionamento ogni 2 ore, idratazione, controlli notturni) | scheda ospite → **Attività** → *Nuova attività*; avviso se restano indietro |
-| Cassa degli ospiti, scontrini, rendiconto per il tutore | *Amministrazione › Denaro degli ospiti*; un movimento sbagliato si annulla con motivo |
+| Cassa degli ospiti, scontrini, rendiconto per il tutore | *Rette, cassa e moduli › Denaro degli ospiti*; un movimento sbagliato si annulla con motivo |
 | Corsi, idoneità e visite del personale | *Personale › Scadenze del personale* (quadro, registrazione dell'attestato, CSV) |
 | Cadute, lesioni, contenzioni, SOS, ricoveri mese per mese | *Archivio e report › Indicatori di qualità* (per 1000 giornate di presenza) |
-| Moduli degli ospiti (informativa, accordo per la cassa, consenso alle foto) | scheda ospite → **Moduli**: compila online con l'ospite o il rappresentante, oppure stampa vuoto; poi **Carica firmato**. In attesa di firma: *Amministrazione › Moduli degli ospiti* |
+| Moduli degli ospiti (informativa, accordo per la cassa, consenso alle foto) | scheda ospite → **Moduli**: compila online con l'ospite o il rappresentante, oppure stampa vuoto; poi **Carica firmato**. In attesa di firma: *Rette, cassa e moduli › Moduli degli ospiti* |
 | Familiari e tutori (se l'area è accesa) | *Da controllare › Familiari*: messaggi, visite da confermare, collegamenti e documenti condivisi |
 | Turni chiusi, consegne | *Chiusura turni* |
 
@@ -59,7 +59,7 @@ testo. Alcune voci del menu possono mancare: la struttura spegne i moduli che no
 
 **Telefono e CIE**: *Impostazioni › App per il telefono* → inquadrare il QR code con un telefono Android e
 installare FASAS Signer; *Firma digitale* → abbinare il telefono, registrare la CIE e scegliere il PIN FASAS (lo
-conferma l'amministratore). L'app per iPhone non c'è ancora.
+conferma il gestore del sistema). L'app per iPhone non c'è ancora.
 
 **Cosa non fa il coordinatore**: validare i protocolli automatici e le interazioni (lo fa il medico), gestire
 utenti e backup (amministratore di sistema).

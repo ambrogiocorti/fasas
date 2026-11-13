@@ -285,7 +285,7 @@ class CieEnrollment(models.Model):
     CIE registrata per l'uso senza il suo PIN (protocollo NIS del Ministero): la carta appoggiata al telefono dimostra
     di essere originale e il PIN FASAS, scelto dall'utente, prende il posto del PIN della carta. Si conservano solo
     l'impronta del NIS e la chiave pubblica della carta; il PIN FASAS solo come impronta (come le password).
-    La registrazione vale dopo la conferma di un amministratore che ha visto la carta e la persona.
+    La registrazione vale dopo la conferma di un gestore del sistema che ha visto la carta e la persona.
     """
     MAX_PIN_FAILURES = 5
 
@@ -374,7 +374,7 @@ class FEAAcceptance(models.Model):
 
 
 class SignerAppRelease(models.Model):
-    """App FASAS Signer per Android caricata dall'amministratore: il personale la scarica dal FASAS stesso (pagina
+    """App FASAS Signer per Android caricata dal gestore del sistema: il personale la scarica dal FASAS stesso (pagina
     «App per il telefono», con QR code) e l'app avvisa quando ce n'è una più recente."""
 
     version_code = models.PositiveIntegerField("numero di versione")

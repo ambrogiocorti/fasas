@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% load fasas_tags %}
 {% block title %}Segnala un problema{% endblock %}
 {% block content %}
-<div class="page-head"><div><h1>Segnala un problema</h1><span class="subtitle">Errori, cose scomode o lente, cose che mancano: ogni segnalazione arriva all'amministratore e serve a migliorare il FASAS durante il pilota.</span></div></div>
+<div class="page-head"><div><h1>Segnala un problema</h1><span class="subtitle">Errori, cose scomode o lente, cose che mancano: ogni segnalazione arriva al gestore del sistema e serve a migliorare il FASAS durante il pilota.</span></div></div>
 <div class="grid grid-2">
   <form method="post" class="card" novalidate>
     {% csrf_token %}

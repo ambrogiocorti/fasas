@@ -91,7 +91,7 @@ sudo -u fasas .venv/bin/python manage.py createsuperuser
 
 Accedere con il superuser, impostare il nome della comunità in *Impostazioni → Configurazione generale* e creare gli
 utenti con il loro ruolo. Il superuser va usato solo per la manutenzione: per il lavoro quotidiano creare un utente
-con ruolo *Amministratore*.
+con ruolo *Gestore del sistema*.
 
 ### systemd
 

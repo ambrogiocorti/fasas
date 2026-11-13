@@ -111,4 +111,4 @@ else
   echo "  Web › Add a new web app › Next › Manual configuration › Python $PY_VERSION › Next"
 fi
 echo
-echo "Utenti: admin, coordinatore, operatore, medico, amministrativo – password nella pagina di accesso."
+echo "Utenti: gestore, coordinatore, operatore, medico, ufficio, familiare – password nella pagina di accesso."

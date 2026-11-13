@@ -66,7 +66,7 @@ def otp_verify(request):
         if is_locked_out(user.get_username(), client_ip(request)):
             record_access(request, AccessLog.Event.LOCKED, user.get_username(), user)
             twofactor.clear_pending(request)
-            messages.error(request, "Troppi tentativi falliti. Riprova tra qualche minuto o contatta l'amministratore.")
+            messages.error(request, "Troppi tentativi falliti. Riprova tra qualche minuto o contatta il gestore del sistema.")
             return redirect("accounts:login")
         if form.is_valid():
             method = twofactor.verify(user, form.cleaned_data["code"])
@@ -75,7 +75,7 @@ def otp_verify(request):
                 if method == "recovery":
                     left = twofactor.recovery_codes_left(user)
                     messages.warning(request, f"Hai usato un codice di recupero: ne restano {left}. "
-                                              "Se hai perso il telefono chiedi all'amministratore di reimpostare la verifica.")
+                                              "Se hai perso il telefono chiedi al gestore del sistema di reimpostare la verifica.")
                 return redirect(target)
             record_access(request, AccessLog.Event.OTP_FAILED, user.get_username(), user)
             form.add_error("code", "Codice non valido o già usato. Controlla che l'ora del telefono sia corretta.")
@@ -136,7 +136,7 @@ def security(request):
 
 @require_POST
 def user_reset_2fa(request, pk):
-    """L'amministratore reimposta la verifica di chi ha perso il telefono: al prossimo accesso la riattiva."""
+    """Il gestore del sistema reimposta la verifica di chi ha perso il telefono: al prossimo accesso la riattiva."""
     if not request.user.has_perm("accounts.change_user"):
         return redirect("core:dashboard")
     target = get_object_or_404(User, pk=pk)

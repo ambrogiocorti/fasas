@@ -133,7 +133,7 @@ file dello Storage (i backup di Supabase, dove ci sono, contengono solo il datab
 
 ## Passo 6 – Primo accesso e controllo
 
-1. Aprire `https://fasas.miacooperativa.it`, entrare con l'amministratore: il FASAS chiede subito la verifica in due
+1. Aprire `https://fasas.miacooperativa.it`, entrare con il gestore del sistema: il FASAS chiede subito la verifica in due
    passaggi (app sul telefono).
 2. Togliere `FASAS_ADMIN_PASSWORD` dalle variabili di Render.
 3. Sistema › **Pannello di sistema** e **Errori del sistema**: database, file (object storage), backup, audit e job

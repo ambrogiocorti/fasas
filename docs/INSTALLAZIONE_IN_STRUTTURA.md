@@ -242,7 +242,7 @@ Nel pannello del router:
    - porta esterna **80** → `192.168.1.50` porta **80**
    - porta esterna **443** → `192.168.1.50` porta **443**
 3. **Nient'altro**: non inoltrare mai la porta 22 (SSH) né altre porte. L'unica eccezione, facoltativa, è la
-   porta **UDP 51820** della VPN di manutenzione dell'amministratore (passo 15c).
+   porta **UDP 51820** della VPN di manutenzione del gestore del sistema (passo 15c).
 4. Se c'è **UPnP**, disattivarlo; disattivare la **gestione remota del router** da internet; se la password del
    router è quella dell'etichetta, cambiarla (e salvarla nel gestore).
 
@@ -309,7 +309,7 @@ Le domande e cosa rispondere:
 | Firewall | Invio (sì) |
 | Riavvio automatico alle 05:15 | Invio (sì); `n` solo se avete scelto di digitare la frase del disco a ogni accensione (passo 5) |
 
-Lo script crea il file `/opt/fasas/.env` con chiavi nuove (leggibile solo dall'amministratore), aggiorna
+Lo script crea il file `/opt/fasas/.env` con chiavi nuove (leggibile solo dal gestore del sistema), aggiorna
 DuckDNS, attiva firewall e aggiornamenti automatici, costruisce e avvia il FASAS (la prima volta 5–15 minuti) e
 controlla che il sito risponda in HTTPS con un certificato valido. Se si rilancia non rigenera mai le chiavi.
 
@@ -426,7 +426,7 @@ cd /opt/fasas && sudo docker compose up -d
 
 6. In *Backup* premere «Esegui backup ora»: la colonna «Fuori sede» deve indicare la copia e la data di fine
    blocco. Se compare un errore (es. permessi), ricreare la chiave come al punto 4; il backup locale non viene
-   toccato e l'amministratore riceve comunque un avviso.
+   toccato e il gestore del sistema riceve comunque un avviso.
 7. Rifare la busta delle chiavi (passo 11) con un nome nuovo, es. `/data/busta-chiavi-2.fkey`, così contiene
    anche la chiave B2.
 
@@ -491,7 +491,7 @@ cd /opt/fasas && sudo ./scripts/disco_continuita.sh --stato
 
    Anche *Impostazioni › Stato del sistema ed errori* mostra la riga «copia continua».
 
-Se il disco viene scollegato o si guasta, il FASAS continua a funzionare ma l'amministratore riceve un avviso
+Se il disco viene scollegato o si guasta, il FASAS continua a funzionare ma il gestore del sistema riceve un avviso
 critico e la riga «copia continua» diventa gialla. Dopo averlo ricollegato:
 
 ```bash
@@ -530,7 +530,7 @@ vengono toccate.
 
 Con il cavo USB del gruppo di continuità collegato al server, il FASAS:
 
-- quando manca la corrente avvisa operatori, coordinatori e amministratori (notifica anche sul telefono): il turno
+- quando manca la corrente avvisa operatori, coordinatori e gestori del sistema (notifica anche sul telefono): il turno
   prepara i tablet per la modalità senza rete e il foglio di emergenza;
 - quando la batteria scende sotto il 40% (o restano meno di 3 minuti) ferma il FASAS in modo ordinato e spegne il
   server, prima che si spenga di colpo;
@@ -557,11 +557,11 @@ assente» e attendere lo spegnimento del server; poi riattaccare la spina e cont
 solo entro qualche minuto (se non riparte: impostazione del BIOS del passo 2). Annotare la durata nel registro del
 piano di continuità.
 
-### Passo 15c. Manutenzione da casa (facoltativa): VPN dell'amministratore
+### Passo 15c. Manutenzione da casa (facoltativa): VPN del gestore del sistema
 
 Gli aggiornamenti di sicurezza di Ubuntu sono automatici (passo 15); la manutenzione del mese (passo 18) si può
 fare anche da casa, **senza mai aprire la porta 22 (SSH) verso internet**: una VPN WireGuard (gratuita, nessun
-servizio esterno né abbonamento) collega solo il PC dell'amministratore al server con un canale cifrato, e solo da
+servizio esterno né abbonamento) collega solo il PC del gestore del sistema al server con un canale cifrato, e solo da
 quel canale si entra con SSH. Chi usa il FASAS non vede nessuna differenza.
 
 1. Sul server (in struttura):
@@ -572,13 +572,13 @@ cd /opt/fasas && sudo ./scripts/accesso_remoto.sh --configura
 
 2. Sul router: una regola di inoltro in più, protocollo **UDP**: porta esterna **51820** → `192.168.1.50` porta
    **51820**. Nient'altro.
-3. Un accesso per ogni PC dell'amministratore (e del sostituto), con un nome riconoscibile:
+3. Un accesso per ogni PC del gestore del sistema (e del sostituto), con un nome riconoscibile:
 
 ```bash
 cd /opt/fasas && sudo ./scripts/accesso_remoto.sh --aggiungi pc-casa-mario
 ```
 
-4. Lo script crea il file `fasas-pc-casa-mario.conf` nella cartella dell'amministratore sul server. Dal PC di
+4. Lo script crea il file `fasas-pc-casa-mario.conf` nella cartella del gestore del sistema sul server. Dal PC di
    casa, **mentre è in struttura** (sulla rete della struttura), copiarlo con
    `scp amministratore@192.168.1.50:fasas-pc-casa-mario.conf .`, poi cancellarlo dal server con
    `rm ~/fasas-pc-casa-mario.conf`. Contiene la chiave del PC: va tenuto solo su quel PC.
@@ -594,7 +594,7 @@ TPM): il FASAS resterebbe spento fino all'arrivo di qualcuno. Lo script del pass
 
 ### Passo 16. Controllo gratuito dall'esterno
 
-Il FASAS avvisa da solo l'amministratore di backup falliti, errori e problemi dell'audit. Se però il server è
+Il FASAS avvisa da solo il gestore del sistema di backup falliti, errori e problemi dell'audit. Se però il server è
 spento o la linea è giù, non può avvisare nessuno: serve un controllo dall'esterno.
 
 1. Registrarsi a un servizio gratuito di controllo dei siti, es. **UptimeRobot** (<https://uptimerobot.com>).
@@ -704,7 +704,7 @@ sudo clevis luks regen -d "$DISCO" -s 1
 (al posto di `1` il numero mostrato prima dei due punti dal comando precedente). Se il server non si riaccende
 proprio, controllare l'impostazione «Power On» del passo 2.
 
-**Un operatore ha perso o cambiato telefono.** L'amministratore in *Utenti* preme «Reimposta» nella colonna
+**Un operatore ha perso o cambiato telefono.** Il gestore del sistema in *Utenti* preme «Reimposta» nella colonna
 della verifica in due passaggi; l'operatore la riattiva al primo accesso **dalla struttura**. In alternativa può
 entrare con uno dei suoi codici di recupero.
 

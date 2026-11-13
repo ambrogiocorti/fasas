@@ -407,7 +407,7 @@ def purge_old_backups(today=None):
 
 
 def copy_offsite(record):
-    """Copia fuori sede di un backup verificato; un errore avvisa l'amministratore ma non tocca il backup locale."""
+    """Copia fuori sede di un backup verificato; un errore avvisa il gestore del sistema ma non tocca il backup locale."""
     from . import offsite
 
     if not offsite.is_configured() or record.status != BackupRecord.Status.OK or not record.verify_ok:

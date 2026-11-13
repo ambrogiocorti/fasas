@@ -16,7 +16,7 @@ class RoleAccessTests(FasasTestCase):
 
     def test_each_role_has_its_own_dashboard(self):
         headings = {self.operator: "Il mio turno", self.coordinator: "Coordinamento",
-                    self.doctor: "Area medica", self.admin: "Pannello di sistema"}
+                    self.doctor: "Area medica", self.admin: "Gestione del sistema"}
         for user, heading in headings.items():
             self.login(user)
             response = self.client.get(reverse("core:dashboard"))

@@ -4,7 +4,7 @@
 -- Come si applica (una volta, su un progetto Supabase nuovo):
 --   - editor SQL di Supabase: incollare questo file ed eseguirlo, poi il file *_fasas_protezione_api.sql;
 --   - oppure, con la CLI di Supabase collegata al progetto: «supabase db push».
--- Contiene: 115 tabelle con vincoli e indici, protezioni dell'audit (sola aggiunta), le 98
+-- Contiene: 115 tabelle con vincoli e indici, protezioni dell'audit (sola aggiunta), le 100
 -- migrazioni di Django già segnate come eseguite, ruoli e permessi, configurazione iniziale.
 -- Nessun dato personale o sanitario, nessun utente: il primo amministratore si crea all'avvio (docs/CLOUD.md).
 -- Gli aggiornamenti futuri dello schema li applica il FASAS da solo a ogni avvio («migrate»).
@@ -3762,8 +3762,8 @@ INSERT INTO public.auth_group (id, name) VALUES
 	(1, 'Operatore'),
 	(2, 'Coordinatore sanitario'),
 	(3, 'Medico'),
-	(4, 'Amministratore'),
-	(5, 'Amministrativo'),
+	(4, 'Gestore del sistema'),
+	(5, 'Ufficio amministrativo'),
 	(6, 'Familiare o tutore');
 
 --
@@ -4691,7 +4691,7 @@ INSERT INTO public.core_community (id, name, code, address, phone, email, asl_co
 --
 
 INSERT INTO public.core_systemconfig (id, evacuation_mode, edit_lock_policy, edit_window_hours, morning_start, afternoon_start, night_start, auto_close_shifts, auto_close_grace_minutes, allow_admin_reopen, max_upload_mb, allowed_upload_extensions, report_retention_years, archive_retention_years, backup_retention_days, session_timeout_minutes, stock_expiry_warning_days, pai_review_warning_days, night_theme_auto, updated_at, community_id, therapy_check_allergies, therapy_check_duplicates, therapy_check_interactions, sos_limit_policy, documents_cie_minutes, documents_cie_required, documents_verification, disabled_modules) VALUES
-	(1, 'A', 'reason', 24, '07:00:00', '14:00:00', '21:00:00', true, 120, true, 20, 'pdf,jpg,jpeg,png,tif,tiff,doc,docx,odt,xls,xlsx,txt,p7m', 5, 10, 30, 30, 30, 15, true, '2026-11-12 08:40:34.208746+00', 1, true, true, false, 'warn', 10, false, 'nis', '["families"]');
+	(1, 'A', 'reason', 24, '07:00:00', '14:00:00', '21:00:00', true, 120, true, 20, 'pdf,jpg,jpeg,png,tif,tiff,doc,docx,odt,xls,xlsx,txt,p7m', 5, 10, 30, 30, 30, 15, true, '2026-11-13 13:37:19.898006+00', 1, true, true, false, 'warn', 10, false, 'nis', '["families"]');
 
 --
 -- Data for Name: daily_checklistcheck; Type: TABLE DATA; Schema: public; Owner: -
@@ -4872,104 +4872,106 @@ INSERT INTO public.django_content_type (id, app_label, model) VALUES
 --
 
 INSERT INTO public.django_migrations (id, app, name, applied) VALUES
-	(1, 'sessions', '0001_initial', '2026-11-12 08:40:22.34933+00'),
-	(2, 'core', '0001_initial', '2026-11-12 08:40:22.372452+00'),
-	(3, 'contenttypes', '0001_initial', '2026-11-12 08:40:22.381419+00'),
-	(4, 'contenttypes', '0002_remove_content_type_name', '2026-11-12 08:40:22.38897+00'),
-	(5, 'auth', '0001_initial', '2026-11-12 08:40:22.41466+00'),
-	(6, 'auth', '0002_alter_permission_name_max_length', '2026-11-12 08:40:22.420308+00'),
-	(7, 'auth', '0003_alter_user_email_max_length', '2026-11-12 08:40:22.424874+00'),
-	(8, 'auth', '0004_alter_user_username_opts', '2026-11-12 08:40:22.429671+00'),
-	(9, 'auth', '0005_alter_user_last_login_null', '2026-11-12 08:40:22.43389+00'),
-	(10, 'auth', '0006_require_contenttypes_0002', '2026-11-12 08:40:22.435234+00'),
-	(11, 'auth', '0007_alter_validators_add_error_messages', '2026-11-12 08:40:22.441937+00'),
-	(12, 'auth', '0008_alter_user_username_max_length', '2026-11-12 08:40:22.447699+00'),
-	(13, 'auth', '0009_alter_user_last_name_max_length', '2026-11-12 08:40:22.452818+00'),
-	(14, 'auth', '0010_alter_group_name_max_length', '2026-11-12 08:40:22.459423+00'),
-	(15, 'auth', '0011_update_proxy_permissions', '2026-11-12 08:40:22.467715+00'),
-	(16, 'auth', '0012_alter_user_first_name_max_length', '2026-11-12 08:40:22.473249+00'),
-	(17, 'accounts', '0001_initial', '2026-11-12 08:40:22.537767+00'),
-	(18, 'accounts', '0002_append_only_trigger', '2026-11-12 08:40:22.624659+00'),
-	(19, 'accounts', '0003_alter_user_role', '2026-11-12 08:40:22.635724+00'),
-	(20, 'accounts', '0004_verifica_due_passaggi', '2026-11-12 08:40:22.685705+00'),
-	(21, 'accounts', '0005_accesso_da_fuori', '2026-11-12 08:40:22.695788+00'),
-	(22, 'accounts', '0006_dimensione_testo', '2026-11-12 08:40:22.705221+00'),
-	(23, 'accounts', '0007_ruolo_familiare', '2026-11-12 08:40:22.714678+00'),
-	(24, 'admin', '0001_initial', '2026-11-12 08:40:22.733814+00'),
-	(25, 'admin', '0002_logentry_remove_auto_add', '2026-11-12 08:40:22.742184+00'),
-	(26, 'admin', '0003_logentry_add_action_flag_choices', '2026-11-12 08:40:22.750325+00'),
-	(27, 'guests', '0001_initial', '2026-11-12 08:40:22.887921+00'),
-	(28, 'documents', '0001_initial', '2026-11-12 08:40:22.94792+00'),
-	(29, 'appointments', '0001_initial', '2026-11-12 08:40:22.984517+00'),
-	(30, 'assessments', '0001_initial', '2026-11-12 08:40:23.02834+00'),
-	(31, 'audit', '0001_initial', '2026-11-12 08:40:23.07125+00'),
-	(32, 'audit', '0002_append_only_trigger', '2026-11-12 08:40:23.1032+00'),
-	(33, 'audit', '0003_alter_auditlog_action', '2026-11-12 08:40:23.130817+00'),
-	(34, 'audit', '0004_punti_di_controllo', '2026-11-12 08:40:23.17288+00'),
-	(35, 'audit', '0005_auditlog_hash_version', '2026-11-12 08:40:23.232013+00'),
-	(36, 'authtoken', '0001_initial', '2026-11-12 08:40:23.261685+00'),
-	(37, 'authtoken', '0002_auto_20160226_1747', '2026-11-12 08:40:23.359414+00'),
-	(38, 'authtoken', '0003_tokenproxy', '2026-11-12 08:40:23.362884+00'),
-	(39, 'authtoken', '0004_alter_tokenproxy_options', '2026-11-12 08:40:23.368053+00'),
-	(40, 'backups', '0001_initial', '2026-11-12 08:40:23.411429+00'),
-	(41, 'backups', '0002_fuori_sede_e_prove_ripristino', '2026-11-12 08:40:23.532111+00'),
-	(42, 'billing', '0001_initial', '2026-11-12 08:40:23.861314+00'),
-	(43, 'care', '0001_attivita_a_orario', '2026-11-12 08:40:23.972263+00'),
-	(44, 'clinical', '0001_initial', '2026-11-12 08:40:24.345883+00'),
-	(45, 'pharmacy', '0001_initial', '2026-11-12 08:40:24.455212+00'),
-	(46, 'clinical', '0002_initial', '2026-11-12 08:40:24.994995+00'),
-	(47, 'clinical', '0003_controlli_somministrazioni', '2026-11-12 08:40:25.077863+00'),
-	(48, 'core', '0002_monitoraggio', '2026-11-12 08:40:25.090184+00'),
-	(49, 'core', '0003_validazione_e_promemoria', '2026-11-12 08:40:25.116202+00'),
-	(50, 'core', '0004_verifica_chiavi', '2026-11-12 08:40:25.122581+00'),
-	(51, 'core', '0005_controlli_somministrazioni', '2026-11-12 08:40:25.133717+00'),
-	(52, 'core', '0006_riapertura_turni', '2026-11-12 08:40:25.188422+00'),
-	(53, 'core', '0007_verifica_cie_documenti', '2026-11-12 08:40:25.209301+00'),
-	(54, 'core', '0008_cie_con_pin_fasas', '2026-11-12 08:40:25.219269+00'),
-	(55, 'core', '0009_moduli_accendibili', '2026-11-12 08:40:25.233257+00'),
-	(56, 'core', '0010_area_familiari_spenta', '2026-11-12 08:40:25.29219+00'),
-	(57, 'daily', '0001_initial', '2026-11-12 08:40:25.729923+00'),
-	(58, 'documents', '0002_foto_lesioni', '2026-11-12 08:40:25.774201+00'),
-	(59, 'documents', '0003_categoria_moduli', '2026-11-12 08:40:25.812712+00'),
-	(60, 'families', '0001_area_familiari', '2026-11-12 08:40:26.343368+00'),
-	(61, 'feedback', '0001_segnalazioni_pilota', '2026-11-12 08:40:26.396704+00'),
-	(62, 'imports', '0001_initial', '2026-11-12 08:40:26.454406+00'),
-	(63, 'modulistica', '0001_modulistica', '2026-11-12 08:40:26.765637+00'),
-	(64, 'notifications', '0001_initial', '2026-11-12 08:40:26.83563+00'),
-	(65, 'notifications', '0002_push', '2026-11-12 08:40:26.983498+00'),
-	(66, 'notifications', '0003_alter_notification_kind_and_more', '2026-11-12 08:40:27.033083+00'),
-	(67, 'notifications', '0004_alter_notification_kind_and_more', '2026-11-12 08:40:27.086035+00'),
-	(68, 'notifications', '0005_monitoraggio', '2026-11-12 08:40:27.136897+00'),
-	(69, 'notifications', '0006_valutazioni', '2026-11-12 08:40:27.187641+00'),
-	(70, 'notifications', '0007_lesioni', '2026-11-12 08:40:27.245377+00'),
-	(71, 'notifications', '0008_gruppo_continuita', '2026-11-12 08:40:27.298996+00'),
-	(72, 'notifications', '0009_segnalazioni_pilota', '2026-11-12 08:40:27.356464+00'),
-	(73, 'notifications', '0010_nuove_notifiche', '2026-11-12 08:40:27.410207+00'),
-	(74, 'notifications', '0011_notifiche_moduli', '2026-11-12 08:40:27.720119+00'),
-	(75, 'offline', '0001_initial', '2026-11-12 08:40:27.785646+00'),
-	(76, 'offline', '0002_consultazione_medico', '2026-11-12 08:40:27.837886+00'),
-	(77, 'pai', '0001_initial', '2026-11-12 08:40:28.049845+00'),
-	(78, 'personal', '0001_cassa_e_oggetti', '2026-11-12 08:40:28.203878+00'),
-	(79, 'pharmacy', '0002_validazione_e_promemoria', '2026-11-12 08:40:28.273442+00'),
-	(80, 'pharmacy', '0003_elenco_ufficiale_aifa', '2026-11-12 08:40:28.350442+00'),
-	(81, 'protocols', '0001_initial', '2026-11-12 08:40:28.617204+00'),
-	(82, 'protocols', '0002_validazione_e_promemoria', '2026-11-12 08:40:28.862145+00'),
-	(83, 'protocols', '0003_azioni_e_parametri_guidati', '2026-11-12 08:40:28.981636+00'),
-	(84, 'reports', '0001_initial', '2026-11-12 08:40:29.397741+00'),
-	(85, 'reports', '0002_modelli_e_ogni_n_giorni', '2026-11-12 08:40:29.792845+00'),
-	(86, 'reports', '0003_indicatori_di_qualita', '2026-11-12 08:40:29.846568+00'),
-	(87, 'signatures', '0001_initial', '2026-11-12 08:40:30.060941+00'),
-	(88, 'signatures', '0002_csc_remote', '2026-11-12 08:40:30.313103+00'),
-	(89, 'signatures', '0003_firma_cie', '2026-11-12 08:40:30.693719+00'),
-	(90, 'signatures', '0004_accettazione_fea', '2026-11-12 08:40:31.172424+00'),
-	(91, 'signatures', '0005_verifica_cie_documenti', '2026-11-12 08:40:31.523017+00'),
-	(92, 'signatures', '0006_cie_con_pin_fasas', '2026-11-12 08:40:31.84787+00'),
-	(93, 'signatures', '0007_app_android_dal_fasas', '2026-11-12 08:40:31.931462+00'),
-	(94, 'signatures', '0008_firme_per_autorizzazione', '2026-11-12 08:40:32.002857+00'),
-	(95, 'staffing', '0001_initial', '2026-11-12 08:40:32.913675+00'),
-	(96, 'staffing', '0002_scadenze_del_personale', '2026-11-12 08:40:33.030458+00'),
-	(97, 'staffing', '0003_tipi_di_scadenza_proposti', '2026-11-12 08:40:33.151671+00'),
-	(98, 'wounds', '0001_initial', '2026-11-12 08:40:33.63075+00');
+	(1, 'sessions', '0001_initial', '2026-11-13 13:37:07.106159+00'),
+	(2, 'core', '0001_initial', '2026-11-13 13:37:07.121431+00'),
+	(3, 'contenttypes', '0001_initial', '2026-11-13 13:37:07.126665+00'),
+	(4, 'contenttypes', '0002_remove_content_type_name', '2026-11-13 13:37:07.133675+00'),
+	(5, 'auth', '0001_initial', '2026-11-13 13:37:07.15522+00'),
+	(6, 'auth', '0002_alter_permission_name_max_length', '2026-11-13 13:37:07.15912+00'),
+	(7, 'auth', '0003_alter_user_email_max_length', '2026-11-13 13:37:07.163159+00'),
+	(8, 'auth', '0004_alter_user_username_opts', '2026-11-13 13:37:07.167277+00'),
+	(9, 'auth', '0005_alter_user_last_login_null', '2026-11-13 13:37:07.170902+00'),
+	(10, 'auth', '0006_require_contenttypes_0002', '2026-11-13 13:37:07.171975+00'),
+	(11, 'auth', '0007_alter_validators_add_error_messages', '2026-11-13 13:37:07.175471+00'),
+	(12, 'auth', '0008_alter_user_username_max_length', '2026-11-13 13:37:07.178795+00'),
+	(13, 'auth', '0009_alter_user_last_name_max_length', '2026-11-13 13:37:07.182255+00'),
+	(14, 'auth', '0010_alter_group_name_max_length', '2026-11-13 13:37:07.186609+00'),
+	(15, 'auth', '0011_update_proxy_permissions', '2026-11-13 13:37:07.192014+00'),
+	(16, 'auth', '0012_alter_user_first_name_max_length', '2026-11-13 13:37:07.195451+00'),
+	(17, 'accounts', '0001_initial', '2026-11-13 13:37:07.251358+00'),
+	(18, 'accounts', '0002_append_only_trigger', '2026-11-13 13:37:07.263232+00'),
+	(19, 'accounts', '0003_alter_user_role', '2026-11-13 13:37:07.271135+00'),
+	(20, 'accounts', '0004_verifica_due_passaggi', '2026-11-13 13:37:07.314797+00'),
+	(21, 'accounts', '0005_accesso_da_fuori', '2026-11-13 13:37:07.324888+00'),
+	(22, 'accounts', '0006_dimensione_testo', '2026-11-13 13:37:07.333655+00'),
+	(23, 'accounts', '0007_ruolo_familiare', '2026-11-13 13:37:07.340721+00'),
+	(24, 'accounts', '0008_nomi_dei_ruoli', '2026-11-13 13:37:07.349161+00'),
+	(25, 'admin', '0001_initial', '2026-11-13 13:37:07.366471+00'),
+	(26, 'admin', '0002_logentry_remove_auto_add', '2026-11-13 13:37:07.373766+00'),
+	(27, 'admin', '0003_logentry_add_action_flag_choices', '2026-11-13 13:37:07.383207+00'),
+	(28, 'guests', '0001_initial', '2026-11-13 13:37:07.512443+00'),
+	(29, 'documents', '0001_initial', '2026-11-13 13:37:07.571584+00'),
+	(30, 'appointments', '0001_initial', '2026-11-13 13:37:07.610121+00'),
+	(31, 'assessments', '0001_initial', '2026-11-13 13:37:07.661831+00'),
+	(32, 'audit', '0001_initial', '2026-11-13 13:37:07.701859+00'),
+	(33, 'audit', '0002_append_only_trigger', '2026-11-13 13:37:07.72686+00'),
+	(34, 'audit', '0003_alter_auditlog_action', '2026-11-13 13:37:07.749128+00'),
+	(35, 'audit', '0004_punti_di_controllo', '2026-11-13 13:37:07.792285+00'),
+	(36, 'audit', '0005_auditlog_hash_version', '2026-11-13 13:37:07.84637+00'),
+	(37, 'authtoken', '0001_initial', '2026-11-13 13:37:07.88069+00'),
+	(38, 'authtoken', '0002_auto_20160226_1747', '2026-11-13 13:37:07.981008+00'),
+	(39, 'authtoken', '0003_tokenproxy', '2026-11-13 13:37:07.983922+00'),
+	(40, 'authtoken', '0004_alter_tokenproxy_options', '2026-11-13 13:37:07.988913+00'),
+	(41, 'backups', '0001_initial', '2026-11-13 13:37:08.032574+00'),
+	(42, 'backups', '0002_fuori_sede_e_prove_ripristino', '2026-11-13 13:37:08.157454+00'),
+	(43, 'billing', '0001_initial', '2026-11-13 13:37:08.495851+00'),
+	(44, 'care', '0001_attivita_a_orario', '2026-11-13 13:37:08.613095+00'),
+	(45, 'clinical', '0001_initial', '2026-11-13 13:37:09.00867+00'),
+	(46, 'pharmacy', '0001_initial', '2026-11-13 13:37:09.147134+00'),
+	(47, 'clinical', '0002_initial', '2026-11-13 13:37:09.767528+00'),
+	(48, 'clinical', '0003_controlli_somministrazioni', '2026-11-13 13:37:09.84718+00'),
+	(49, 'core', '0002_monitoraggio', '2026-11-13 13:37:09.863183+00'),
+	(50, 'core', '0003_validazione_e_promemoria', '2026-11-13 13:37:09.893247+00'),
+	(51, 'core', '0004_verifica_chiavi', '2026-11-13 13:37:09.901993+00'),
+	(52, 'core', '0005_controlli_somministrazioni', '2026-11-13 13:37:09.918687+00'),
+	(53, 'core', '0006_riapertura_turni', '2026-11-13 13:37:09.974739+00'),
+	(54, 'core', '0007_verifica_cie_documenti', '2026-11-13 13:37:09.995116+00'),
+	(55, 'core', '0008_cie_con_pin_fasas', '2026-11-13 13:37:10.005848+00'),
+	(56, 'core', '0009_moduli_accendibili', '2026-11-13 13:37:10.019189+00'),
+	(57, 'core', '0010_area_familiari_spenta', '2026-11-13 13:37:10.078345+00'),
+	(58, 'core', '0011_testi_gestore_del_sistema', '2026-11-13 13:37:10.088293+00'),
+	(59, 'daily', '0001_initial', '2026-11-13 13:37:10.558031+00'),
+	(60, 'documents', '0002_foto_lesioni', '2026-11-13 13:37:10.610443+00'),
+	(61, 'documents', '0003_categoria_moduli', '2026-11-13 13:37:10.653846+00'),
+	(62, 'families', '0001_area_familiari', '2026-11-13 13:37:11.310177+00'),
+	(63, 'feedback', '0001_segnalazioni_pilota', '2026-11-13 13:37:11.375656+00'),
+	(64, 'imports', '0001_initial', '2026-11-13 13:37:11.438671+00'),
+	(65, 'modulistica', '0001_modulistica', '2026-11-13 13:37:11.841163+00'),
+	(66, 'notifications', '0001_initial', '2026-11-13 13:37:11.915437+00'),
+	(67, 'notifications', '0002_push', '2026-11-13 13:37:12.076126+00'),
+	(68, 'notifications', '0003_alter_notification_kind_and_more', '2026-11-13 13:37:12.13233+00'),
+	(69, 'notifications', '0004_alter_notification_kind_and_more', '2026-11-13 13:37:12.192699+00'),
+	(70, 'notifications', '0005_monitoraggio', '2026-11-13 13:37:12.254994+00'),
+	(71, 'notifications', '0006_valutazioni', '2026-11-13 13:37:12.313091+00'),
+	(72, 'notifications', '0007_lesioni', '2026-11-13 13:37:12.389148+00'),
+	(73, 'notifications', '0008_gruppo_continuita', '2026-11-13 13:37:12.472351+00'),
+	(74, 'notifications', '0009_segnalazioni_pilota', '2026-11-13 13:37:12.559709+00'),
+	(75, 'notifications', '0010_nuove_notifiche', '2026-11-13 13:37:12.613165+00'),
+	(76, 'notifications', '0011_notifiche_moduli', '2026-11-13 13:37:13.023628+00'),
+	(77, 'offline', '0001_initial', '2026-11-13 13:37:13.08853+00'),
+	(78, 'offline', '0002_consultazione_medico', '2026-11-13 13:37:13.162948+00'),
+	(79, 'pai', '0001_initial', '2026-11-13 13:37:13.431581+00'),
+	(80, 'personal', '0001_cassa_e_oggetti', '2026-11-13 13:37:13.630905+00'),
+	(81, 'pharmacy', '0002_validazione_e_promemoria', '2026-11-13 13:37:13.705634+00'),
+	(82, 'pharmacy', '0003_elenco_ufficiale_aifa', '2026-11-13 13:37:13.796953+00'),
+	(83, 'protocols', '0001_initial', '2026-11-13 13:37:14.075155+00'),
+	(84, 'protocols', '0002_validazione_e_promemoria', '2026-11-13 13:37:14.422186+00'),
+	(85, 'protocols', '0003_azioni_e_parametri_guidati', '2026-11-13 13:37:14.593976+00'),
+	(86, 'reports', '0001_initial', '2026-11-13 13:37:15.185326+00'),
+	(87, 'reports', '0002_modelli_e_ogni_n_giorni', '2026-11-13 13:37:15.663938+00'),
+	(88, 'reports', '0003_indicatori_di_qualita', '2026-11-13 13:37:15.730135+00'),
+	(89, 'signatures', '0001_initial', '2026-11-13 13:37:15.888553+00'),
+	(90, 'signatures', '0002_csc_remote', '2026-11-13 13:37:16.071017+00'),
+	(91, 'signatures', '0003_firma_cie', '2026-11-13 13:37:16.392197+00'),
+	(92, 'signatures', '0004_accettazione_fea', '2026-11-13 13:37:16.920527+00'),
+	(93, 'signatures', '0005_verifica_cie_documenti', '2026-11-13 13:37:17.261864+00'),
+	(94, 'signatures', '0006_cie_con_pin_fasas', '2026-11-13 13:37:17.560128+00'),
+	(95, 'signatures', '0007_app_android_dal_fasas', '2026-11-13 13:37:17.664908+00'),
+	(96, 'signatures', '0008_firme_per_autorizzazione', '2026-11-13 13:37:17.769756+00'),
+	(97, 'staffing', '0001_initial', '2026-11-13 13:37:18.736241+00'),
+	(98, 'staffing', '0002_scadenze_del_personale', '2026-11-13 13:37:18.86361+00'),
+	(99, 'staffing', '0003_tipi_di_scadenza_proposti', '2026-11-13 13:37:18.963033+00'),
+	(100, 'wounds', '0001_initial', '2026-11-13 13:37:19.366146+00');
 
 --
 -- Data for Name: documents_document; Type: TABLE DATA; Schema: public; Owner: -
@@ -5090,7 +5092,7 @@ INSERT INTO public.modulistica_formfield (id, key, label, kind, required, option
 --
 
 INSERT INTO public.modulistica_formtemplate (id, created_at, updated_at, code, title, intro, for_guests, for_family, for_staff, staff_roles, auto_assign, requires_signature, withdrawable, signatures, document_category, status, version, published_at, "order", created_by_id, updated_by_id) VALUES
-	(1, '2026-11-12 08:40:34.800754+00', '2026-11-12 08:40:34.801088+00', 'informativa-ospiti', 'Informativa sul trattamento dei dati personali – ospiti', 'Ai sensi dell''art. 13 del Regolamento (UE) 2016/679, {titolare}, con sede in {sede}, in qualità di titolare del trattamento, informa che i dati personali dell''ospite sono trattati come segue. Responsabile della protezione dei dati: {dpo}.
+	(1, '2026-11-13 13:37:20.429425+00', '2026-11-13 13:37:20.429818+00', 'informativa-ospiti', 'Informativa sul trattamento dei dati personali – ospiti', 'Ai sensi dell''art. 13 del Regolamento (UE) 2016/679, {titolare}, con sede in {sede}, in qualità di titolare del trattamento, informa che i dati personali dell''ospite sono trattati come segue. Responsabile della protezione dei dati: {dpo}.
 
 **Dati e finalità.** Dati anagrafici e di contatto, dati relativi alla salute, alla disabilità e alla tutela legale, presenze e dati amministrativi, trattati per erogare l''assistenza socio-sanitaria, tenere il Fascicolo Socio Assistenziale Sanitario previsto dalla normativa regionale, adempiere agli obblighi verso ATS e Regione, gestire la retta e, se affidata alla struttura, la piccola cassa personale.
 
@@ -5102,8 +5104,8 @@ INSERT INTO public.modulistica_formtemplate (id, created_at, updated_at, code, t
 
 **Conservazione.** Il fascicolo è conservato per il tempo previsto dalla normativa sanitaria e regionale; i dati amministrativi per dieci anni.
 
-Per esercitare i diritti previsti dagli artt. 15–22 del Regolamento (UE) 2016/679 (accesso, rettifica, limitazione, opposizione) scrivere a {contatti} o al Responsabile della protezione dei dati ({contatti_dpo}). È possibile proporre reclamo al Garante per la protezione dei dati personali.', true, true, false, '[]', false, false, false, '["L''ospite o chi lo rappresenta"]', 'form', 'published', 1, '2026-11-12 08:40:34.800722+00', 0, NULL, NULL),
-	(2, '2026-11-12 08:40:34.810855+00', '2026-11-12 08:40:34.811081+00', 'informativa-personale', 'Informativa al personale sull''uso del sistema FASAS Digitale', 'Ai sensi dell''art. 13 del Regolamento (UE) 2016/679 e dell''art. 4, comma 3, della L. 300/1970, {titolare} informa che il sistema FASAS Digitale, strumento di lavoro per la tenuta del fascicolo degli ospiti, registra:
+Per esercitare i diritti previsti dagli artt. 15–22 del Regolamento (UE) 2016/679 (accesso, rettifica, limitazione, opposizione) scrivere a {contatti} o al Responsabile della protezione dei dati ({contatti_dpo}). È possibile proporre reclamo al Garante per la protezione dei dati personali.', true, true, false, '[]', false, false, false, '["L''ospite o chi lo rappresenta"]', 'form', 'published', 1, '2026-11-13 13:37:20.429338+00', 0, NULL, NULL),
+	(2, '2026-11-13 13:37:20.440273+00', '2026-11-13 13:37:20.440516+00', 'informativa-personale', 'Informativa al personale sull''uso del sistema FASAS Digitale', 'Ai sensi dell''art. 13 del Regolamento (UE) 2016/679 e dell''art. 4, comma 3, della L. 300/1970, {titolare} informa che il sistema FASAS Digitale, strumento di lavoro per la tenuta del fascicolo degli ospiti, registra:
 
 - gli accessi (utente, data e ora, indirizzo IP, dispositivo, esito);
 - le operazioni svolte sui dati, con il valore precedente e quello nuovo;
@@ -5114,8 +5116,8 @@ Per esercitare i diritti previsti dagli artt. 15–22 del Regolamento (UE) 2016/
 
 **Conservazione.** Registri degli accessi e delle operazioni per il tempo indicato nel registro dei trattamenti; dati sulla formazione per la durata del rapporto e successivamente per il tempo previsto dalla legge.
 
-Per esercitare i diritti previsti dagli artt. 15–22 del Regolamento (UE) 2016/679 (accesso, rettifica, limitazione, opposizione) scrivere a {contatti} o al Responsabile della protezione dei dati ({contatti_dpo}). È possibile proporre reclamo al Garante per la protezione dei dati personali.', false, false, true, '["operator", "coordinator", "doctor", "administrative", "admin"]', true, false, false, '["Il/la dipendente"]', 'form', 'published', 1, '2026-11-12 08:40:34.810833+00', 10, NULL, NULL),
-	(3, '2026-11-12 08:40:34.818701+00', '2026-11-12 08:40:34.818877+00', 'autorizzazione-personale', 'Autorizzazione al trattamento dei dati e istruzioni', '{titolare}, titolare del trattamento, autorizza {utente}, con il ruolo di {ruolo}, a trattare i dati personali degli ospiti e del personale con il sistema FASAS Digitale, nei limiti necessari alle mansioni assegnate (art. 29 del Regolamento (UE) 2016/679 e art. 2-quaterdecies del D.Lgs. 196/2003).
+Per esercitare i diritti previsti dagli artt. 15–22 del Regolamento (UE) 2016/679 (accesso, rettifica, limitazione, opposizione) scrivere a {contatti} o al Responsabile della protezione dei dati ({contatti_dpo}). È possibile proporre reclamo al Garante per la protezione dei dati personali.', false, false, true, '["operator", "coordinator", "doctor", "administrative", "admin"]', true, false, false, '["Il/la dipendente"]', 'form', 'published', 1, '2026-11-13 13:37:20.440249+00', 10, NULL, NULL),
+	(3, '2026-11-13 13:37:20.446956+00', '2026-11-13 13:37:20.447173+00', 'autorizzazione-personale', 'Autorizzazione al trattamento dei dati e istruzioni', '{titolare}, titolare del trattamento, autorizza {utente}, con il ruolo di {ruolo}, a trattare i dati personali degli ospiti e del personale con il sistema FASAS Digitale, nei limiti necessari alle mansioni assegnate (art. 29 del Regolamento (UE) 2016/679 e art. 2-quaterdecies del D.Lgs. 196/2003).
 
 **Istruzioni**
 
@@ -5126,14 +5128,14 @@ Per esercitare i diritti previsti dagli artt. 15–22 del Regolamento (UE) 2016/
 - Stampe ed esportazioni si conservano come la documentazione cartacea e si distruggono in modo sicuro.
 - Smarrimenti, accessi sospetti o invii errati si segnalano subito al coordinatore o all''amministratore di sistema.
 
-Quanto appreso sugli ospiti è coperto dal segreto professionale e d''ufficio anche dopo la cessazione del rapporto. L''autorizzazione vale fino a revoca, cambio di mansione o cessazione del rapporto.', false, false, true, '["operator", "coordinator", "doctor", "administrative"]', true, false, false, '["Il titolare del trattamento", "Il/la dipendente"]', 'form', 'published', 1, '2026-11-12 08:40:34.818676+00', 20, NULL, NULL),
-	(4, '2026-11-12 08:40:34.825771+00', '2026-11-12 08:40:34.825936+00', 'nomina-amministratore-sistema', 'Designazione ad amministratore di sistema', '{titolare} designa {utente} amministratore di sistema per il sistema FASAS Digitale, ai sensi del provvedimento del Garante per la protezione dei dati personali del 27 novembre 2008 e successive modifiche, per gli ambiti indicati di seguito.
+Quanto appreso sugli ospiti è coperto dal segreto professionale e d''ufficio anche dopo la cessazione del rapporto. L''autorizzazione vale fino a revoca, cambio di mansione o cessazione del rapporto.', false, false, true, '["operator", "coordinator", "doctor", "administrative"]', true, false, false, '["Il titolare del trattamento", "Il/la dipendente"]', 'form', 'published', 1, '2026-11-13 13:37:20.446939+00', 20, NULL, NULL),
+	(4, '2026-11-13 13:37:20.453483+00', '2026-11-13 13:37:20.45434+00', 'nomina-amministratore-sistema', 'Designazione ad amministratore di sistema', '{titolare} designa {utente} amministratore di sistema per il sistema FASAS Digitale, ai sensi del provvedimento del Garante per la protezione dei dati personali del 27 novembre 2008 e successive modifiche, per gli ambiti indicati di seguito.
 
-L''amministratore di sistema gestisce utenti, permessi, configurazione, copie di sicurezza e aggiornamenti; non accede ai dati sanitari se non per necessità tecniche documentate; custodisce le credenziali di amministrazione; segnala senza ritardo ogni possibile violazione dei dati. Gli accessi amministrativi sono registrati e l''operato è verificato almeno una volta l''anno.', false, false, true, '["admin"]', false, true, false, '["Il titolare del trattamento", "L''amministratore di sistema"]', 'legal', 'published', 1, '2026-11-12 08:40:34.825753+00', 30, NULL, NULL),
-	(5, '2026-11-12 08:40:34.832408+00', '2026-11-12 08:40:34.832578+00', 'cassa-e-oggetti', 'Accordo per la gestione della piccola cassa e degli oggetti personali', 'Con il presente accordo {ospite} affida a {titolare} una somma per le piccole spese personali e/o gli oggetti elencati. La struttura registra ogni movimento nel sistema FASAS Digitale con data, importo e scontrino, custodisce il denaro separatamente da quello della struttura, non effettua spese oltre il saldo e i limiti indicati e fornisce un rendiconto periodico. Eventuali errori si correggono con un''annotazione motivata che resta visibile nel rendiconto.', true, false, false, '[]', false, true, false, '["L''ospite o chi lo rappresenta", "Per la struttura"]', 'legal', 'published', 1, '2026-11-12 08:40:34.832367+00', 40, NULL, NULL),
-	(6, '2026-11-12 08:40:34.841032+00', '2026-11-12 08:40:34.841245+00', 'foto-lesioni', 'Fotografie delle lesioni cutanee – informazione e consenso', 'Per seguire l''andamento delle lesioni cutanee, il personale sanitario può fotografarle durante le medicazioni. Le fotografie si scattano solo con dispositivi della struttura, inquadrano esclusivamente la lesione, sono conservate in forma cifrata nel fascicolo dell''ospite e sono consultabili solo dal personale sanitario autorizzato e dai medici curanti. Il consenso può essere revocato in qualsiasi momento senza conseguenze sull''assistenza: in tal caso le lesioni saranno documentate solo per iscritto.', true, false, false, '[]', false, true, true, '["L''ospite o chi lo rappresenta"]', 'form', 'published', 1, '2026-11-12 08:40:34.84101+00', 50, NULL, NULL),
-	(7, '2026-11-12 08:40:34.849438+00', '2026-11-12 08:40:34.849615+00', 'richiesta-diritti', 'Richiesta di esercizio dei diritti sui dati personali', 'Richiesta ai sensi degli artt. 15–22 del Regolamento (UE) 2016/679, indirizzata a {titolare}. La risposta è fornita entro un mese dal ricevimento, prorogabile di due mesi nei casi complessi. Per le richieste presentate per conto di altri può essere chiesta la documentazione che ne attesta i poteri.', true, true, true, '[]', false, false, false, '["Il richiedente"]', 'form', 'published', 1, '2026-11-12 08:40:34.849422+00', 60, NULL, NULL),
-	(8, '2026-11-12 08:40:34.857328+00', '2026-11-12 08:40:34.85752+00', 'informativa-familiari', 'Informativa per gli utenti dell''area familiari', 'Ai sensi dell''art. 13 del Regolamento (UE) 2016/679, {titolare} informa che, per l''accesso all''area familiari del sistema FASAS Digitale, tratta nome, codice fiscale e recapiti del familiare, gli estremi del documento d''identità e dell''eventuale provvedimento di nomina, i messaggi, le richieste di visita e la registrazione degli accessi.
+L''amministratore di sistema gestisce utenti, permessi, configurazione, copie di sicurezza e aggiornamenti; non accede ai dati sanitari se non per necessità tecniche documentate; custodisce le credenziali di amministrazione; segnala senza ritardo ogni possibile violazione dei dati. Gli accessi amministrativi sono registrati e l''operato è verificato almeno una volta l''anno.', false, false, true, '["admin"]', false, true, false, '["Il titolare del trattamento", "L''amministratore di sistema"]', 'legal', 'published', 1, '2026-11-13 13:37:20.453462+00', 30, NULL, NULL),
+	(5, '2026-11-13 13:37:20.462904+00', '2026-11-13 13:37:20.463101+00', 'cassa-e-oggetti', 'Accordo per la gestione della piccola cassa e degli oggetti personali', 'Con il presente accordo {ospite} affida a {titolare} una somma per le piccole spese personali e/o gli oggetti elencati. La struttura registra ogni movimento nel sistema FASAS Digitale con data, importo e scontrino, custodisce il denaro separatamente da quello della struttura, non effettua spese oltre il saldo e i limiti indicati e fornisce un rendiconto periodico. Eventuali errori si correggono con un''annotazione motivata che resta visibile nel rendiconto.', true, false, false, '[]', false, true, false, '["L''ospite o chi lo rappresenta", "Per la struttura"]', 'legal', 'published', 1, '2026-11-13 13:37:20.462885+00', 40, NULL, NULL),
+	(6, '2026-11-13 13:37:20.469524+00', '2026-11-13 13:37:20.469702+00', 'foto-lesioni', 'Fotografie delle lesioni cutanee – informazione e consenso', 'Per seguire l''andamento delle lesioni cutanee, il personale sanitario può fotografarle durante le medicazioni. Le fotografie si scattano solo con dispositivi della struttura, inquadrano esclusivamente la lesione, sono conservate in forma cifrata nel fascicolo dell''ospite e sono consultabili solo dal personale sanitario autorizzato e dai medici curanti. Il consenso può essere revocato in qualsiasi momento senza conseguenze sull''assistenza: in tal caso le lesioni saranno documentate solo per iscritto.', true, false, false, '[]', false, true, true, '["L''ospite o chi lo rappresenta"]', 'form', 'published', 1, '2026-11-13 13:37:20.469507+00', 50, NULL, NULL),
+	(7, '2026-11-13 13:37:20.475856+00', '2026-11-13 13:37:20.476006+00', 'richiesta-diritti', 'Richiesta di esercizio dei diritti sui dati personali', 'Richiesta ai sensi degli artt. 15–22 del Regolamento (UE) 2016/679, indirizzata a {titolare}. La risposta è fornita entro un mese dal ricevimento, prorogabile di due mesi nei casi complessi. Per le richieste presentate per conto di altri può essere chiesta la documentazione che ne attesta i poteri.', true, true, true, '[]', false, false, false, '["Il richiedente"]', 'form', 'published', 1, '2026-11-13 13:37:20.47584+00', 60, NULL, NULL),
+	(8, '2026-11-13 13:37:20.483993+00', '2026-11-13 13:37:20.48467+00', 'informativa-familiari', 'Informativa per gli utenti dell''area familiari', 'Ai sensi dell''art. 13 del Regolamento (UE) 2016/679, {titolare} informa che, per l''accesso all''area familiari del sistema FASAS Digitale, tratta nome, codice fiscale e recapiti del familiare, gli estremi del documento d''identità e dell''eventuale provvedimento di nomina, i messaggi, le richieste di visita e la registrazione degli accessi.
 
 **Finalità e base giuridica.** Comunicazioni con la struttura, programmazione delle visite e messa a disposizione delle informazioni condivise, sulla base della richiesta del familiare e del consenso dell''ospite o dei poteri conferiti dal provvedimento di nomina.
 
@@ -5141,8 +5143,8 @@ L''amministratore di sistema gestisce utenti, permessi, configurazione, copie di
 
 **Conservazione.** I dati dell''utente fino alla chiusura dell''accesso; messaggi e visite per il tempo indicato nel registro dei trattamenti.
 
-Per esercitare i diritti previsti dagli artt. 15–22 del Regolamento (UE) 2016/679 (accesso, rettifica, limitazione, opposizione) scrivere a {contatti} o al Responsabile della protezione dei dati ({contatti_dpo}). È possibile proporre reclamo al Garante per la protezione dei dati personali.', true, true, false, '[]', false, false, false, '["Il familiare"]', 'form', 'published', 1, '2026-11-12 08:40:34.857312+00', 70, NULL, NULL),
-	(9, '2026-11-12 08:40:34.866051+00', '2026-11-12 08:40:34.866212+00', 'accesso-area-familiari', 'Richiesta di accesso all''area familiari', 'Richiesta di collegamento di un familiare, tutore o amministratore di sostegno a {ospite} nell''area familiari del sistema FASAS Digitale. Il collegamento consente di comunicare con la struttura e di programmare le visite; documenti condivisi e rendiconto della cassa solo se indicati di seguito. Non è mai consentito l''accesso alla cartella clinica. Le credenziali sono personali; l''accesso può essere revocato in qualsiasi momento dall''ospite capace o dalla struttura.', true, false, false, '[]', false, true, false, '["Il richiedente", "L''ospite (se il collegamento si basa sul suo consenso)", "Per la struttura"]', 'legal', 'published', 1, '2026-11-12 08:40:34.866034+00', 80, NULL, NULL);
+Per esercitare i diritti previsti dagli artt. 15–22 del Regolamento (UE) 2016/679 (accesso, rettifica, limitazione, opposizione) scrivere a {contatti} o al Responsabile della protezione dei dati ({contatti_dpo}). È possibile proporre reclamo al Garante per la protezione dei dati personali.', true, true, false, '[]', false, false, false, '["Il familiare"]', 'form', 'published', 1, '2026-11-13 13:37:20.483944+00', 70, NULL, NULL),
+	(9, '2026-11-13 13:37:20.494541+00', '2026-11-13 13:37:20.494827+00', 'accesso-area-familiari', 'Richiesta di accesso all''area familiari', 'Richiesta di collegamento di un familiare, tutore o amministratore di sostegno a {ospite} nell''area familiari del sistema FASAS Digitale. Il collegamento consente di comunicare con la struttura e di programmare le visite; documenti condivisi e rendiconto della cassa solo se indicati di seguito. Non è mai consentito l''accesso alla cartella clinica. Le credenziali sono personali; l''accesso può essere revocato in qualsiasi momento dall''ospite capace o dalla struttura.', true, false, false, '[]', false, true, false, '["Il richiedente", "L''ospite (se il collegamento si basa sul suo consenso)", "Per la struttura"]', 'legal', 'published', 1, '2026-11-13 13:37:20.494513+00', 80, NULL, NULL);
 
 --
 -- Data for Name: notifications_notification; Type: TABLE DATA; Schema: public; Owner: -
@@ -5241,25 +5243,25 @@ INSERT INTO public.notifications_notificationsetting (id, kind, enabled, roles, 
 --
 
 INSERT INTO public.protocols_protocol (id, created_at, updated_at, name, kind, description, params, actions, severity, applies_to_all, notify_roles, validated_by, active, created_by_id, updated_by_id, validated_at, validated_by_user_id) VALUES
-	(1, '2026-11-12 08:40:34.913776+00', '2026-11-12 08:40:34.914007+00', 'Protocollo evacuazione', 'evacuation', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"days": 3}', 'Somministrare il lassativo previsto dalla prescrizione
+	(1, '2026-11-13 13:37:20.538446+00', '2026-11-13 13:37:20.538675+00', 'Protocollo evacuazione', 'evacuation', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"days": 3}', 'Somministrare il lassativo previsto dalla prescrizione
 Se nessun risultato entro 12 ore: eseguire lavanda intestinale
 Informare il medico curante se persiste', 'warning', true, '[]', '', true, NULL, NULL, NULL, NULL),
-	(2, '2026-11-12 08:40:34.919621+00', '2026-11-12 08:40:34.919781+00', 'Protocollo febbre', 'fever', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"parameter": "temperatura", "threshold": 37.5}', 'Ricontrollare la temperatura dopo 30 minuti
+	(2, '2026-11-13 13:37:20.547959+00', '2026-11-13 13:37:20.548127+00', 'Protocollo febbre', 'fever', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"parameter": "temperatura", "threshold": 37.5}', 'Ricontrollare la temperatura dopo 30 minuti
 Somministrare l''antipiretico SOS se prescritto
 Idratare l''ospite
 Avvisare il medico se > 38.5 °C o persistente oltre 24 ore', 'warning', true, '[]', '', true, NULL, NULL, NULL, NULL),
-	(3, '2026-11-12 08:40:34.925114+00', '2026-11-12 08:40:34.92529+00', 'Protocollo glicemia', 'glycemia', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"max": 250, "min": 70, "parameter": "glicemia"}', 'Ipoglicemia: somministrare zuccheri semplici e ricontrollare dopo 15 minuti
+	(3, '2026-11-13 13:37:20.551809+00', '2026-11-13 13:37:20.551935+00', 'Protocollo glicemia', 'glycemia', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"max": 250, "min": 70, "parameter": "glicemia"}', 'Ipoglicemia: somministrare zuccheri semplici e ricontrollare dopo 15 minuti
 Iperglicemia: ricontrollare e applicare lo schema insulinico prescritto
 Avvisare il medico', 'critical', true, '[]', '', true, NULL, NULL, NULL, NULL),
-	(4, '2026-11-12 08:40:34.929959+00', '2026-11-12 08:40:34.930112+00', 'Protocollo crisi epilettica', 'seizure', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"min_duration_minutes": 0}', 'Proteggere l''ospite da traumi e posizionarlo in sicurezza
+	(4, '2026-11-13 13:37:20.556581+00', '2026-11-13 13:37:20.556721+00', 'Protocollo crisi epilettica', 'seizure', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"min_duration_minutes": 0}', 'Proteggere l''ospite da traumi e posizionarlo in sicurezza
 Cronometrare la durata della crisi
 Se la crisi supera la durata indicata in prescrizione: somministrare il farmaco SOS antiepilettico
 Chiamare il 112/118 se la crisi non cede
 Avvisare medico e familiari/tutore', 'critical', true, '[]', '', true, NULL, NULL, NULL, NULL),
-	(5, '2026-11-12 08:40:34.933805+00', '2026-11-12 08:40:34.933932+00', 'Protocollo agitazione', 'agitation', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"events": 2, "window_hours": 24}', 'Applicare le strategie di contenimento relazionale previste dal PAI
+	(5, '2026-11-13 13:37:20.561205+00', '2026-11-13 13:37:20.561333+00', 'Protocollo agitazione', 'agitation', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"events": 2, "window_hours": 24}', 'Applicare le strategie di contenimento relazionale previste dal PAI
 Valutare il farmaco SOS se prescritto
 Informare il coordinatore', 'warning', true, '[]', '', true, NULL, NULL, NULL, NULL),
-	(6, '2026-11-12 08:40:34.938129+00', '2026-11-12 08:40:34.93826+00', 'Protocollo farmaci SOS', 'sos', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"count": 2, "window_hours": 24}', 'Verificare la corretta indicazione delle somministrazioni SOS
+	(6, '2026-11-13 13:37:20.565416+00', '2026-11-13 13:37:20.565545+00', 'Protocollo farmaci SOS', 'sos', 'Protocollo di esempio: da validare dal medico / direttore sanitario della struttura.', '{"count": 2, "window_hours": 24}', 'Verificare la corretta indicazione delle somministrazioni SOS
 Informare il medico per rivalutazione terapia', 'warning', true, '[]', '', true, NULL, NULL, NULL, NULL);
 
 --
@@ -5669,7 +5671,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 108, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 98, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 100, true);
 
 --
 -- Name: documents_document_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -

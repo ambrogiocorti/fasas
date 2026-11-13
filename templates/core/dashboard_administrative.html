@@ -2,7 +2,7 @@
 {% block title %}Amministrazione{% endblock %}
 {% block content %}{% if modules.billing %}
 <div class="page-head">
-  <div><h1>Amministrazione</h1><span class="subtitle">Presenze per la rendicontazione, rette, prospetti e incassi. Questo ruolo non consulta la cartella clinica.</span></div>
+  <div><h1>Ufficio amministrativo</h1><span class="subtitle">Presenze per la rendicontazione, rette, prospetti e incassi, cassa degli ospiti, moduli. Non consulta la cartella clinica e non configura il sistema.</span></div>
   <div class="actions"><a class="btn btn-primary" href="{% url 'billing:attendance' %}?mese={{ previous|date:'Y-m' }}">{% icon "calendar-days" %}Presenze di {{ previous|date:"F" }}</a></div>
 </div>
 
@@ -33,7 +33,7 @@
   </div>
 </div>
 {% else %}
-<div class="page-head"><h1>Amministrazione</h1></div>
+<div class="page-head"><h1>Ufficio amministrativo</h1></div>
 <div class="alert alert-info">{% icon "info" %}<div class="alert-body">Il modulo «Presenze e rette» è spento in questa struttura: si accende da Configurazione › Moduli.</div></div>
 {% endif %}
 {% endblock %}

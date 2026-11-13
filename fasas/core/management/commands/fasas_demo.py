@@ -23,11 +23,11 @@ def demo_password():
     return os.environ.get("FASAS_PRESENTAZIONE_PASSWORD", "").strip() or DEMO_PASSWORD
 
 USERS = [
-    ("admin", "Anna", "Amministratrice", "admin", ""),
+    ("gestore", "Anna", "Gestrice", "admin", "Gestore del sistema"),
     ("coordinatore", "Carlo", "Coordinatore", "coordinator", "Infermiere"),
     ("operatore", "Olga", "Operatrice", "operator", "OSS"),
     ("medico", "Marta", "Medico", "doctor", "Medico di struttura"),
-    ("amministrativo", "Paolo", "Amministrativo", "administrative", "Ufficio amministrativo"),
+    ("ufficio", "Paolo", "Contabile", "administrative", "Ufficio amministrativo"),
     ("familiare", "Elena", "Rossi", "family", "Sorella di Mario Rossi, amministratrice di sostegno"),
 ]
 
@@ -72,14 +72,15 @@ class Command(BaseCommand):
 
         if not settings.DEBUG and not options["ambiente_di_prova"]:
             # Gli utenti demo hanno password pubblicate nel README: su un'installazione vera sarebbero una porta aperta
-            raise CommandError("I dati demo creano utenti (anche un amministratore) con password pubbliche: si usano "
+            raise CommandError("I dati demo creano utenti (anche un gestore del sistema) con password pubbliche: si usano "
                                "solo nelle installazioni di prova. Su un'installazione di prova con DEBUG spento "
                                "aggiungere --ambiente-di-prova; MAI dove ci sono o ci saranno dati reali.")
 
         if Guest.objects.exists() and options["skip_if_exists"]:
             from fasas.accounts.models import User
 
-            if User.objects.filter(username="admin", email="admin@example.invalid").exists():
+            if User.objects.filter(username__in=["gestore", "admin"], email__in=["gestore@example.invalid",
+                                                                              "admin@example.invalid"]).exists():
                 # Database di prova creato da una versione precedente: si aggiungono solo le novità della demo
                 call_command("fasas_setup", stdout=self.stdout)
                 with audit_context(source="demo"):

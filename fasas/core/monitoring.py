@@ -4,7 +4,7 @@ Monitoraggio senza servizi esterni a pagamento.
 - /salute/ risponde a un servizio di controllo (anche gratuito): 200 se tutto va, 503 se il database o i dischi
   non funzionano. Con FASAS_HEALTH_TOKEN (intestazione «Authorization: Bearer …» o ?token=) restituisce il
   dettaglio dei controlli: backup, verifica dell'audit, job periodici, spazio su disco, errori recenti.
-- Gli errori del sistema finiscono in un registro raggruppato per punto del codice e l'amministratore riceve
+- Gli errori del sistema finiscono in un registro raggruppato per punto del codice e il gestore del sistema riceve
   un avviso. Non si salvano messaggi, valori né dati delle richieste: solo tipo d'errore, rotta, righe di codice.
 """
 import datetime

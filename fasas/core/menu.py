@@ -12,8 +12,8 @@ DASHBOARD_LABELS = {
     "operator": "Il mio turno",
     "coordinator": "Coordinamento",
     "doctor": "Area medica",
-    "admin": "Pannello di sistema",
-    "administrative": "Amministrazione",
+    "admin": "Gestione del sistema",
+    "administrative": "Ufficio amministrativo",
     "family": "I miei cari",
 }
 
@@ -114,7 +114,7 @@ MENU = [
         Item("Importa dal cartaceo", "upload", "imports:home", "imports.add_importbatch", namespace="imports",
              module="imports"),
     ], icon="file-text", key="archivio"),
-    Section("Amministrazione", [
+    Section("Rette, cassa e moduli", [
         Item("Presenze", "calendar-days", "billing:attendance", "billing.view_attendancemonth",
              active=("billing:attendance", "billing:correction"), module="billing"),
         Item("Rette", "wallet", "billing:fees", "billing.view_guestfeeline",
