@@ -1,5 +1,5 @@
 # FASAS Digitale – immagine dell'applicazione (Django + gunicorn + Celery). Guida: docs/CONTAINER.md
-FROM python:3.12-slim-bookworm
+FROM python:3.15-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 \
     FASAS_MEDIA_ROOT=/data/media FASAS_BACKUP_DIR=/data/backups
